@@ -3,10 +3,20 @@ const mongoose = require('mongoose');
 const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
+const cors = require('cors'); 
 
 dotenv.config();
 
 const app = express();
+
+app.use(cors({
+    origin: 'http://localhost:3000',  // Allow frontend to connect
+    credentials: true,
+    methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
+    allowedHeaders: ['Content-Type', 'Authorization']
+}));
+
+
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 
@@ -485,6 +495,7 @@ app.post('/api/cart/add', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // Update cart item quantity
 app.put('/api/cart/update/:productId', protect, async (req, res) => {
