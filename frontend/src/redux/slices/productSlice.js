@@ -81,4 +81,34 @@ export const fetchProduct = (id) => async (dispatch) => {
     }
 };
 
+export const createProduct = (productData) => async (dispatch) => {
+    try {
+        const { data } = await api.post('/products', productData);
+        dispatch(createProductSuccess(data.product));
+        return { success: true, product: data.product };
+    } catch (error) {
+        return { error: error.response?.data?.message || 'Failed to create product' };
+    }
+};
+
+export const updateProduct = (id, productData) => async (dispatch) => {
+    try {
+        const { data } = await api.put(`/products/${id}`, productData);
+        dispatch(updateProductSuccess(data.product));
+        return { success: true, product: data.product };
+    } catch (error) {
+        return { error: error.response?.data?.message || 'Failed to update product' };
+    }
+};
+
+export const deleteProduct = (id) => async (dispatch) => {
+    try {
+        await api.delete(`/products/${id}`);
+        dispatch(deleteProductSuccess(id));
+        return { success: true };
+    } catch (error) {
+        return { error: error.response?.data?.message || 'Failed to delete product' };
+    }
+};
+
 export default productSlice.reducer;
