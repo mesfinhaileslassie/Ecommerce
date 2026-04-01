@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, deleteProduct } from '../../redux/slices/productSlice';
-import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar, FaImage } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -10,6 +10,7 @@ const AdminProductsPage = () => {
     const { products, loading } = useSelector((state) => state.products);
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
+    const [imagePreview, setImagePreview] = useState('');
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -30,6 +31,17 @@ const AdminProductsPage = () => {
             ...formData,
             [name]: type === 'checkbox' ? checked : value,
         });
+        
+        // Update image preview when image URL changes
+        if (name === 'imageUrl') {
+            setImagePreview(value);
+        }
+    };
+
+    const handleImageUrlChange = (e) => {
+        const url = e.target.value;
+        setFormData({ ...formData, imageUrl: url });
+        setImagePreview(url);
     };
 
     const handleSubmit = async (e) => {
@@ -61,6 +73,7 @@ const AdminProductsPage = () => {
             imageUrl: product.imageUrl || '',
             isFeatured: product.isFeatured || false,
         });
+        setImagePreview(product.imageUrl || '');
         setShowModal(true);
     };
 
@@ -100,10 +113,36 @@ const AdminProductsPage = () => {
             imageUrl: '',
             isFeatured: false,
         });
+        setImagePreview('');
+    };
+
+    // Get placeholder image based on category
+    const getPlaceholderImage = (category) => {
+        const categoryImages = {
+            'Electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=50&h=50&fit=crop',
+            'Clothing': 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=50&h=50&fit=crop',
+            'Books': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=50&h=50&fit=crop',
+            'Home': 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=50&h=50&fit=crop',
+            'Sports': 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=50&h=50&fit=crop',
+        };
+        return categoryImages[category] || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=50&h=50&fit=crop';
+    };
+
+    // Get product image with fallback
+    const getProductImage = (product) => {
+        if (product.imageUrl && product.imageUrl !== 'https://via.placeholder.com/300') {
+            return product.imageUrl;
+        }
+        return getPlaceholderImage(product.category);
     };
 
     if (loading) {
-        return <div style={styles.center}>Loading products...</div>;
+        return (
+            <div style={styles.center}>
+                <div className="spinner"></div>
+                <p>Loading products...</p>
+            </div>
+        );
     }
 
     return (
@@ -133,9 +172,12 @@ const AdminProductsPage = () => {
                             <tr key={product._id}>
                                 <td>
                                     <img 
-                                        src={product.imageUrl || 'https://via.placeholder.com/50'} 
+                                        src={getProductImage(product)} 
                                         alt={product.name}
                                         style={styles.productImage}
+                                        onError={(e) => {
+                                            e.target.src = getPlaceholderImage(product.category);
+                                        }}
                                     />
                                 </td>
                                 <td style={styles.productName}>{product.name}</td>
@@ -232,14 +274,38 @@ const AdminProductsPage = () => {
                                 required
                                 style={styles.input}
                             />
-                            <input
-                                type="text"
-                                name="imageUrl"
-                                placeholder="Image URL (optional)"
-                                value={formData.imageUrl}
-                                onChange={handleInputChange}
-                                style={styles.input}
-                            />
+                            
+                            {/* Image URL Input with Preview */}
+                            <div style={styles.imageInputContainer}>
+                                <input
+                                    type="text"
+                                    name="imageUrl"
+                                    placeholder="Image URL (optional - leave empty for auto-generated)"
+                                    value={formData.imageUrl}
+                                    onChange={handleImageUrlChange}
+                                    style={styles.input}
+                                />
+                                {imagePreview && (
+                                    <div style={styles.imagePreviewContainer}>
+                                        <img 
+                                            src={imagePreview} 
+                                            alt="Preview" 
+                                            style={styles.imagePreview}
+                                            onError={(e) => {
+                                                e.target.style.display = 'none';
+                                                document.getElementById('previewError').style.display = 'block';
+                                            }}
+                                        />
+                                        <div id="previewError" style={{ display: 'none', color: '#dc3545', fontSize: '12px', marginTop: '5px' }}>
+                                            Invalid image URL
+                                        </div>
+                                    </div>
+                                )}
+                                <p style={styles.imageHint}>
+                                    <FaImage /> Leave empty for auto-generated images based on category
+                                </p>
+                            </div>
+                            
                             <label style={styles.checkboxLabel}>
                                 <input
                                     type="checkbox"
@@ -411,6 +477,30 @@ const styles = {
         fontSize: '16px',
         minHeight: '100px',
         fontFamily: 'inherit',
+    },
+    imageInputContainer: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+    },
+    imagePreviewContainer: {
+        display: 'flex',
+        justifyContent: 'center',
+        marginTop: '5px',
+    },
+    imagePreview: {
+        maxWidth: '100%',
+        maxHeight: '150px',
+        borderRadius: '5px',
+        objectFit: 'contain',
+    },
+    imageHint: {
+        fontSize: '12px',
+        color: '#6c757d',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
+        marginTop: '5px',
     },
     checkboxLabel: {
         display: 'flex',

@@ -6,7 +6,7 @@ import { addToCart } from '../../redux/slices/cartSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
 import Reviews from '../../components/Products/Reviews';
 import toast from 'react-hot-toast';
-import { FaStar, FaShoppingCart } from 'react-icons/fa';
+import { FaStar, FaShoppingCart, FaHeart, FaRegHeart } from 'react-icons/fa';
 
 const ProductDetailsPage = () => {
     const { id } = useParams();
@@ -15,12 +15,38 @@ const ProductDetailsPage = () => {
     const { user } = useSelector((state) => state.auth);
     const [quantity, setQuantity] = useState(1);
     const [adding, setAdding] = useState(false);
+    const [selectedImage, setSelectedImage] = useState(0);
 
     useEffect(() => {
         if (id) {
             dispatch(fetchProduct(id));
         }
     }, [dispatch, id]);
+
+    // Get product image with fallback
+    const getProductImage = () => {
+        if (product?.imageUrl && product.imageUrl !== 'https://via.placeholder.com/300') {
+            return product.imageUrl;
+        }
+        const categoryImages = {
+            'Electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=600&h=400&fit=crop',
+            'Clothing': 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&h=400&fit=crop',
+            'Books': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=600&h=400&fit=crop',
+            'Home': 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=600&h=400&fit=crop',
+            'Sports': 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=600&h=400&fit=crop',
+        };
+        return categoryImages[product?.category] || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=600&h=400&fit=crop';
+    };
+
+    // Sample product images gallery
+    const getGalleryImages = () => {
+        const mainImage = getProductImage();
+        return [
+            mainImage,
+            mainImage.replace('w=600', 'w=600&sat=-50'),
+            mainImage.replace('w=600', 'w=600&bright=-20'),
+        ];
+    };
 
     const handleAddToCart = async () => {
         if (!user) {
@@ -46,24 +72,48 @@ const ProductDetailsPage = () => {
     };
 
     if (loading) {
-        return <div style={styles.center}>Loading product...</div>;
+        return (
+            <div style={styles.center}>
+                <div className="spinner"></div>
+                <p>Loading product...</p>
+            </div>
+        );
     }
 
     if (!product) {
         return <div style={styles.center}>Product not found</div>;
     }
 
+    const galleryImages = getGalleryImages();
+
     return (
         <div style={styles.container}>
             <div style={styles.productContainer}>
+                {/* Image Gallery */}
                 <div style={styles.imageSection}>
                     <img 
-                        src={product.imageUrl || 'https://via.placeholder.com/400'} 
+                        src={galleryImages[selectedImage]} 
                         alt={product.name}
-                        style={styles.image}
+                        style={styles.mainImage}
                     />
+                    <div style={styles.thumbnailContainer}>
+                        {galleryImages.map((img, index) => (
+                            <img
+                                key={index}
+                                src={img}
+                                alt={`${product.name} ${index + 1}`}
+                                style={{
+                                    ...styles.thumbnail,
+                                    border: selectedImage === index ? '2px solid var(--primary)' : '2px solid transparent',
+                                }}
+                                onMouseEnter={() => setSelectedImage(index)}
+                                onClick={() => setSelectedImage(index)}
+                            />
+                        ))}
+                    </div>
                 </div>
                 
+                {/* Product Info */}
                 <div style={styles.infoSection}>
                     <h1 style={styles.name}>{product.name}</h1>
                     <div style={styles.rating}>
@@ -71,7 +121,7 @@ const ProductDetailsPage = () => {
                             <FaStar
                                 key={i}
                                 style={styles.star}
-                                color={i < Math.floor(product.rating) ? '#ffc107' : '#e4e5e9'}
+                                color={i < Math.floor(product.rating) ? '#fbbf24' : '#e5e7eb'}
                             />
                         ))}
                         <span style={styles.reviewCount}>({product.numReviews} reviews)</span>
@@ -80,7 +130,7 @@ const ProductDetailsPage = () => {
                     <p style={styles.price}>${product.price.toFixed(2)}</p>
                     <p style={styles.description}>{product.description}</p>
                     <p style={styles.stock}>
-                        {product.countInStock > 0 ? `In Stock: ${product.countInStock}` : 'Out of Stock'}
+                        {product.countInStock > 0 ? `✅ In Stock: ${product.countInStock} units` : '❌ Out of Stock'}
                     </p>
                     
                     {product.countInStock > 0 && (
@@ -98,19 +148,21 @@ const ProductDetailsPage = () => {
                         </div>
                     )}
                     
-                    <button 
-                        onClick={handleAddToCart}
-                        disabled={product.countInStock === 0 || adding}
-                        style={{
-                            ...styles.addBtn,
-                            ...(product.countInStock === 0 && styles.disabledBtn)
-                        }}
-                    >
-                        <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
-                    </button>
+                    <div style={styles.buttonGroup}>
+                        <button 
+                            onClick={handleAddToCart}
+                            disabled={product.countInStock === 0 || adding}
+                            style={{
+                                ...styles.addBtn,
+                                ...(product.countInStock === 0 && styles.disabledBtn)
+                            }}
+                        >
+                            <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
+                        </button>
+                    </div>
                     
                     <Link to="/products" style={styles.backBtn}>
-                        Back to Products
+                        ← Back to Products
                     </Link>
                 </div>
             </div>
@@ -131,18 +183,35 @@ const styles = {
         gridTemplateColumns: '1fr 1fr',
         gap: '40px',
         backgroundColor: '#fff',
-        borderRadius: '8px',
+        borderRadius: '1rem',
         padding: '30px',
         marginBottom: '30px',
+        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
     },
     imageSection: {
         display: 'flex',
+        flexDirection: 'column',
+        gap: '1rem',
+    },
+    mainImage: {
+        width: '100%',
+        height: '400px',
+        objectFit: 'cover',
+        borderRadius: '0.5rem',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    },
+    thumbnailContainer: {
+        display: 'flex',
+        gap: '0.5rem',
         justifyContent: 'center',
     },
-    image: {
-        maxWidth: '100%',
-        height: 'auto',
-        borderRadius: '8px',
+    thumbnail: {
+        width: '80px',
+        height: '80px',
+        objectFit: 'cover',
+        borderRadius: '0.5rem',
+        cursor: 'pointer',
+        transition: 'all 0.3s',
     },
     infoSection: {
         display: 'flex',
@@ -172,7 +241,7 @@ const styles = {
     price: {
         fontSize: '1.5rem',
         fontWeight: 'bold',
-        color: '#007bff',
+        color: '#6366f1',
     },
     description: {
         color: '#555',
@@ -180,7 +249,7 @@ const styles = {
     },
     stock: {
         fontWeight: 'bold',
-        color: '#28a745',
+        color: '#10b981',
     },
     quantitySection: {
         display: 'flex',
@@ -195,18 +264,25 @@ const styles = {
         border: '1px solid #ddd',
         borderRadius: '5px',
     },
+    buttonGroup: {
+        display: 'flex',
+        gap: '1rem',
+        marginTop: '0.5rem',
+    },
     addBtn: {
+        flex: 1,
         padding: '12px',
-        backgroundColor: '#007bff',
+        backgroundColor: '#6366f1',
         color: '#fff',
         border: 'none',
-        borderRadius: '5px',
+        borderRadius: '0.5rem',
         cursor: 'pointer',
         fontSize: '16px',
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',
         gap: '8px',
+        transition: 'all 0.3s',
     },
     disabledBtn: {
         backgroundColor: '#ccc',
@@ -218,7 +294,8 @@ const styles = {
         backgroundColor: '#6c757d',
         color: '#fff',
         textDecoration: 'none',
-        borderRadius: '5px',
+        borderRadius: '0.5rem',
+        transition: 'all 0.3s',
     },
     center: {
         textAlign: 'center',

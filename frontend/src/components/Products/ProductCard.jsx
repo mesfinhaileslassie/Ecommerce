@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../redux/slices/cartSlice';
 import { addToWishlist, removeFromWishlist, fetchWishlist } from '../../redux/slices/wishlistSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
-import { FaHeart, FaRegHeart, FaShoppingCart } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaShoppingCart, FaStar } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const ProductCard = ({ product }) => {
@@ -14,6 +14,22 @@ const ProductCard = ({ product }) => {
     const [adding, setAdding] = React.useState(false);
     
     const isInWishlist = wishlistItems?.some(item => item.product?._id === product._id);
+
+    // Get product image with fallback
+    const getProductImage = () => {
+        if (product.imageUrl && product.imageUrl !== 'https://via.placeholder.com/300') {
+            return product.imageUrl;
+        }
+        // Category-based placeholder images
+        const categoryImages = {
+            'Electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=300&h=200&fit=crop',
+            'Clothing': 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&h=200&fit=crop',
+            'Books': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&h=200&fit=crop',
+            'Home': 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=200&fit=crop',
+            'Sports': 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=300&h=200&fit=crop',
+        };
+        return categoryImages[product.category] || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=300&h=200&fit=crop';
+    };
 
     const handleAddToCart = async () => {
         if (!user) {
@@ -33,8 +49,7 @@ const ProductCard = ({ product }) => {
             await dispatch(fetchCart());
             toast.success(`${product.name} added to cart!`);
         } catch (error) {
-            const errorMessage = error.response?.data?.message || 'Failed to add to cart';
-            toast.error(errorMessage);
+            toast.error(error.response?.data?.message || 'Failed to add to cart');
         } finally {
             setAdding(false);
         }
@@ -64,123 +79,56 @@ const ProductCard = ({ product }) => {
             }
             dispatch(fetchWishlist());
         } catch (error) {
-            const errorMessage = error.message || 'Something went wrong';
-            toast.error(errorMessage);
+            toast.error('Something went wrong');
         }
     };
 
     return (
-        <div style={styles.card}>
-            <button onClick={handleWishlist} style={styles.wishlistBtn}>
-                {isInWishlist ? <FaHeart color="#dc3545" size={20} /> : <FaRegHeart size={20} />}
+        <div className="product-card">
+            <button className="wishlist-btn" onClick={handleWishlist}>
+                {isInWishlist ? <FaHeart color="#ef4444" size={18} /> : <FaRegHeart size={18} />}
             </button>
             <Link to={`/products/${product._id}`}>
                 <img 
-                    src={product.imageUrl || 'https://via.placeholder.com/300'} 
+                    src={getProductImage()} 
                     alt={product.name}
-                    style={styles.image}
+                    className="product-image"
+                    onError={(e) => {
+                        e.target.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=300&h=200&fit=crop';
+                    }}
                 />
             </Link>
-            <div style={styles.content}>
-                <Link to={`/products/${product._id}`} style={styles.titleLink}>
-                    <h3 style={styles.title}>{product.name}</h3>
+            <div className="product-content">
+                <Link to={`/products/${product._id}`} style={{ textDecoration: 'none' }}>
+                    <h3 className="product-title">{product.name}</h3>
                 </Link>
-                <p style={styles.category}>{product.category}</p>
-                <p style={styles.price}>${product.price.toFixed(2)}</p>
-                <p style={styles.stock}>
-                    {product.countInStock > 0 ? `In Stock: ${product.countInStock}` : 'Out of Stock'}
-                </p>
+                <p className="product-category">{product.category}</p>
+                <div style={{ display: 'flex', alignItems: 'center', gap: '0.5rem', marginBottom: '0.5rem' }}>
+                    <div style={{ display: 'flex', gap: '2px' }}>
+                        {[...Array(5)].map((_, i) => (
+                            <FaStar key={i} size={12} color={i < Math.floor(product.rating) ? '#fbbf24' : '#e5e7eb'} />
+                        ))}
+                    </div>
+                    <span style={{ fontSize: '0.75rem', color: '#6b7280' }}>({product.numReviews})</span>
+                </div>
+                <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '1rem' }}>
+                    <span className="product-price">${product.price.toFixed(2)}</span>
+                    <span className={`product-stock ${product.countInStock > 0 ? 'stock-in' : 'stock-out'}`}>
+                        {product.countInStock > 0 ? `${product.countInStock} in stock` : 'Out of stock'}
+                    </span>
+                </div>
                 <button 
                     onClick={handleAddToCart}
                     disabled={product.countInStock === 0 || adding}
-                    style={{
-                        ...styles.button,
-                        ...(product.countInStock === 0 && styles.buttonDisabled)
-                    }}
+                    className="btn-primary"
+                    style={{ width: '100%', padding: '0.5rem' }}
                 >
-                    <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
+                    <FaShoppingCart size={14} />
+                    <span>{adding ? 'Adding...' : 'Add to Cart'}</span>
                 </button>
             </div>
         </div>
     );
-};
-
-const styles = {
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: '8px',
-        overflow: 'hidden',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        transition: 'transform 0.3s, box-shadow 0.3s',
-        position: 'relative',
-    },
-    wishlistBtn: {
-        position: 'absolute',
-        top: '10px',
-        right: '10px',
-        backgroundColor: '#fff',
-        border: 'none',
-        borderRadius: '50%',
-        width: '32px',
-        height: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        zIndex: 1,
-    },
-    image: {
-        width: '100%',
-        height: '200px',
-        objectFit: 'cover',
-    },
-    content: {
-        padding: '1rem',
-    },
-    titleLink: {
-        textDecoration: 'none',
-    },
-    title: {
-        fontSize: '1rem',
-        marginBottom: '0.5rem',
-        color: '#333',
-    },
-    category: {
-        fontSize: '0.85rem',
-        color: '#666',
-        marginBottom: '0.5rem',
-    },
-    price: {
-        fontSize: '1.25rem',
-        fontWeight: 'bold',
-        color: '#007bff',
-        marginBottom: '0.5rem',
-    },
-    stock: {
-        fontSize: '0.85rem',
-        color: '#28a745',
-        marginBottom: '1rem',
-    },
-    button: {
-        width: '100%',
-        padding: '0.5rem',
-        backgroundColor: '#007bff',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '4px',
-        cursor: 'pointer',
-        fontSize: '1rem',
-        transition: 'background-color 0.3s',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-    },
-    buttonDisabled: {
-        backgroundColor: '#ccc',
-        cursor: 'not-allowed',
-    },
 };
 
 export default ProductCard;
