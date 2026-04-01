@@ -212,6 +212,65 @@ const orderSchema = new mongoose.Schema({
 const Order = mongoose.model('Order', orderSchema);
 
 // ============================================
+// WISHLIST MODEL
+// ============================================
+const wishlistItemSchema = new mongoose.Schema({
+    product: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product',
+        required: true
+    },
+    name: String,
+    price: Number,
+    imageUrl: String,
+    addedAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const wishlistSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true,
+        unique: true
+    },
+    items: [wishlistItemSchema],
+    createdAt: {
+        type: Date,
+        default: Date.now
+    },
+    updatedAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+const Wishlist = mongoose.model('Wishlist', wishlistSchema);
+
+// ============================================
+// ADDRESS MODEL
+// ============================================
+const addressSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    fullName: { type: String, required: true },
+    address: { type: String, required: true },
+    city: { type: String, required: true },
+    postalCode: { type: String, required: true },
+    country: { type: String, required: true },
+    phone: { type: String, required: true },
+    isDefault: { type: Boolean, default: false },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Address = mongoose.model('Address', addressSchema);
+
+// ============================================
 // PROTECT MIDDLEWARE
 // ============================================
 const protect = async (req, res, next) => {
@@ -241,63 +300,6 @@ const admin = async (req, res, next) => {
         res.status(401).json({ success: false, message: 'Not authorized' });
     }
 };
-
-// ============================================
-// REVIEW ROUTES (MOVED HERE - AFTER protect)
-// ============================================
-
-// Create product review
-app.post('/api/products/:id/reviews', protect, async (req, res) => {
-    try {
-        const { rating, comment } = req.body;
-        const product = await Product.findById(req.params.id);
-        
-        if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
-        }
-        
-        // Check if user already reviewed
-        const alreadyReviewed = product.reviews.find(
-            r => r.user.toString() === req.userId.toString()
-        );
-        
-        if (alreadyReviewed) {
-            return res.status(400).json({ success: false, message: 'Product already reviewed' });
-        }
-        
-        const user = await User.findById(req.userId);
-        
-        const review = {
-            user: req.userId,
-            name: user.name,
-            rating: Number(rating),
-            comment,
-        };
-        
-        product.reviews.push(review);
-        product.numReviews = product.reviews.length;
-        product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
-        
-        await product.save();
-        
-        res.status(201).json({ success: true, message: 'Review added', product });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Get product reviews
-app.get('/api/products/:id/reviews', async (req, res) => {
-    try {
-        const product = await Product.findById(req.params.id);
-        if (!product) {
-            return res.status(404).json({ success: false, message: 'Product not found' });
-        }
-        res.json({ success: true, reviews: product.reviews, rating: product.rating, numReviews: product.numReviews });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
 
 // ============================================
 // TEST ROUTES
@@ -397,6 +399,16 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
+// Get featured products
+app.get('/api/products/featured', async (req, res) => {
+    try {
+        const featuredProducts = await Product.find({ isFeatured: true }).limit(8);
+        res.json({ success: true, count: featuredProducts.length, products: featuredProducts });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
 // Get single product
 app.get('/api/products/:id', async (req, res) => {
     try {
@@ -413,7 +425,7 @@ app.get('/api/products/:id', async (req, res) => {
 // Create product (Admin only)
 app.post('/api/products', protect, admin, async (req, res) => {
     try {
-        const { name, description, price, category, countInStock, imageUrl } = req.body;
+        const { name, description, price, category, countInStock, imageUrl, isFeatured } = req.body;
         
         if (!name || !description || !price || !category) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -428,7 +440,8 @@ app.post('/api/products', protect, admin, async (req, res) => {
             price,
             category,
             countInStock: countInStock || 0,
-            imageUrl: imageUrl || 'https://via.placeholder.com/300'
+            imageUrl: imageUrl || 'https://via.placeholder.com/300',
+            isFeatured: isFeatured || false
         });
         
         await product.save();
@@ -474,6 +487,83 @@ app.delete('/api/products/:id', protect, admin, async (req, res) => {
         await Product.findByIdAndDelete(req.params.id);
         
         res.json({ success: true, message: 'Product removed successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Toggle featured status (Admin only)
+app.put('/api/products/:id/featured', protect, admin, async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        
+        product.isFeatured = !product.isFeatured;
+        await product.save();
+        
+        res.json({ 
+            success: true, 
+            message: `Product ${product.isFeatured ? 'added to' : 'removed from'} featured`, 
+            product 
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// REVIEW ROUTES
+// ============================================
+
+// Create product review
+app.post('/api/products/:id/reviews', protect, async (req, res) => {
+    try {
+        const { rating, comment } = req.body;
+        const product = await Product.findById(req.params.id);
+        
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        
+        const alreadyReviewed = product.reviews.find(
+            r => r.user.toString() === req.userId.toString()
+        );
+        
+        if (alreadyReviewed) {
+            return res.status(400).json({ success: false, message: 'Product already reviewed' });
+        }
+        
+        const user = await User.findById(req.userId);
+        
+        const review = {
+            user: req.userId,
+            name: user.name,
+            rating: Number(rating),
+            comment,
+        };
+        
+        product.reviews.push(review);
+        product.numReviews = product.reviews.length;
+        product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+        
+        await product.save();
+        
+        res.status(201).json({ success: true, message: 'Review added', product });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get product reviews
+app.get('/api/products/:id/reviews', async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        res.json({ success: true, reviews: product.reviews, rating: product.rating, numReviews: product.numReviews });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -813,6 +903,236 @@ app.get('/api/orders', protect, admin, async (req, res) => {
 });
 
 // ============================================
+// WISHLIST ROUTES
+// ============================================
+
+// Get user's wishlist
+app.get('/api/wishlist', protect, async (req, res) => {
+    try {
+        let wishlist = await Wishlist.findOne({ user: req.userId }).populate('items.product');
+        
+        if (!wishlist) {
+            wishlist = new Wishlist({ user: req.userId, items: [] });
+            await wishlist.save();
+        }
+        
+        res.json({
+            success: true,
+            wishlist: {
+                items: wishlist.items,
+                itemCount: wishlist.items.length
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Add to wishlist
+app.post('/api/wishlist/add', protect, async (req, res) => {
+    try {
+        const { productId } = req.body;
+        
+        if (!productId) {
+            return res.status(400).json({ success: false, message: 'Product ID required' });
+        }
+        
+        const product = await Product.findById(productId);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        
+        let wishlist = await Wishlist.findOne({ user: req.userId });
+        if (!wishlist) {
+            wishlist = new Wishlist({ user: req.userId, items: [] });
+        }
+        
+        const exists = wishlist.items.find(
+            item => item.product.toString() === productId
+        );
+        
+        if (exists) {
+            return res.status(400).json({ success: false, message: 'Product already in wishlist' });
+        }
+        
+        wishlist.items.push({
+            product: productId,
+            name: product.name,
+            price: product.price,
+            imageUrl: product.imageUrl
+        });
+        
+        wishlist.updatedAt = Date.now();
+        await wishlist.save();
+        
+        res.json({
+            success: true,
+            message: 'Added to wishlist',
+            wishlist: {
+                items: wishlist.items,
+                itemCount: wishlist.items.length
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Remove from wishlist
+app.delete('/api/wishlist/remove/:productId', protect, async (req, res) => {
+    try {
+        const { productId } = req.params;
+        
+        const wishlist = await Wishlist.findOne({ user: req.userId });
+        if (!wishlist) {
+            return res.status(404).json({ success: false, message: 'Wishlist not found' });
+        }
+        
+        wishlist.items = wishlist.items.filter(
+            item => item.product.toString() !== productId
+        );
+        
+        wishlist.updatedAt = Date.now();
+        await wishlist.save();
+        
+        res.json({
+            success: true,
+            message: 'Removed from wishlist',
+            wishlist: {
+                items: wishlist.items,
+                itemCount: wishlist.items.length
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// ADDRESS ROUTES
+// ============================================
+
+// Get user's addresses
+app.get('/api/addresses', protect, async (req, res) => {
+    try {
+        const addresses = await Address.find({ user: req.userId }).sort({ isDefault: -1, createdAt: -1 });
+        res.json({ success: true, addresses });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Add address
+app.post('/api/addresses', protect, async (req, res) => {
+    try {
+        const { fullName, address, city, postalCode, country, phone, isDefault } = req.body;
+        
+        if (!fullName || !address || !city || !postalCode || !country || !phone) {
+            return res.status(400).json({ success: false, message: 'Please provide all fields' });
+        }
+        
+        if (isDefault) {
+            await Address.updateMany(
+                { user: req.userId },
+                { $set: { isDefault: false } }
+            );
+        }
+        
+        const newAddress = new Address({
+            user: req.userId,
+            fullName,
+            address,
+            city,
+            postalCode,
+            country,
+            phone,
+            isDefault: isDefault || false
+        });
+        
+        await newAddress.save();
+        
+        res.status(201).json({ success: true, message: 'Address added', address: newAddress });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update address
+app.put('/api/addresses/:id', protect, async (req, res) => {
+    try {
+        const address = await Address.findById(req.params.id);
+        
+        if (!address) {
+            return res.status(404).json({ success: false, message: 'Address not found' });
+        }
+        
+        if (address.user.toString() !== req.userId) {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        
+        const { fullName, address: street, city, postalCode, country, phone, isDefault } = req.body;
+        
+        if (isDefault) {
+            await Address.updateMany(
+                { user: req.userId, _id: { $ne: req.params.id } },
+                { $set: { isDefault: false } }
+            );
+        }
+        
+        const updatedAddress = await Address.findByIdAndUpdate(
+            req.params.id,
+            { fullName, address: street, city, postalCode, country, phone, isDefault },
+            { new: true }
+        );
+        
+        res.json({ success: true, message: 'Address updated', address: updatedAddress });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete address
+app.delete('/api/addresses/:id', protect, async (req, res) => {
+    try {
+        const address = await Address.findById(req.params.id);
+        
+        if (!address) {
+            return res.status(404).json({ success: false, message: 'Address not found' });
+        }
+        
+        if (address.user.toString() !== req.userId) {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        
+        await address.deleteOne();
+        
+        res.json({ success: true, message: 'Address deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Set default address
+app.put('/api/addresses/:id/default', protect, async (req, res) => {
+    try {
+        await Address.updateMany(
+            { user: req.userId },
+            { $set: { isDefault: false } }
+        );
+        
+        const address = await Address.findByIdAndUpdate(
+            req.params.id,
+            { isDefault: true },
+            { new: true }
+        );
+        
+        res.json({ success: true, message: 'Default address set', address });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
 // DASHBOARD STATS (Admin only)
 // ============================================
 app.get('/api/admin/stats', protect, admin, async (req, res) => {
@@ -864,17 +1184,41 @@ app.listen(PORT, () => {
     console.log(`\n🔐 AUTH:`);
     console.log(`   POST /api/auth/register`);
     console.log(`   POST /api/auth/login`);
+    console.log(`   GET  /api/auth/profile`);
     console.log(`\n📦 PRODUCTS:`);
     console.log(`   GET  /api/products`);
+    console.log(`   GET  /api/products/featured`);
+    console.log(`   GET  /api/products/:id`);
     console.log(`   POST /api/products (Admin)`);
-    console.log(`\n🛒 CART:`);
-    console.log(`   GET  /api/cart`);
-    console.log(`   POST /api/cart/add`);
-    console.log(`\n📋 ORDERS:`);
-    console.log(`   POST /api/orders`);
-    console.log(`   GET  /api/orders/myorders`);
+    console.log(`   PUT  /api/products/:id (Admin)`);
+    console.log(`   DELETE /api/products/:id (Admin)`);
+    console.log(`   PUT  /api/products/:id/featured (Admin)`);
     console.log(`\n⭐ REVIEWS:`);
     console.log(`   POST /api/products/:id/reviews (Protected)`);
     console.log(`   GET  /api/products/:id/reviews`);
+    console.log(`\n🛒 CART:`);
+    console.log(`   GET  /api/cart`);
+    console.log(`   POST /api/cart/add`);
+    console.log(`   PUT  /api/cart/update/:id`);
+    console.log(`   DELETE /api/cart/remove/:id`);
+    console.log(`   DELETE /api/cart/clear`);
+    console.log(`\n📋 ORDERS:`);
+    console.log(`   POST /api/orders`);
+    console.log(`   GET  /api/orders/myorders`);
+    console.log(`   GET  /api/orders/:id`);
+    console.log(`   GET  /api/orders (Admin)`);
+    console.log(`   PUT  /api/orders/:id/status (Admin)`);
+    console.log(`\n💖 WISHLIST:`);
+    console.log(`   GET  /api/wishlist`);
+    console.log(`   POST /api/wishlist/add`);
+    console.log(`   DELETE /api/wishlist/remove/:id`);
+    console.log(`\n📍 ADDRESSES:`);
+    console.log(`   GET  /api/addresses`);
+    console.log(`   POST /api/addresses`);
+    console.log(`   PUT  /api/addresses/:id`);
+    console.log(`   DELETE /api/addresses/:id`);
+    console.log(`   PUT  /api/addresses/:id/default`);
+    console.log(`\n📊 ADMIN:`);
+    console.log(`   GET  /api/admin/stats`);
     console.log(`=================================\n`);
 });

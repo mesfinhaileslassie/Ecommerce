@@ -2,13 +2,18 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../redux/slices/cartSlice';
+import { addToWishlist, removeFromWishlist, fetchWishlist } from '../../redux/slices/wishlistSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
+import { FaHeart, FaRegHeart, FaShoppingCart } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const ProductCard = ({ product }) => {
     const dispatch = useDispatch();
     const { user } = useSelector((state) => state.auth);
+    const { items: wishlistItems } = useSelector((state) => state.wishlist);
     const [adding, setAdding] = React.useState(false);
+    
+    const isInWishlist = wishlistItems?.some(item => item.product?._id === product._id);
 
     const handleAddToCart = async () => {
         if (!user) {
@@ -24,27 +29,51 @@ const ProductCard = ({ product }) => {
         setAdding(true);
         
         try {
-            console.log('Adding to cart - Product ID:', product._id);
-            const result = await dispatch(addToCart(product._id, 1));
-            console.log('Add to cart result:', result);
-            
-            if (result.error) {
-                toast.error(result.error.message || 'Failed to add to cart');
-            } else {
-                toast.success(`${product.name} added to cart!`);
-                // Force refresh the cart to update the count in navbar and cart page
-                await dispatch(fetchCart());
-            }
+            await dispatch(addToCart(product._id, 1));
+            await dispatch(fetchCart());
+            toast.success(`${product.name} added to cart!`);
         } catch (error) {
-            console.error('Add to cart error:', error);
-            toast.error(error.response?.data?.message || 'Failed to add to cart');
+            const errorMessage = error.response?.data?.message || 'Failed to add to cart';
+            toast.error(errorMessage);
         } finally {
             setAdding(false);
         }
     };
 
+    const handleWishlist = async () => {
+        if (!user) {
+            toast.error('Please login to add to wishlist');
+            return;
+        }
+        
+        try {
+            if (isInWishlist) {
+                const result = await dispatch(removeFromWishlist(product._id));
+                if (result.error) {
+                    toast.error(typeof result.error === 'string' ? result.error : 'Failed to remove from wishlist');
+                } else {
+                    toast.success('Removed from wishlist');
+                }
+            } else {
+                const result = await dispatch(addToWishlist(product._id));
+                if (result.error) {
+                    toast.error(typeof result.error === 'string' ? result.error : 'Failed to add to wishlist');
+                } else {
+                    toast.success('Added to wishlist');
+                }
+            }
+            dispatch(fetchWishlist());
+        } catch (error) {
+            const errorMessage = error.message || 'Something went wrong';
+            toast.error(errorMessage);
+        }
+    };
+
     return (
         <div style={styles.card}>
+            <button onClick={handleWishlist} style={styles.wishlistBtn}>
+                {isInWishlist ? <FaHeart color="#dc3545" size={20} /> : <FaRegHeart size={20} />}
+            </button>
             <Link to={`/products/${product._id}`}>
                 <img 
                     src={product.imageUrl || 'https://via.placeholder.com/300'} 
@@ -69,7 +98,7 @@ const ProductCard = ({ product }) => {
                         ...(product.countInStock === 0 && styles.buttonDisabled)
                     }}
                 >
-                    {adding ? 'Adding...' : 'Add to Cart'}
+                    <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
                 </button>
             </div>
         </div>
@@ -83,6 +112,23 @@ const styles = {
         overflow: 'hidden',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         transition: 'transform 0.3s, box-shadow 0.3s',
+        position: 'relative',
+    },
+    wishlistBtn: {
+        position: 'absolute',
+        top: '10px',
+        right: '10px',
+        backgroundColor: '#fff',
+        border: 'none',
+        borderRadius: '50%',
+        width: '32px',
+        height: '32px',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        cursor: 'pointer',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        zIndex: 1,
     },
     image: {
         width: '100%',
@@ -126,6 +172,10 @@ const styles = {
         cursor: 'pointer',
         fontSize: '1rem',
         transition: 'background-color 0.3s',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
     },
     buttonDisabled: {
         backgroundColor: '#ccc',

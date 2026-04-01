@@ -6,6 +6,7 @@ import ProductCard from '../../components/Products/ProductCard';
 const HomePage = () => {
     const dispatch = useDispatch();
     const { products, loading, error } = useSelector((state) => state.products);
+    const featuredProducts = products.filter(p => p.isFeatured).slice(0, 4);
 
     useEffect(() => {
         dispatch(fetchProducts());
@@ -26,10 +27,24 @@ const HomePage = () => {
                 <p style={styles.heroSubtitle}>Discover amazing products at great prices</p>
             </div>
             
-            <div style={styles.productsGrid}>
-                {products.map((product) => (
-                    <ProductCard key={product._id} product={product} />
-                ))}
+            {featuredProducts.length > 0 && (
+                <div style={styles.featuredSection}>
+                    <h2 style={styles.sectionTitle}>Featured Products</h2>
+                    <div style={styles.productsGrid}>
+                        {featuredProducts.map((product) => (
+                            <ProductCard key={product._id} product={product} />
+                        ))}
+                    </div>
+                </div>
+            )}
+            
+            <div style={styles.allProductsSection}>
+                <h2 style={styles.sectionTitle}>All Products</h2>
+                <div style={styles.productsGrid}>
+                    {products.map((product) => (
+                        <ProductCard key={product._id} product={product} />
+                    ))}
+                </div>
             </div>
         </div>
     );
@@ -51,11 +66,21 @@ const styles = {
     heroSubtitle: {
         fontSize: '1.2rem',
     },
+    featuredSection: {
+        marginBottom: '40px',
+    },
+    allProductsSection: {
+        marginBottom: '40px',
+    },
+    sectionTitle: {
+        fontSize: '1.8rem',
+        marginBottom: '20px',
+        color: '#333',
+    },
     productsGrid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))',
         gap: '2rem',
-        padding: '20px 0',
     },
     center: {
         textAlign: 'center',

@@ -14,6 +14,7 @@ import RegisterPage from './pages/Register/RegisterPage';
 import ProfilePage from './pages/Profile/ProfilePage';
 import OrdersPage from './pages/Orders/OrdersPage';
 import CheckoutPage from './pages/Checkout/CheckoutPage';
+import WishlistPage from './pages/Wishlist/WishlistPage';
 
 // Admin imports
 import AdminDashboardPage from './pages/Admin/AdminDashboardPage';
@@ -37,6 +38,7 @@ function App() {
                         <Route path="/products/:id" element={<ProductDetailsPage />} />
                         <Route path="/login" element={<LoginPage />} />
                         <Route path="/register" element={<RegisterPage />} />
+                        <Route path="/wishlist" element={<WishlistPage />} />
                         
                         {/* Protected User Routes */}
                         <Route path="/cart" element={<CartPage />} />

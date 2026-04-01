@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, deleteProduct } from '../../redux/slices/productSlice';
-import { FaEdit, FaTrash, FaPlus } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -17,6 +17,7 @@ const AdminProductsPage = () => {
         category: 'Electronics',
         countInStock: '',
         imageUrl: '',
+        isFeatured: false,
     });
 
     useEffect(() => {
@@ -24,9 +25,10 @@ const AdminProductsPage = () => {
     }, [dispatch]);
 
     const handleInputChange = (e) => {
+        const { name, value, type, checked } = e.target;
         setFormData({
             ...formData,
-            [e.target.name]: e.target.value,
+            [name]: type === 'checkbox' ? checked : value,
         });
     };
 
@@ -57,6 +59,7 @@ const AdminProductsPage = () => {
             category: product.category,
             countInStock: product.countInStock,
             imageUrl: product.imageUrl || '',
+            isFeatured: product.isFeatured || false,
         });
         setShowModal(true);
     };
@@ -76,6 +79,16 @@ const AdminProductsPage = () => {
         }
     };
 
+    const toggleFeatured = async (id, currentStatus) => {
+        try {
+            const { data } = await api.put(`/products/${id}/featured`);
+            toast.success(data.message);
+            dispatch(fetchProducts());
+        } catch (error) {
+            toast.error(error.response?.data?.message || 'Failed to update featured status');
+        }
+    };
+
     const resetForm = () => {
         setEditingProduct(null);
         setFormData({
@@ -85,6 +98,7 @@ const AdminProductsPage = () => {
             category: 'Electronics',
             countInStock: '',
             imageUrl: '',
+            isFeatured: false,
         });
     };
 
@@ -110,6 +124,7 @@ const AdminProductsPage = () => {
                             <th>Category</th>
                             <th>Price</th>
                             <th>Stock</th>
+                            <th>Featured</th>
                             <th>Actions</th>
                         </tr>
                     </thead>
@@ -123,15 +138,38 @@ const AdminProductsPage = () => {
                                         style={styles.productImage}
                                     />
                                 </td>
-                                <td>{product.name}</td>
-                                <td>{product.category}</td>
-                                <td>${product.price}</td>
-                                <td>{product.countInStock}</td>
+                                <td style={styles.productName}>{product.name}</td>
+                                <td><span style={styles.categoryBadge}>{product.category}</span></td>
+                                <td style={styles.priceCell}>${product.price.toFixed(2)}</td>
                                 <td>
-                                    <button onClick={() => handleEdit(product)} style={styles.editBtn}>
+                                    <span style={{
+                                        ...styles.stockBadge,
+                                        backgroundColor: product.countInStock > 0 ? '#d4edda' : '#f8d7da',
+                                        color: product.countInStock > 0 ? '#155724' : '#721c24',
+                                    }}>
+                                        {product.countInStock}
+                                    </span>
+                                </td>
+                                <td>
+                                    <button 
+                                        onClick={() => toggleFeatured(product._id, product.isFeatured)}
+                                        style={{
+                                            ...styles.featuredBtn,
+                                            backgroundColor: product.isFeatured ? '#ffc107' : '#6c757d',
+                                        }}
+                                        title={product.isFeatured ? 'Remove from featured' : 'Add to featured'}
+                                    >
+                                        {product.isFeatured ? <FaStar /> : <FaRegStar />}
+                                        <span style={{ marginLeft: '5px' }}>
+                                            {product.isFeatured ? 'Featured' : 'Not Featured'}
+                                        </span>
+                                    </button>
+                                </td>
+                                <td>
+                                    <button onClick={() => handleEdit(product)} style={styles.editBtn} title="Edit">
                                         <FaEdit />
                                     </button>
-                                    <button onClick={() => handleDelete(product._id)} style={styles.deleteBtn}>
+                                    <button onClick={() => handleDelete(product._id)} style={styles.deleteBtn} title="Delete">
                                         <FaTrash />
                                     </button>
                                 </td>
@@ -202,6 +240,16 @@ const AdminProductsPage = () => {
                                 onChange={handleInputChange}
                                 style={styles.input}
                             />
+                            <label style={styles.checkboxLabel}>
+                                <input
+                                    type="checkbox"
+                                    name="isFeatured"
+                                    checked={formData.isFeatured}
+                                    onChange={handleInputChange}
+                                    style={styles.checkbox}
+                                />
+                                <span>Feature this product (show on homepage)</span>
+                            </label>
                             <div style={styles.modalButtons}>
                                 <button type="submit" style={styles.saveBtn}>
                                     {editingProduct ? 'Update' : 'Create'}
@@ -259,10 +307,12 @@ const styles = {
         backgroundColor: '#fff',
         borderRadius: '8px',
         overflow: 'auto',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     },
     table: {
         width: '100%',
         borderCollapse: 'collapse',
+        minWidth: '800px',
     },
     productImage: {
         width: '50px',
@@ -270,8 +320,43 @@ const styles = {
         objectFit: 'cover',
         borderRadius: '5px',
     },
+    productName: {
+        fontWeight: '500',
+    },
+    categoryBadge: {
+        display: 'inline-block',
+        padding: '4px 8px',
+        backgroundColor: '#e9ecef',
+        borderRadius: '4px',
+        fontSize: '12px',
+        color: '#495057',
+    },
+    priceCell: {
+        fontWeight: 'bold',
+        color: '#28a745',
+    },
+    stockBadge: {
+        display: 'inline-block',
+        padding: '4px 8px',
+        borderRadius: '4px',
+        fontSize: '12px',
+        fontWeight: '500',
+    },
+    featuredBtn: {
+        padding: '6px 12px',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '5px',
+        fontSize: '12px',
+        color: '#fff',
+        transition: 'all 0.3s',
+    },
     editBtn: {
-        padding: '5px 10px',
+        padding: '6px 12px',
         backgroundColor: '#ffc107',
         color: '#333',
         border: 'none',
@@ -280,7 +365,7 @@ const styles = {
         marginRight: '5px',
     },
     deleteBtn: {
-        padding: '5px 10px',
+        padding: '6px 12px',
         backgroundColor: '#dc3545',
         color: '#fff',
         border: 'none',
@@ -326,6 +411,17 @@ const styles = {
         fontSize: '16px',
         minHeight: '100px',
         fontFamily: 'inherit',
+    },
+    checkboxLabel: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        cursor: 'pointer',
+    },
+    checkbox: {
+        width: '18px',
+        height: '18px',
+        cursor: 'pointer',
     },
     modalButtons: {
         display: 'flex',

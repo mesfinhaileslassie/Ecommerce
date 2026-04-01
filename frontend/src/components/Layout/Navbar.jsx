@@ -1,7 +1,7 @@
 import React, { useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { useSelector, useDispatch } from 'react-redux';
-import { FaShoppingCart, FaUser, FaTachometerAlt } from 'react-icons/fa';
+import { FaShoppingCart, FaUser, FaTachometerAlt, FaHeart } from 'react-icons/fa';
 import { logout } from '../../redux/slices/authSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
 import toast from 'react-hot-toast';
@@ -13,7 +13,6 @@ const Navbar = () => {
     const { itemCount } = useSelector((state) => state.cart);
 
     useEffect(() => {
-        // Refresh cart when component mounts or user changes
         if (token && user) {
             dispatch(fetchCart());
         }
@@ -53,6 +52,9 @@ const Navbar = () => {
                             </Link>
                             <Link to="/orders" style={styles.link}>
                                 Orders
+                            </Link>
+                            <Link to="/wishlist" style={styles.link}>
+                                <FaHeart /> Wishlist
                             </Link>
                             
                             {user.isAdmin && (
@@ -104,7 +106,6 @@ const styles = {
         fontWeight: 'bold',
         color: '#fff',
         textDecoration: 'none',
-        transition: 'opacity 0.3s',
     },
     navLinks: {
         display: 'flex',
@@ -119,7 +120,6 @@ const styles = {
         alignItems: 'center',
         gap: '0.5rem',
         transition: 'color 0.3s',
-        padding: '5px 0',
     },
     userLink: {
         color: '#fff',
@@ -127,8 +127,6 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
-        transition: 'color 0.3s',
-        padding: '5px 0',
     },
     adminLink: {
         color: '#ffc107',
@@ -136,8 +134,6 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         gap: '0.5rem',
-        transition: 'color 0.3s',
-        padding: '5px 0',
         fontWeight: '500',
     },
     cartLink: {
@@ -145,8 +141,6 @@ const styles = {
         textDecoration: 'none',
         position: 'relative',
         fontSize: '1.2rem',
-        transition: 'color 0.3s',
-        padding: '5px 0',
     },
     cartBadge: {
         position: 'absolute',
@@ -166,8 +160,6 @@ const styles = {
         padding: '5px 15px',
         borderRadius: '5px',
         cursor: 'pointer',
-        transition: 'all 0.3s',
-        fontSize: '14px',
     },
 };
 
