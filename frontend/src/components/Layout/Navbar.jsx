@@ -13,6 +13,7 @@ const Navbar = () => {
     const { itemCount } = useSelector((state) => state.cart);
 
     useEffect(() => {
+        // Refresh cart when component mounts or user changes
         if (token && user) {
             dispatch(fetchCart());
         }
@@ -54,7 +55,6 @@ const Navbar = () => {
                                 Orders
                             </Link>
                             
-                            {/* Admin Dashboard Link - Only visible to admin users */}
                             {user.isAdmin && (
                                 <Link to="/admin" style={styles.adminLink}>
                                     <FaTachometerAlt /> Admin
@@ -129,7 +129,6 @@ const styles = {
         gap: '0.5rem',
         transition: 'color 0.3s',
         padding: '5px 0',
-        borderBottom: '2px solid transparent',
     },
     adminLink: {
         color: '#ffc107',

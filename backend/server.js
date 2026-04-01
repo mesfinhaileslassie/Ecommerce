@@ -10,12 +10,11 @@ dotenv.config();
 const app = express();
 
 app.use(cors({
-    origin: 'http://localhost:3000',  // Allow frontend to connect
+    origin: 'http://localhost:3000',
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'OPTIONS'],
     allowedHeaders: ['Content-Type', 'Authorization']
 }));
-
 
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
@@ -50,6 +49,35 @@ const generateToken = (id) => {
 };
 
 // ============================================
+// REVIEW MODEL
+// ============================================
+const reviewSchema = new mongoose.Schema({
+    user: {
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'User',
+        required: true
+    },
+    name: {
+        type: String,
+        required: true
+    },
+    rating: {
+        type: Number,
+        required: true,
+        min: 1,
+        max: 5
+    },
+    comment: {
+        type: String,
+        required: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+
+// ============================================
 // PRODUCT MODEL
 // ============================================
 const productSchema = new mongoose.Schema({
@@ -63,13 +91,14 @@ const productSchema = new mongoose.Schema({
     rating: { type: Number, default: 0 },
     numReviews: { type: Number, default: 0 },
     isFeatured: { type: Boolean, default: false },
+    reviews: [reviewSchema],
     createdAt: { type: Date, default: Date.now }
 });
 
 const Product = mongoose.model('Product', productSchema);
 
 // ============================================
-// CART MODEL - NO PRE-SAVE HOOK
+// CART MODEL
 // ============================================
 const cartItemSchema = new mongoose.Schema({
     product: {
@@ -112,20 +141,8 @@ const cartSchema = new mongoose.Schema({
 
 const Cart = mongoose.model('Cart', cartSchema);
 
-// Helper function to calculate cart total
-async function updateCartTotal(cart) {
-    let total = 0;
-    for (const item of cart.items) {
-        total += item.price * item.quantity;
-    }
-    cart.totalPrice = total;
-    cart.updatedAt = Date.now();
-    await cart.save();
-    return cart;
-}
-
 // ============================================
-// ORDER MODEL - NO PRE-SAVE HOOK
+// ORDER MODEL
 // ============================================
 const orderItemSchema = new mongoose.Schema({
     product: {
@@ -224,6 +241,63 @@ const admin = async (req, res, next) => {
         res.status(401).json({ success: false, message: 'Not authorized' });
     }
 };
+
+// ============================================
+// REVIEW ROUTES (MOVED HERE - AFTER protect)
+// ============================================
+
+// Create product review
+app.post('/api/products/:id/reviews', protect, async (req, res) => {
+    try {
+        const { rating, comment } = req.body;
+        const product = await Product.findById(req.params.id);
+        
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        
+        // Check if user already reviewed
+        const alreadyReviewed = product.reviews.find(
+            r => r.user.toString() === req.userId.toString()
+        );
+        
+        if (alreadyReviewed) {
+            return res.status(400).json({ success: false, message: 'Product already reviewed' });
+        }
+        
+        const user = await User.findById(req.userId);
+        
+        const review = {
+            user: req.userId,
+            name: user.name,
+            rating: Number(rating),
+            comment,
+        };
+        
+        product.reviews.push(review);
+        product.numReviews = product.reviews.length;
+        product.rating = product.reviews.reduce((acc, item) => item.rating + acc, 0) / product.reviews.length;
+        
+        await product.save();
+        
+        res.status(201).json({ success: true, message: 'Review added', product });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get product reviews
+app.get('/api/products/:id/reviews', async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        res.json({ success: true, reviews: product.reviews, rating: product.rating, numReviews: product.numReviews });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 // ============================================
 // TEST ROUTES
@@ -406,7 +480,7 @@ app.delete('/api/products/:id', protect, admin, async (req, res) => {
 });
 
 // ============================================
-// CART ROUTES - WITH MANUAL TOTAL CALCULATION
+// CART ROUTES
 // ============================================
 
 // Get user's cart
@@ -472,7 +546,6 @@ app.post('/api/cart/add', protect, async (req, res) => {
             });
         }
         
-        // Manually calculate total
         let total = 0;
         for (const item of cart.items) {
             total += item.price * item.quantity;
@@ -492,10 +565,10 @@ app.post('/api/cart/add', protect, async (req, res) => {
             }
         });
     } catch (error) {
+        console.error('Add to cart error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 // Update cart item quantity
 app.put('/api/cart/update/:productId', protect, async (req, res) => {
@@ -527,7 +600,6 @@ app.put('/api/cart/update/:productId', protect, async (req, res) => {
         
         cart.items[itemIndex].quantity = quantity;
         
-        // Manually calculate total
         let total = 0;
         for (const item of cart.items) {
             total += item.price * item.quantity;
@@ -565,7 +637,6 @@ app.delete('/api/cart/remove/:productId', protect, async (req, res) => {
             item => item.product.toString() !== productId
         );
         
-        // Manually calculate total
         let total = 0;
         for (const item of cart.items) {
             total += item.price * item.quantity;
@@ -628,7 +699,6 @@ app.post('/api/orders', protect, async (req, res) => {
             return res.status(400).json({ success: false, message: 'Cart is empty' });
         }
         
-        // Check stock for all items
         for (const item of cart.items) {
             const product = await Product.findById(item.product);
             if (!product || product.countInStock < item.quantity) {
@@ -639,7 +709,6 @@ app.post('/api/orders', protect, async (req, res) => {
             }
         }
         
-        // Create order
         const order = new Order({
             user: req.userId,
             items: cart.items.map(item => ({
@@ -656,14 +725,12 @@ app.post('/api/orders', protect, async (req, res) => {
         
         await order.save();
         
-        // Update product stock
         for (const item of cart.items) {
             await Product.findByIdAndUpdate(item.product, {
                 $inc: { countInStock: -item.quantity }
             });
         }
         
-        // Clear cart
         cart.items = [];
         cart.totalPrice = 0;
         cart.updatedAt = Date.now();
@@ -698,7 +765,6 @@ app.get('/api/orders/:id', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
         
-        // Check if user owns order or is admin
         if (order.user.toString() !== req.userId) {
             const user = await User.findById(req.userId);
             if (!user.isAdmin) {
@@ -807,5 +873,8 @@ app.listen(PORT, () => {
     console.log(`\n📋 ORDERS:`);
     console.log(`   POST /api/orders`);
     console.log(`   GET  /api/orders/myorders`);
+    console.log(`\n⭐ REVIEWS:`);
+    console.log(`   POST /api/products/:id/reviews (Protected)`);
+    console.log(`   GET  /api/products/:id/reviews`);
     console.log(`=================================\n`);
 });

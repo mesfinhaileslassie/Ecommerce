@@ -9,30 +9,61 @@ const CartPage = () => {
     const dispatch = useDispatch();
     const { items, totalPrice, itemCount, loading } = useSelector((state) => state.cart);
     const { user, token } = useSelector((state) => state.auth);
+    const [updating, setUpdating] = React.useState(false);
 
     useEffect(() => {
         if (token && user) {
-            dispatch(fetchCart());
+            loadCart();
         }
     }, [dispatch, token, user]);
+
+    const loadCart = async () => {
+        try {
+            console.log('🔄 Loading cart...');
+            const result = await dispatch(fetchCart());
+            console.log('📦 Cart loaded:', result);
+        } catch (error) {
+            console.error('Failed to load cart:', error);
+        }
+    };
 
     const handleUpdateQuantity = async (productId, quantity) => {
         if (quantity < 1) {
             handleRemoveItem(productId);
             return;
         }
+        
+        setUpdating(true);
         try {
-            await dispatch(updateCartItem(productId, quantity)).unwrap();
-            toast.success('Cart updated');
+            console.log('✏️ Updating quantity:', { productId, quantity });
+            const result = await dispatch(updateCartItem(productId, quantity));
+            console.log('📦 Update result:', result);
+            
+            if (result.error) {
+                toast.error(result.error.message || 'Update failed');
+            } else {
+                toast.success('Cart updated');
+                // Force reload cart
+                await loadCart();
+            }
         } catch (error) {
-            toast.error(error.response?.data?.message || 'Update failed');
+            console.error('Update error:', error);
+            toast.error(error.message || 'Update failed');
+        } finally {
+            setUpdating(false);
         }
     };
 
     const handleRemoveItem = async (productId) => {
         try {
-            await dispatch(removeFromCart(productId)).unwrap();
-            toast.success('Item removed');
+            console.log('🗑️ Removing item:', productId);
+            const result = await dispatch(removeFromCart(productId));
+            if (result.error) {
+                toast.error(result.error.message || 'Remove failed');
+            } else {
+                toast.success('Item removed');
+                await loadCart();
+            }
         } catch (error) {
             toast.error('Remove failed');
         }
@@ -40,8 +71,17 @@ const CartPage = () => {
 
     const handleClearCart = async () => {
         if (window.confirm('Clear entire cart?')) {
-            await dispatch(clearCart());
-            toast.success('Cart cleared');
+            try {
+                const result = await dispatch(clearCart());
+                if (result.error) {
+                    toast.error(result.error.message || 'Clear failed');
+                } else {
+                    toast.success('Cart cleared');
+                    await loadCart();
+                }
+            } catch (error) {
+                toast.error('Clear failed');
+            }
         }
     };
 
@@ -91,6 +131,7 @@ const CartPage = () => {
                             <div style={styles.quantityControls}>
                                 <button 
                                     onClick={() => handleUpdateQuantity(item.product?._id || item.product, item.quantity - 1)}
+                                    disabled={updating}
                                     style={styles.qtyBtn}
                                 >
                                     <FaMinus />
@@ -98,6 +139,7 @@ const CartPage = () => {
                                 <span style={styles.quantity}>{item.quantity}</span>
                                 <button 
                                     onClick={() => handleUpdateQuantity(item.product?._id || item.product, item.quantity + 1)}
+                                    disabled={updating}
                                     style={styles.qtyBtn}
                                 >
                                     <FaPlus />

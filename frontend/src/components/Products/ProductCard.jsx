@@ -2,6 +2,7 @@ import React from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../redux/slices/cartSlice';
+import { fetchCart } from '../../redux/slices/cartSlice';
 import toast from 'react-hot-toast';
 
 const ProductCard = ({ product }) => {
@@ -31,6 +32,8 @@ const ProductCard = ({ product }) => {
                 toast.error(result.error.message || 'Failed to add to cart');
             } else {
                 toast.success(`${product.name} added to cart!`);
+                // Force refresh the cart to update the count in navbar and cart page
+                await dispatch(fetchCart());
             }
         } catch (error) {
             console.error('Add to cart error:', error);
