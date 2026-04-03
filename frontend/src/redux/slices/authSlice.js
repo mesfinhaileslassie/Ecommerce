@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import api from '../../services/api';
+import toast from 'react-hot-toast'; // Add this import
 
 const initialState = {
     user: localStorage.getItem('user') ? JSON.parse(localStorage.getItem('user')) : null,
@@ -27,6 +28,16 @@ const authSlice = createSlice({
             state.loading = false;
             state.error = action.payload;
         },
+        updateProfileSuccess: (state, action) => {
+            state.user = action.payload.user;
+            localStorage.setItem('user', JSON.stringify(action.payload.user));
+        },
+        updateAvatarSuccess: (state, action) => {
+            if (state.user) {
+                state.user.avatar = action.payload.avatar;
+                localStorage.setItem('user', JSON.stringify(state.user));
+            }
+        },
         logout: (state) => {
             state.user = null;
             state.token = null;
@@ -39,8 +50,17 @@ const authSlice = createSlice({
     },
 });
 
-export const { loginStart, loginSuccess, loginFailure, logout, clearError } = authSlice.actions;
+export const { 
+    loginStart, 
+    loginSuccess, 
+    loginFailure, 
+    updateProfileSuccess,
+    updateAvatarSuccess,
+    logout, 
+    clearError 
+} = authSlice.actions;
 
+// Login action
 export const login = (email, password) => async (dispatch) => {
     try {
         dispatch(loginStart());
@@ -54,6 +74,7 @@ export const login = (email, password) => async (dispatch) => {
     }
 };
 
+// Register action
 export const register = (name, email, password) => async (dispatch) => {
     try {
         dispatch(loginStart());
@@ -63,6 +84,36 @@ export const register = (name, email, password) => async (dispatch) => {
     } catch (error) {
         const message = error.response?.data?.message || 'Registration failed';
         dispatch(loginFailure(message));
+        throw new Error(message);
+    }
+};
+
+// Update Profile action
+export const updateProfile = (profileData) => async (dispatch) => {
+    try {
+        dispatch(loginStart());
+        const { data } = await api.put('/auth/profile', profileData);
+        dispatch(updateProfileSuccess(data));
+        toast.success('Profile updated successfully!');
+        return data;
+    } catch (error) {
+        const message = error.response?.data?.message || 'Update failed';
+        dispatch(loginFailure(message));
+        toast.error(message);
+        throw new Error(message);
+    }
+};
+
+// Update Avatar action
+export const updateAvatar = (avatar) => async (dispatch) => {
+    try {
+        const { data } = await api.post('/auth/avatar', { avatar });
+        dispatch(updateAvatarSuccess(data));
+        toast.success('Avatar updated successfully!');
+        return data;
+    } catch (error) {
+        const message = error.response?.data?.message || 'Avatar update failed';
+        toast.error(message);
         throw new Error(message);
     }
 };

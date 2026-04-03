@@ -11,9 +11,21 @@ const ProfilePage = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     
-    const { user, loading: authLoading } = useSelector((state) => state.auth);
-    const { orders, loading: ordersLoading } = useSelector((state) => state.orders);
-    const { items: wishlistItems, loading: wishlistLoading } = useSelector((state) => state.wishlist);
+    // Get state from Redux
+    const { user, loading: authLoading } = useSelector((state) => {
+        console.log('🟢 Auth state:', state.auth.user?.name || 'No user');
+        return state.auth;
+    });
+    
+    const { orders, loading: ordersLoading, error: ordersError } = useSelector((state) => {
+        console.log('🟢 Orders state:', state.orders.orders?.length || 0, 'orders');
+        return state.orders;
+    });
+    
+    const { items: wishlistItems, loading: wishlistLoading, error: wishlistError } = useSelector((state) => {
+        console.log('🟢 Wishlist state:', state.wishlist.items?.length || 0, 'items');
+        return state.wishlist;
+    });
     
     const [isEditing, setIsEditing] = useState(false);
     const [formData, setFormData] = useState({
@@ -27,27 +39,34 @@ const ProfilePage = () => {
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
 
     // Fetch orders and wishlist when component mounts
-    useEffect(() => {
-        console.log('🔍 ProfilePage mounted');
-        console.log('👤 User exists?', !!user);
+   useEffect(() => {
+    console.log('🔍 ProfilePage useEffect - Component mounted');
+    console.log('👤 User object:', user);
+    console.log('👤 User ID:', user?._id);
+    
+    if (user && user._id) {
+        console.log('📊 Calling fetchMyOrders...');
+        const result = dispatch(fetchMyOrders());
+        console.log('📊 fetchMyOrders result:', result);
         
-        if (user) {
-            console.log('📊 Dispatching fetchMyOrders...');
-            dispatch(fetchMyOrders());
-            console.log('💖 Dispatching fetchWishlist...');
-            dispatch(fetchWishlist());
-        }
-    }, [dispatch, user]);
+        console.log('💖 Calling fetchWishlist...');
+        dispatch(fetchWishlist());
+    } else {
+        console.log('⚠️ No user found, user object:', user);
+    }
+}, [dispatch, user]);
 
     // Debug logging for counts
     useEffect(() => {
-        console.log('========== STATE UPDATE ==========');
-        console.log('Orders:', orders);
-        console.log('Order count:', orders?.length || 0);
-        console.log('Wishlist items:', wishlistItems);
-        console.log('Wishlist count:', wishlistItems?.length || 0);
-        console.log('==================================');
-    }, [orders, wishlistItems]);
+        console.log('========== PROFILE PAGE STATE UPDATE ==========');
+        console.log('📦 Orders array:', orders);
+        console.log('📊 Order count:', orders?.length || 0);
+        console.log('💖 Wishlist items:', wishlistItems);
+        console.log('💖 Wishlist count:', wishlistItems?.length || 0);
+        if (ordersError) console.log('❌ Orders error:', ordersError);
+        if (wishlistError) console.log('❌ Wishlist error:', wishlistError);
+        console.log('===============================================');
+    }, [orders, wishlistItems, ordersError, wishlistError]);
 
     const handleChange = (e) => {
         setFormData({
@@ -133,8 +152,37 @@ const ProfilePage = () => {
         navigate('/');
     };
 
+    console.log('🔍 ProfilePage rendering, user:', user?.name);
+
+
+    // Format date safely
+    const formatDate = (dateString) => {
+        if (!dateString) return 'Recently joined';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Recently joined';
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        } catch (error) {
+            return 'Recently joined';
+        }
+    };
+
+    // Get avatar URL with fallback
+    const getAvatarUrl = () => {
+        if (avatarPreview) return avatarPreview;
+        if (user?.avatar) return user.avatar;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=6366f1&color=fff&size=120`;
+    };
+
+    // Get counts safely
     const orderCount = Array.isArray(orders) ? orders.length : 0;
     const wishlistCount = Array.isArray(wishlistItems) ? wishlistItems.length : 0;
+
+    console.log('🎯 RENDERING PROFILE PAGE - Order count:', orderCount, 'Wishlist count:', wishlistCount);
 
     if (!user) {
         return (
@@ -164,7 +212,7 @@ const ProfilePage = () => {
                     <div style={styles.avatarSection}>
                         <div style={styles.avatarContainer}>
                             <img 
-                                src={avatarPreview || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff&size=120`} 
+                                src={getAvatarUrl()} 
                                 alt={user.name}
                                 style={styles.avatar}
                             />
@@ -182,6 +230,9 @@ const ProfilePage = () => {
                         </div>
                         <h2 style={styles.userName}>{user.name}</h2>
                         <p style={styles.userEmail}>{user.email}</p>
+                        <p style={styles.userSince}>
+                            Member since {formatDate(user.createdAt)}
+                        </p>
                         <button onClick={handleLogout} style={styles.logoutBtn}>
                             <FaSignOutAlt /> Logout
                         </button>
@@ -189,17 +240,21 @@ const ProfilePage = () => {
                     
                     <div style={styles.statsSection}>
                         <Link to="/orders" style={styles.statItem}>
-                            <FaShoppingBag size={24} />
+                            <div style={styles.statIconContainer}>
+                                <FaShoppingBag style={styles.statIcon} />
+                            </div>
                             <div>
-                                <h3>{orderCount}</h3>
-                                <p>Orders</p>
+                                <h3 style={styles.statNumber}>{orderCount}</h3>
+                                <p style={styles.statLabel}>Orders</p>
                             </div>
                         </Link>
                         <Link to="/wishlist" style={styles.statItem}>
-                            <FaHeart size={24} />
+                            <div style={styles.statIconContainer}>
+                                <FaHeart style={styles.statIcon} />
+                            </div>
                             <div>
-                                <h3>{wishlistCount}</h3>
-                                <p>Wishlist</p>
+                                <h3 style={styles.statNumber}>{wishlistCount}</h3>
+                                <p style={styles.statLabel}>Wishlist</p>
                             </div>
                         </Link>
                     </div>
@@ -229,6 +284,7 @@ const ProfilePage = () => {
                                     onChange={handleChange}
                                     required
                                     style={styles.input}
+                                    placeholder="Enter your full name"
                                 />
                             </div>
                             
@@ -243,6 +299,7 @@ const ProfilePage = () => {
                                     onChange={handleChange}
                                     required
                                     style={styles.input}
+                                    placeholder="Enter your email"
                                 />
                             </div>
                             
@@ -329,18 +386,40 @@ const ProfilePage = () => {
                             </div>
                             <div style={styles.infoRow}>
                                 <strong>Member Since:</strong>
-                                <span>{new Date(user.createdAt).toLocaleDateString()}</span>
+                                <span>{formatDate(user.createdAt)}</span>
                             </div>
                             <div style={styles.infoRow}>
                                 <strong>Total Orders:</strong>
-                                <span style={{ fontWeight: 'bold', color: '#28a745' }}>{orderCount}</span>
+                                <span style={styles.orderCount}>{orderCount}</span>
                             </div>
                             <div style={styles.infoRow}>
                                 <strong>Wishlist Items:</strong>
-                                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>{wishlistCount}</span>
+                                <span style={styles.wishlistCount}>{wishlistCount}</span>
                             </div>
                         </div>
                     )}
+                </div>
+            </div>
+            
+            {/* Quick Links */}
+            <div style={styles.quickLinks}>
+                <h2 style={styles.sectionTitle}>Quick Actions</h2>
+                <div style={styles.linksGrid}>
+                    <Link to="/orders" style={styles.linkCard}>
+                        <FaShoppingBag size={24} />
+                        <span>My Orders</span>
+                        <p>{orderCount} order{orderCount !== 1 ? 's' : ''}</p>
+                    </Link>
+                    <Link to="/wishlist" style={styles.linkCard}>
+                        <FaHeart size={24} />
+                        <span>Wishlist</span>
+                        <p>{wishlistCount} item{wishlistCount !== 1 ? 's' : ''}</p>
+                    </Link>
+                    <Link to="/checkout" style={styles.linkCard}>
+                        <FaMapMarkerAlt size={24} />
+                        <span>Checkout</span>
+                        <p>Complete purchase</p>
+                    </Link>
                 </div>
             </div>
         </div>
@@ -399,6 +478,7 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
+        transition: 'all 0.3s',
     },
     spinnerIcon: {
         animation: 'spin 1s linear infinite',
@@ -411,6 +491,11 @@ const styles = {
     userEmail: {
         color: '#666',
         fontSize: '0.875rem',
+        marginBottom: '5px',
+    },
+    userSince: {
+        color: '#999',
+        fontSize: '0.75rem',
         marginBottom: '15px',
     },
     logoutBtn: {
@@ -423,6 +508,8 @@ const styles = {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '8px',
+        fontSize: '0.875rem',
+        transition: 'all 0.3s',
     },
     statsSection: {
         display: 'flex',
@@ -435,8 +522,37 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
+        textAlign: 'left',
         textDecoration: 'none',
         color: 'inherit',
+        cursor: 'pointer',
+        transition: 'transform 0.3s',
+        padding: '10px',
+        borderRadius: '0.5rem',
+    },
+    statIconContainer: {
+        width: '40px',
+        height: '40px',
+        backgroundColor: '#f3f4f6',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    statIcon: {
+        fontSize: '20px',
+        color: '#6366f1',
+    },
+    statNumber: {
+        fontSize: '1.5rem',
+        fontWeight: 'bold',
+        color: '#333',
+        margin: 0,
+    },
+    statLabel: {
+        fontSize: '0.75rem',
+        color: '#666',
+        margin: 0,
     },
     editCard: {
         backgroundColor: '#fff',
@@ -482,6 +598,7 @@ const styles = {
         border: '1px solid #ddd',
         borderRadius: '0.5rem',
         fontSize: '1rem',
+        transition: 'all 0.3s',
     },
     divider: {
         height: '1px',
@@ -527,6 +644,41 @@ const styles = {
         padding: '10px 0',
         borderBottom: '1px solid #f0f0f0',
     },
+    orderCount: {
+        fontWeight: 'bold',
+        color: '#28a745',
+    },
+    wishlistCount: {
+        fontWeight: 'bold',
+        color: '#ef4444',
+    },
+    quickLinks: {
+        marginTop: '40px',
+    },
+    sectionTitle: {
+        fontSize: '1.25rem',
+        marginBottom: '20px',
+        color: '#333',
+    },
+    linksGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '20px',
+    },
+    linkCard: {
+        backgroundColor: '#fff',
+        padding: '20px',
+        borderRadius: '1rem',
+        textDecoration: 'none',
+        textAlign: 'center',
+        transition: 'all 0.3s',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        color: '#333',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '8px',
+    },
     center: {
         textAlign: 'center',
         padding: '50px',
@@ -552,8 +704,12 @@ const styles = {
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
     @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
     }
 `;
 document.head.appendChild(styleSheet);
