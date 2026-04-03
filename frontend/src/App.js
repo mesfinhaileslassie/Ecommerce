@@ -22,6 +22,7 @@ import AdminDashboardPage from './pages/Admin/AdminDashboardPage';
 import AdminProductsPage from './pages/Admin/AdminProductsPage';
 import AdminOrdersPage from './pages/Admin/AdminOrdersPage';
 import AdminRoute from './components/Admin/AdminRoute';
+import AdminCouponsPage from './pages/Admin/AdminCouponsPage';
 
 import './styles/index.css';
 import './styles/App.css';
@@ -79,6 +80,14 @@ const AppContent = () => {
                             <AdminDashboardPage />
                         </AdminRoute>
                     } />
+
+
+                    <Route path="/admin/coupons" element={
+                    <AdminRoute>
+                        <AdminCouponsPage />
+                    </AdminRoute>
+                         } />
+
                     <Route path="/admin/products" element={
                         <AdminRoute>
                             <AdminProductsPage />

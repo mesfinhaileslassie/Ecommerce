@@ -301,6 +301,220 @@ const admin = async (req, res, next) => {
     }
 };
 
+
+// ============================================
+// COUPON MODEL
+// ============================================
+const couponSchema = new mongoose.Schema({
+    code: {
+        type: String,
+        required: true,
+        unique: true,
+        uppercase: true,
+        trim: true
+    },
+    description: {
+        type: String,
+        required: true
+    },
+    discountType: {
+        type: String,
+        enum: ['percentage', 'fixed'],
+        required: true
+    },
+    discountValue: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    minimumOrder: {
+        type: Number,
+        default: 0
+    },
+    maxDiscount: {
+        type: Number,
+        default: null
+    },
+    startDate: {
+        type: Date,
+        required: true,
+        default: Date.now
+    },
+    endDate: {
+        type: Date,
+        required: true
+    },
+    usageLimit: {
+        type: Number,
+        default: null
+    },
+    usedCount: {
+        type: Number,
+        default: 0
+    },
+    isActive: {
+        type: Boolean,
+        default: true
+    },
+    createdAt: {
+        type: Date,
+        default: Date.now
+    }
+});
+// ============================================
+// COUPON ROUTES
+// ============================================
+
+// Get all coupons (Admin only)
+app.get('/api/coupons', protect, admin, async (req, res) => {
+    try {
+        const coupons = await Coupon.find({}).sort({ createdAt: -1 });
+        res.json({ success: true, coupons });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get active coupons for customers
+app.get('/api/coupons/active', async (req, res) => {
+    try {
+        const now = new Date();
+        const coupons = await Coupon.find({
+            isActive: true,
+            startDate: { $lte: now },
+            endDate: { $gte: now }
+        });
+        res.json({ success: true, coupons });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Create coupon (Admin only)
+app.post('/api/coupons', protect, admin, async (req, res) => {
+    try {
+        const { code, description, discountType, discountValue, minimumOrder, maxDiscount, startDate, endDate, usageLimit } = req.body;
+        
+        const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
+        if (existingCoupon) {
+            return res.status(400).json({ success: false, message: 'Coupon code already exists' });
+        }
+        
+        const coupon = new Coupon({
+            code: code.toUpperCase(),
+            description,
+            discountType,
+            discountValue,
+            minimumOrder: minimumOrder || 0,
+            maxDiscount: maxDiscount || null,
+            startDate,
+            endDate,
+            usageLimit: usageLimit || null
+        });
+        
+        await coupon.save();
+        res.status(201).json({ success: true, coupon });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Validate coupon
+app.post('/api/coupons/validate', async (req, res) => {
+    try {
+        const { code, cartTotal } = req.body;
+        
+        const coupon = await Coupon.findOne({ 
+            code: code.toUpperCase(),
+            isActive: true,
+            startDate: { $lte: new Date() },
+            endDate: { $gte: new Date() }
+        });
+        
+        if (!coupon) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired coupon code' });
+        }
+        
+        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+            return res.status(400).json({ success: false, message: 'Coupon usage limit reached' });
+        }
+        
+        if (cartTotal < coupon.minimumOrder) {
+            return res.status(400).json({ 
+                success: false, 
+                message: `Minimum order amount of $${coupon.minimumOrder} required` 
+            });
+        }
+        
+        let discountAmount = 0;
+        if (coupon.discountType === 'percentage') {
+            discountAmount = (cartTotal * coupon.discountValue) / 100;
+            if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
+                discountAmount = coupon.maxDiscount;
+            }
+        } else {
+            discountAmount = coupon.discountValue;
+        }
+        
+        res.json({
+            success: true,
+            coupon: {
+                code: coupon.code,
+                description: coupon.description,
+                discountType: coupon.discountType,
+                discountValue: coupon.discountValue,
+                discountAmount: discountAmount.toFixed(2),
+                finalTotal: (cartTotal - discountAmount).toFixed(2)
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Apply coupon to order
+app.post('/api/coupons/apply', protect, async (req, res) => {
+    try {
+        const { code, orderId } = req.body;
+        
+        const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+        if (!coupon) {
+            return res.status(400).json({ success: false, message: 'Coupon not found' });
+        }
+        
+        coupon.usedCount += 1;
+        await coupon.save();
+        
+        res.json({ success: true, message: 'Coupon applied successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update coupon (Admin only)
+app.put('/api/coupons/:id', protect, admin, async (req, res) => {
+    try {
+        const coupon = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ success: true, coupon });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete coupon (Admin only)
+app.delete('/api/coupons/:id', protect, admin, async (req, res) => {
+    try {
+        await Coupon.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Coupon deleted' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+const Coupon = mongoose.model('Coupon', couponSchema);
+
+
+
 // ============================================
 // TEST ROUTES
 // ============================================
@@ -390,10 +604,94 @@ app.get('/api/auth/profile', protect, async (req, res) => {
 // ============================================
 
 // Get all products
+// Get all products with search, filter, and sort
 app.get('/api/products', async (req, res) => {
     try {
-        const products = await Product.find({});
-        res.json({ success: true, count: products.length, products });
+        const { 
+            keyword, 
+            category, 
+            minPrice, 
+            maxPrice, 
+            rating,
+            sortBy = 'createdAt',
+            order = 'desc',
+            page = 1,
+            limit = 12
+        } = req.query;
+        
+        // Build query object
+        let query = {};
+        
+        // Search by keyword (name or description)
+        if (keyword) {
+            query.$or = [
+                { name: { $regex: keyword, $options: 'i' } },
+                { description: { $regex: keyword, $options: 'i' } }
+            ];
+        }
+        
+        // Filter by category
+        if (category && category !== 'All') {
+            query.category = category;
+        }
+        
+        // Filter by price range
+        if (minPrice || maxPrice) {
+            query.price = {};
+            if (minPrice) query.price.$gte = Number(minPrice);
+            if (maxPrice) query.price.$lte = Number(maxPrice);
+        }
+        
+        // Filter by rating
+        if (rating) {
+            query.rating = { $gte: Number(rating) };
+        }
+        
+        // Build sort object
+        let sortObject = {};
+        switch(sortBy) {
+            case 'price':
+                sortObject.price = order === 'asc' ? 1 : -1;
+                break;
+            case 'rating':
+                sortObject.rating = order === 'asc' ? 1 : -1;
+                break;
+            case 'name':
+                sortObject.name = order === 'asc' ? 1 : -1;
+                break;
+            default:
+                sortObject.createdAt = -1;
+        }
+        
+        // Calculate pagination
+        const skip = (parseInt(page) - 1) * parseInt(limit);
+        
+        // Execute query
+        const products = await Product.find(query)
+            .sort(sortObject)
+            .skip(skip)
+            .limit(parseInt(limit));
+        
+        const total = await Product.countDocuments(query);
+        
+        res.json({
+            success: true,
+            products,
+            total,
+            page: parseInt(page),
+            pages: Math.ceil(total / parseInt(limit)),
+            filters: { keyword, category, minPrice, maxPrice, rating, sortBy, order }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get unique categories (for filter dropdown)
+app.get('/api/categories', async (req, res) => {
+    try {
+        const categories = await Product.distinct('category');
+        res.json({ success: true, categories });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

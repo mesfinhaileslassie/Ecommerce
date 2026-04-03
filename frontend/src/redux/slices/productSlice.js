@@ -61,11 +61,13 @@ export const {
     deleteProductSuccess,
 } = productSlice.actions;
 
-export const fetchProducts = () => async (dispatch) => {
+export const fetchProducts = (queryString = '') => async (dispatch) => {
     try {
         dispatch(fetchProductsStart());
-        const { data } = await api.get('/products');
+        const url = queryString ? `/products?${queryString}` : '/products';
+        const { data } = await api.get(url);
         dispatch(fetchProductsSuccess(data.products));
+        return data;
     } catch (error) {
         dispatch(fetchProductsFailure(error.response?.data?.message || 'Failed to fetch products'));
     }
