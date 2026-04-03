@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { FaPlus, FaEdit, FaTrash, FaTag, FaPercentage, FaDollarSign } from 'react-icons/fa';
+import { useSelector } from 'react-redux';
+import { FaPlus, FaEdit, FaTrash, FaTag, FaPercentage, FaDollarSign, FaBoxes } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -32,8 +32,10 @@ const AdminCouponsPage = () => {
     const fetchCoupons = async () => {
         try {
             const { data } = await api.get('/coupons');
+            console.log('Fetched coupons:', data.coupons);
             setCoupons(data.coupons);
         } catch (error) {
+            console.error('Failed to fetch coupons:', error);
             toast.error('Failed to fetch coupons');
         } finally {
             setLoading(false);
@@ -56,18 +58,41 @@ const AdminCouponsPage = () => {
             return;
         }
         
+        // Validate minimum items
+        const minimumItemsNum = parseInt(formData.minimumItems) || 0;
+        if (minimumItemsNum < 0) {
+            toast.error('Minimum items cannot be negative');
+            return;
+        }
+        
+        const couponData = {
+            code: formData.code,
+            description: formData.description,
+            discountType: formData.discountType,
+            discountValue: parseFloat(formData.discountValue),
+            minimumOrder: parseFloat(formData.minimumOrder) || 0,
+            minimumItems: minimumItemsNum,
+            maxDiscount: formData.maxDiscount ? parseFloat(formData.maxDiscount) : null,
+            startDate: formData.startDate,
+            endDate: formData.endDate,
+            usageLimit: formData.usageLimit ? parseInt(formData.usageLimit) : null,
+        };
+        
+        console.log('Sending coupon data:', couponData);
+        
         try {
             if (editingCoupon) {
-                await api.put(`/coupons/${editingCoupon._id}`, formData);
+                await api.put(`/coupons/${editingCoupon._id}`, couponData);
                 toast.success('Coupon updated successfully');
             } else {
-                await api.post('/coupons', formData);
+                await api.post('/coupons', couponData);
                 toast.success('Coupon created successfully');
             }
             fetchCoupons();
             setShowModal(false);
             resetForm();
         } catch (error) {
+            console.error('Error saving coupon:', error);
             toast.error(error.response?.data?.message || 'Operation failed');
         }
     };
@@ -92,6 +117,7 @@ const AdminCouponsPage = () => {
             discountType: coupon.discountType,
             discountValue: coupon.discountValue,
             minimumOrder: coupon.minimumOrder || '',
+            minimumItems: coupon.minimumItems || '',
             maxDiscount: coupon.maxDiscount || '',
             startDate: coupon.startDate.split('T')[0],
             endDate: coupon.endDate.split('T')[0],
@@ -108,6 +134,7 @@ const AdminCouponsPage = () => {
             discountType: 'percentage',
             discountValue: '',
             minimumOrder: '',
+            minimumItems: '',
             maxDiscount: '',
             startDate: '',
             endDate: '',
@@ -172,66 +199,79 @@ const AdminCouponsPage = () => {
                         <p>Fixed Discounts</p>
                     </div>
                 </div>
+                <div style={styles.statCard}>
+                    <FaBoxes size={24} color="#ef4444" />
+                    <div>
+                        <h3>{coupons.filter(c => (c.minimumItems || 0) > 0).length}</h3>
+                        <p>Has Item Min</p>
+                    </div>
+                </div>
             </div>
 
             <div style={styles.tableContainer}>
                 <table style={styles.table}>
-                    // Updated
-                        <thead>
-                            <tr>
-                                <th>Code</th>
-                                <th>Description</th>
-                                <th>Discount</th>
-                                <th>Min. Order</th>
-                                <th>Min. Items</th>  {/* Add this column */}
-                                <th>Valid Period</th>
-                                <th>Uses</th>
-                                <th>Status</th>
-                                <th>Actions</th>
+                    <thead>
+                        <tr>
+                            <th>Code</th>
+                            <th>Description</th>
+                            <th>Discount</th>
+                            <th>Min. Order</th>
+                            <th>Min. Items</th>
+                            <th>Valid Period</th>
+                            <th>Uses</th>
+                            <th>Status</th>
+                            <th>Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {coupons.map((coupon) => (
+                            <tr key={coupon._id}>
+                                <td style={styles.couponCode}>{coupon.code}</td>
+                                <td style={styles.descriptionCell}>{coupon.description}</td>
+                                <td style={styles.discountCell}>{getDiscountDisplay(coupon)}</td>
+                                <td>${coupon.minimumOrder || 0}</td>
+                                <td>
+                                    <span style={{
+                                        ...styles.itemsBadge,
+                                        backgroundColor: (coupon.minimumItems || 0) > 0 ? '#dbeafe' : '#f3f4f6',
+                                        color: (coupon.minimumItems || 0) > 0 ? '#1e40af' : '#6b7280',
+                                    }}>
+                                        <FaBoxes size={10} style={{ marginRight: '4px' }} />
+                                        {coupon.minimumItems || 0} item{(coupon.minimumItems || 0) !== 1 ? 's' : ''}
+                                    </span>
+                                </td>
+                                <td style={styles.dateCell}>
+                                    {new Date(coupon.startDate).toLocaleDateString()}<br />
+                                    <span style={styles.toText}>to</span><br />
+                                    {new Date(coupon.endDate).toLocaleDateString()}
+                                </td>
+                                <td>
+                                    {coupon.usedCount || 0}
+                                    {coupon.usageLimit && ` / ${coupon.usageLimit}`}
+                                </td>
+                                <td>
+                                    <button
+                                        onClick={() => toggleCouponStatus(coupon._id, coupon.isActive)}
+                                        style={{
+                                            ...styles.statusBtn,
+                                            backgroundColor: coupon.isActive ? '#d1fae5' : '#fee2e2',
+                                            color: coupon.isActive ? '#065f46' : '#991b1b',
+                                        }}
+                                    >
+                                        {coupon.isActive ? 'Active' : 'Inactive'}
+                                    </button>
+                                </td>
+                                <td>
+                                    <button onClick={() => handleEdit(coupon)} style={styles.editBtn} title="Edit">
+                                        <FaEdit />
+                                    </button>
+                                    <button onClick={() => handleDelete(coupon._id)} style={styles.deleteBtn} title="Delete">
+                                        <FaTrash />
+                                    </button>
+                                </td>
                             </tr>
-                        </thead>
-
-                        // Update the table body - add Min Items data
-                        <tbody>
-                            {coupons.map((coupon) => (
-                                <tr key={coupon._id}>
-                                    <td style={styles.couponCode}>{coupon.code}</td>
-                                    <td>{coupon.description}</td>
-                                    <td style={styles.discountCell}>{getDiscountDisplay(coupon)}</td>
-                                    <td>${coupon.minimumOrder || 0}</td>
-                                    <td>{coupon.minimumItems || 0} items</td>  {/* Add this line */}
-                                    <td style={styles.dateCell}>
-                                        {new Date(coupon.startDate).toLocaleDateString()}<br />
-                                        <span style={styles.toText}>to</span><br />
-                                        {new Date(coupon.endDate).toLocaleDateString()}
-                                    </td>
-                                    <td>
-                                        {coupon.usedCount || 0}
-                                        {coupon.usageLimit && ` / ${coupon.usageLimit}`}
-                                    </td>
-                                    <td>
-                                        <button
-                                            onClick={() => toggleCouponStatus(coupon._id, coupon.isActive)}
-                                            style={{
-                                                ...styles.statusBtn,
-                                                backgroundColor: coupon.isActive ? '#d1fae5' : '#fee2e2',
-                                                color: coupon.isActive ? '#065f46' : '#991b1b',
-                                            }}
-                                        >
-                                            {coupon.isActive ? 'Active' : 'Inactive'}
-                                        </button>
-                                    </td>
-                                    <td>
-                                        <button onClick={() => handleEdit(coupon)} style={styles.editBtn} title="Edit">
-                                            <FaEdit />
-                                        </button>
-                                        <button onClick={() => handleDelete(coupon._id)} style={styles.deleteBtn} title="Delete">
-                                            <FaTrash />
-                                        </button>
-                                    </td>
-                                </tr>
-                            ))}
-                        </tbody>
+                        ))}
+                    </tbody>
                 </table>
                 
                 {coupons.length === 0 && (
@@ -248,123 +288,153 @@ const AdminCouponsPage = () => {
                     <div style={styles.modalContent}>
                         <h2>{editingCoupon ? 'Edit Coupon' : 'Create New Coupon'}</h2>
                         <form onSubmit={handleSubmit} style={styles.form}>
-                            <input
-                                type="text"
-                                name="code"
-                                placeholder="Coupon Code (e.g., SAVE20)"
-                                value={formData.code}
-                                onChange={handleInputChange}
-                                required
-                                style={styles.input}
-                            />
-                            <textarea
-                                name="description"
-                                placeholder="Description"
-                                value={formData.description}
-                                onChange={handleInputChange}
-                                required
-                                style={styles.textarea}
-                            />
-                            
-                            <select
-                                name="discountType"
-                                value={formData.discountType}
-                                onChange={handleInputChange}
-                                style={styles.select}
-                            >
-                                <option value="percentage">Percentage Discount (%)</option>
-                                <option value="fixed">Fixed Amount Discount ($)</option>
-                            </select>
-                            
-                            <input
-                                type="number"
-                                name="discountValue"
-                                placeholder={formData.discountType === 'percentage' ? 'Discount Percentage (e.g., 20)' : 'Discount Amount (e.g., 10)'}
-                                value={formData.discountValue}
-                                onChange={handleInputChange}
-                                required
-                                style={styles.input}
-                            />
-                            
-                            <input
-                                type="number"
-                                name="minimumOrder"
-                                placeholder="Minimum Order Amount (optional)"
-                                value={formData.minimumOrder}
-                                onChange={handleInputChange}
-                                style={styles.input}
-                            />
-
-
-                            <input
-                                    type="number"
-                                    name="minimumItems"
-                                    placeholder="Minimum Items Required (e.g., 3)"
-                                    value={formData.minimumItems}
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Coupon Code</label>
+                                <input
+                                    type="text"
+                                    name="code"
+                                    placeholder="e.g., SUMMER20"
+                                    value={formData.code}
                                     onChange={handleInputChange}
+                                    required
                                     style={styles.input}
                                 />
-
+                                <small style={styles.hint}>Code will be automatically converted to uppercase</small>
+                            </div>
+                            
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Description</label>
+                                <textarea
+                                    name="description"
+                                    placeholder="Describe the coupon (e.g., 20% off summer sale)"
+                                    value={formData.description}
+                                    onChange={handleInputChange}
+                                    required
+                                    style={styles.textarea}
+                                />
+                            </div>
+                            
+                            <div style={styles.formRow}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Discount Type</label>
+                                    <select
+                                        name="discountType"
+                                        value={formData.discountType}
+                                        onChange={handleInputChange}
+                                        style={styles.select}
+                                    >
+                                        <option value="percentage">Percentage (%)</option>
+                                        <option value="fixed">Fixed Amount ($)</option>
+                                    </select>
+                                </div>
+                                
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>
+                                        {formData.discountType === 'percentage' ? 'Discount Percentage' : 'Discount Amount'}
+                                    </label>
+                                    <input
+                                        type="number"
+                                        name="discountValue"
+                                        placeholder={formData.discountType === 'percentage' ? 'e.g., 20' : 'e.g., 10'}
+                                        value={formData.discountValue}
+                                        onChange={handleInputChange}
+                                        required
+                                        style={styles.input}
+                                        step={formData.discountType === 'percentage' ? '1' : '0.01'}
+                                        min="0"
+                                    />
+                                </div>
+                            </div>
+                            
+                            <div style={styles.formRow}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Minimum Order Amount</label>
+                                    <input
+                                        type="number"
+                                        name="minimumOrder"
+                                        placeholder="e.g., 50 (leave 0 for no minimum)"
+                                        value={formData.minimumOrder}
+                                        onChange={handleInputChange}
+                                        style={styles.input}
+                                        step="0.01"
+                                        min="0"
+                                    />
+                                    <small style={styles.hint}>Minimum cart total required</small>
+                                </div>
+                                
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Minimum Items Required</label>
+                                    <input
+                                        type="number"
+                                        name="minimumItems"
+                                        placeholder="e.g., 3 (number of items in cart)"
+                                        value={formData.minimumItems}
+                                        onChange={handleInputChange}
+                                        style={styles.input}
+                                        min="0"
+                                        step="1"
+                                    />
+                                    <small style={styles.hint}>Minimum number of items in cart</small>
+                                </div>
+                            </div>
                             
                             {formData.discountType === 'percentage' && (
-                                <input
-                                    type="number"
-                                    name="maxDiscount"
-                                    placeholder="Maximum Discount Amount (optional)"
-                                    value={formData.maxDiscount}
-                                    onChange={handleInputChange}
-                                    style={styles.input}
-                                />
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Maximum Discount Amount (Optional)</label>
+                                    <input
+                                        type="number"
+                                        name="maxDiscount"
+                                        placeholder="e.g., 100 (max discount amount)"
+                                        value={formData.maxDiscount}
+                                        onChange={handleInputChange}
+                                        style={styles.input}
+                                        step="0.01"
+                                        min="0"
+                                    />
+                                    <small style={styles.hint}>Limit the maximum discount for percentage coupons</small>
+                                </div>
                             )}
                             
-                            <div style={styles.dateGroup}>
-                                <input
-                                    type="date"
-                                    name="startDate"
-                                    value={formData.startDate}
-                                    onChange={handleInputChange}
-                                    required
-                                    style={styles.dateInput}
-                                />
-                                <span>to</span>
-                                <input
-                                    type="date"
-                                    name="endDate"
-                                    value={formData.endDate}
-                                    onChange={handleInputChange}
-                                    required
-                                    style={styles.dateInput}
-                                />
+                            <div style={styles.formRow}>
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>Start Date</label>
+                                    <input
+                                        type="date"
+                                        name="startDate"
+                                        value={formData.startDate}
+                                        onChange={handleInputChange}
+                                        required
+                                        style={styles.input}
+                                    />
+                                </div>
+                                
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>End Date</label>
+                                    <input
+                                        type="date"
+                                        name="endDate"
+                                        value={formData.endDate}
+                                        onChange={handleInputChange}
+                                        required
+                                        style={styles.input}
+                                    />
+                                </div>
                             </div>
                             
-                            <input
-                                type="number"
-                                name="usageLimit"
-                                placeholder="Usage Limit (optional)"
-                                value={formData.usageLimit}
-                                onChange={handleInputChange}
-                                style={styles.input}
-                            />
-                            
-
-                            //validation to ensure minimum items is set
                             <div style={styles.formGroup}>
-                                <label style={styles.label}>Minimum Items Required</label>
+                                <label style={styles.label}>Usage Limit (Optional)</label>
                                 <input
                                     type="number"
-                                    name="minimumItems"
-                                    placeholder="e.g., 3 (customer must buy at least 3 items)"
-                                    value={formData.minimumItems}
+                                    name="usageLimit"
+                                    placeholder="e.g., 100 (maximum number of times coupon can be used)"
+                                    value={formData.usageLimit}
                                     onChange={handleInputChange}
                                     style={styles.input}
-                                    min="0"
+                                    min="1"
                                 />
-                                <small style={styles.hintText}>Leave 0 or empty for no minimum item requirement</small>
+                                <small style={styles.hint}>Leave empty for unlimited uses</small>
                             </div>
-
                             
-
-
                             <div style={styles.modalButtons}>
                                 <button type="submit" style={styles.saveBtn}>
                                     {editingCoupon ? 'Update' : 'Create'}
@@ -441,25 +511,39 @@ const styles = {
     table: {
         width: '100%',
         borderCollapse: 'collapse',
-        minWidth: '800px',
+        minWidth: '900px',
     },
     couponCode: {
         fontWeight: 'bold',
         fontFamily: 'monospace',
-        fontSize: '1rem',
+        fontSize: '0.9rem',
         color: '#6366f1',
+    },
+    descriptionCell: {
+        maxWidth: '200px',
+        whiteSpace: 'nowrap',
+        overflow: 'hidden',
+        textOverflow: 'ellipsis',
     },
     discountCell: {
         fontWeight: 'bold',
         color: '#10b981',
     },
     dateCell: {
-        fontSize: '0.8rem',
+        fontSize: '0.75rem',
         lineHeight: '1.4',
     },
     toText: {
-        fontSize: '0.7rem',
+        fontSize: '0.65rem',
         color: '#999',
+    },
+    itemsBadge: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        padding: '4px 8px',
+        borderRadius: '20px',
+        fontSize: '12px',
+        fontWeight: '500',
     },
     statusBtn: {
         padding: '4px 12px',
@@ -503,7 +587,7 @@ const styles = {
         padding: '30px',
         borderRadius: '1rem',
         width: '90%',
-        maxWidth: '500px',
+        maxWidth: '600px',
         maxHeight: '90vh',
         overflow: 'auto',
     },
@@ -512,17 +596,32 @@ const styles = {
         flexDirection: 'column',
         gap: '15px',
     },
+    formGroup: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '5px',
+    },
+    formRow: {
+        display: 'grid',
+        gridTemplateColumns: '1fr 1fr',
+        gap: '15px',
+    },
+    label: {
+        fontWeight: '500',
+        fontSize: '0.85rem',
+        color: '#555',
+    },
     input: {
         padding: '10px',
         border: '1px solid #ddd',
         borderRadius: '0.5rem',
-        fontSize: '1rem',
+        fontSize: '0.9rem',
     },
     textarea: {
         padding: '10px',
         border: '1px solid #ddd',
         borderRadius: '0.5rem',
-        fontSize: '1rem',
+        fontSize: '0.9rem',
         minHeight: '80px',
         fontFamily: 'inherit',
     },
@@ -530,20 +629,13 @@ const styles = {
         padding: '10px',
         border: '1px solid #ddd',
         borderRadius: '0.5rem',
-        fontSize: '1rem',
+        fontSize: '0.9rem',
         backgroundColor: '#fff',
     },
-    dateGroup: {
-        display: 'flex',
-        gap: '10px',
-        alignItems: 'center',
-    },
-    dateInput: {
-        flex: 1,
-        padding: '10px',
-        border: '1px solid #ddd',
-        borderRadius: '0.5rem',
-        fontSize: '1rem',
+    hint: {
+        fontSize: '0.7rem',
+        color: '#999',
+        marginTop: '2px',
     },
     modalButtons: {
         display: 'flex',
