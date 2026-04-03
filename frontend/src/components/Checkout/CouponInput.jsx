@@ -1,35 +1,45 @@
 import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { validateCoupon, clearCoupon } from '../../redux/slices/couponSlice';
-import { FaTag, FaCheck, FaTimes, FaSpinner } from 'react-icons/fa';
+import { FaTag, FaCheck, FaTimes, FaSpinner, FaBoxes } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
-const CouponInput = ({ cartTotal, onDiscountChange }) => {
+const CouponInput = ({ cartTotal, cartItemsCount, onDiscountChange }) => {
     const dispatch = useDispatch();
     const { appliedCoupon, discountAmount, loading, error } = useSelector((state) => state.coupons);
     const [couponCode, setCouponCode] = useState('');
     const [isApplying, setIsApplying] = useState(false);
 
-    const handleApplyCoupon = async () => {
-        if (!couponCode.trim()) {
-            toast.error('Please enter a coupon code');
-            return;
-        }
+// Update the handleApplyCoupon function
+const handleApplyCoupon = async () => {
+    if (!couponCode.trim()) {
+        toast.error('Please enter a coupon code');
+        return;
+    }
 
-        setIsApplying(true);
-        const result = await dispatch(validateCoupon(couponCode, cartTotal));
+    setIsApplying(true);
+    try {
+        const result = await dispatch(validateCoupon(couponCode, cartTotal, cartItemsCount));
+        console.log('Coupon validation result:', result);
+        
         if (result.success && result.data) {
             toast.success('Coupon applied successfully!');
-            // Ensure discountAmount is a number
             const discount = parseFloat(result.data.coupon.discountAmount) || 0;
             if (onDiscountChange && typeof onDiscountChange === 'function') {
                 onDiscountChange(discount);
             }
         } else if (result.error) {
-            toast.error(result.error.message);
+            // Display the specific error message from backend
+            const errorMsg = result.error.message || 'Invalid coupon code';
+            toast.error(errorMsg);
         }
+    } catch (error) {
+        console.error('Coupon error:', error);
+        toast.error(error.response?.data?.message || 'Failed to apply coupon');
+    } finally {
         setIsApplying(false);
-    };
+    }
+};
 
     const handleRemoveCoupon = () => {
         dispatch(clearCoupon());
@@ -40,7 +50,6 @@ const CouponInput = ({ cartTotal, onDiscountChange }) => {
         toast.success('Coupon removed');
     };
 
-    // Ensure discountAmount is a number for display
     const displayDiscount = typeof discountAmount === 'number' ? discountAmount : 0;
 
     return (
@@ -56,6 +65,18 @@ const CouponInput = ({ cartTotal, onDiscountChange }) => {
                         <div>
                             <strong>{appliedCoupon.code}</strong>
                             <p style={styles.couponDesc}>{appliedCoupon.description}</p>
+                            <div style={styles.couponRequirements}>
+                                {appliedCoupon.minimumItems > 0 && (
+                                    <span style={styles.requirementBadge}>
+                                        <FaBoxes /> Min {appliedCoupon.minimumItems} items
+                                    </span>
+                                )}
+                                {appliedCoupon.minimumOrder > 0 && (
+                                    <span style={styles.requirementBadge}>
+                                        Min ${appliedCoupon.minimumOrder} order
+                                    </span>
+                                )}
+                            </div>
                             <span style={styles.discountText}>
                                 {appliedCoupon.discountType === 'percentage' 
                                     ? `${appliedCoupon.discountValue}% OFF` 
@@ -98,6 +119,11 @@ const CouponInput = ({ cartTotal, onDiscountChange }) => {
                     <strong>${displayDiscount.toFixed(2)}</strong>
                 </div>
             )}
+
+            {/* Show cart items count */}
+            <div style={styles.cartInfo}>
+                <FaBoxes /> {cartItemsCount} item{cartItemsCount !== 1 ? 's' : ''} in cart
+            </div>
         </div>
     );
 };
@@ -154,17 +180,34 @@ const styles = {
     },
     couponInfo: {
         display: 'flex',
-        alignItems: 'center',
+        alignItems: 'flex-start',
         gap: '0.75rem',
+        flex: 1,
     },
     checkIcon: {
         color: '#10b981',
         fontSize: '1.2rem',
+        marginTop: '0.2rem',
     },
     couponDesc: {
         fontSize: '0.8rem',
         color: '#065f46',
         marginTop: '2px',
+    },
+    couponRequirements: {
+        display: 'flex',
+        gap: '0.5rem',
+        marginTop: '0.25rem',
+        flexWrap: 'wrap',
+    },
+    requirementBadge: {
+        fontSize: '0.7rem',
+        backgroundColor: '#a7f3d0',
+        padding: '2px 6px',
+        borderRadius: '10px',
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '3px',
     },
     discountText: {
         fontSize: '0.75rem',
@@ -204,6 +247,16 @@ const styles = {
         display: 'flex',
         justifyContent: 'space-between',
         fontSize: '0.9rem',
+    },
+    cartInfo: {
+        marginTop: '0.75rem',
+        paddingTop: '0.75rem',
+        borderTop: '1px solid #e5e7eb',
+        fontSize: '0.8rem',
+        color: '#666',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '0.5rem',
     },
     spinner: {
         animation: 'spin 1s linear infinite',

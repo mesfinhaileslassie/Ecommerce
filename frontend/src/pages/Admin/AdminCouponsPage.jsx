@@ -16,6 +16,7 @@ const AdminCouponsPage = () => {
         discountType: 'percentage',
         discountValue: '',
         minimumOrder: '',
+        minimumItems: '',
         maxDiscount: '',
         startDate: '',
         endDate: '',
@@ -175,57 +176,62 @@ const AdminCouponsPage = () => {
 
             <div style={styles.tableContainer}>
                 <table style={styles.table}>
-                    <thead>
-                        <tr>
-                            <th>Code</th>
-                            <th>Description</th>
-                            <th>Discount</th>
-                            <th>Min. Order</th>
-                            <th>Valid Period</th>
-                            <th>Uses</th>
-                            <th>Status</th>
-                            <th>Actions</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {coupons.map((coupon) => (
-                            <tr key={coupon._id}>
-                                <td style={styles.couponCode}>{coupon.code}</td>
-                                <td>{coupon.description}</td>
-                                <td style={styles.discountCell}>{getDiscountDisplay(coupon)}</td>
-                                <td>${coupon.minimumOrder || 0}</td>
-                                <td style={styles.dateCell}>
-                                    {new Date(coupon.startDate).toLocaleDateString()}<br />
-                                    <span style={styles.toText}>to</span><br />
-                                    {new Date(coupon.endDate).toLocaleDateString()}
-                                </td>
-                                <td>
-                                    {coupon.usedCount || 0}
-                                    {coupon.usageLimit && ` / ${coupon.usageLimit}`}
-                                </td>
-                                <td>
-                                    <button
-                                        onClick={() => toggleCouponStatus(coupon._id, coupon.isActive)}
-                                        style={{
-                                            ...styles.statusBtn,
-                                            backgroundColor: coupon.isActive ? '#d1fae5' : '#fee2e2',
-                                            color: coupon.isActive ? '#065f46' : '#991b1b',
-                                        }}
-                                    >
-                                        {coupon.isActive ? 'Active' : 'Inactive'}
-                                    </button>
-                                </td>
-                                <td>
-                                    <button onClick={() => handleEdit(coupon)} style={styles.editBtn} title="Edit">
-                                        <FaEdit />
-                                    </button>
-                                    <button onClick={() => handleDelete(coupon._id)} style={styles.deleteBtn} title="Delete">
-                                        <FaTrash />
-                                    </button>
-                                </td>
+                    // Updated
+                        <thead>
+                            <tr>
+                                <th>Code</th>
+                                <th>Description</th>
+                                <th>Discount</th>
+                                <th>Min. Order</th>
+                                <th>Min. Items</th>  {/* Add this column */}
+                                <th>Valid Period</th>
+                                <th>Uses</th>
+                                <th>Status</th>
+                                <th>Actions</th>
                             </tr>
-                        ))}
-                    </tbody>
+                        </thead>
+
+                        // Update the table body - add Min Items data
+                        <tbody>
+                            {coupons.map((coupon) => (
+                                <tr key={coupon._id}>
+                                    <td style={styles.couponCode}>{coupon.code}</td>
+                                    <td>{coupon.description}</td>
+                                    <td style={styles.discountCell}>{getDiscountDisplay(coupon)}</td>
+                                    <td>${coupon.minimumOrder || 0}</td>
+                                    <td>{coupon.minimumItems || 0} items</td>  {/* Add this line */}
+                                    <td style={styles.dateCell}>
+                                        {new Date(coupon.startDate).toLocaleDateString()}<br />
+                                        <span style={styles.toText}>to</span><br />
+                                        {new Date(coupon.endDate).toLocaleDateString()}
+                                    </td>
+                                    <td>
+                                        {coupon.usedCount || 0}
+                                        {coupon.usageLimit && ` / ${coupon.usageLimit}`}
+                                    </td>
+                                    <td>
+                                        <button
+                                            onClick={() => toggleCouponStatus(coupon._id, coupon.isActive)}
+                                            style={{
+                                                ...styles.statusBtn,
+                                                backgroundColor: coupon.isActive ? '#d1fae5' : '#fee2e2',
+                                                color: coupon.isActive ? '#065f46' : '#991b1b',
+                                            }}
+                                        >
+                                            {coupon.isActive ? 'Active' : 'Inactive'}
+                                        </button>
+                                    </td>
+                                    <td>
+                                        <button onClick={() => handleEdit(coupon)} style={styles.editBtn} title="Edit">
+                                            <FaEdit />
+                                        </button>
+                                        <button onClick={() => handleDelete(coupon._id)} style={styles.deleteBtn} title="Delete">
+                                            <FaTrash />
+                                        </button>
+                                    </td>
+                                </tr>
+                            ))}
+                        </tbody>
                 </table>
                 
                 {coupons.length === 0 && (
@@ -288,6 +294,17 @@ const AdminCouponsPage = () => {
                                 onChange={handleInputChange}
                                 style={styles.input}
                             />
+
+
+                            <input
+                                    type="number"
+                                    name="minimumItems"
+                                    placeholder="Minimum Items Required (e.g., 3)"
+                                    value={formData.minimumItems}
+                                    onChange={handleInputChange}
+                                    style={styles.input}
+                                />
+
                             
                             {formData.discountType === 'percentage' && (
                                 <input
@@ -329,6 +346,25 @@ const AdminCouponsPage = () => {
                                 style={styles.input}
                             />
                             
+
+                            //validation to ensure minimum items is set
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Minimum Items Required</label>
+                                <input
+                                    type="number"
+                                    name="minimumItems"
+                                    placeholder="e.g., 3 (customer must buy at least 3 items)"
+                                    value={formData.minimumItems}
+                                    onChange={handleInputChange}
+                                    style={styles.input}
+                                    min="0"
+                                />
+                                <small style={styles.hintText}>Leave 0 or empty for no minimum item requirement</small>
+                            </div>
+
+                            
+
+
                             <div style={styles.modalButtons}>
                                 <button type="submit" style={styles.saveBtn}>
                                     {editingCoupon ? 'Update' : 'Create'}

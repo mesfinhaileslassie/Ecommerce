@@ -69,13 +69,18 @@ export const fetchCoupons = () => async (dispatch) => {
     }
 };
 
-export const validateCoupon = (code, cartTotal) => async (dispatch) => {
+export const validateCoupon = (code, cartTotal, cartItemsCount) => async (dispatch) => {
     try {
         dispatch(validateCouponStart());
-        const { data } = await api.post('/coupons/validate', { code, cartTotal });
+        console.log('Validating coupon:', { code, cartTotal, cartItemsCount });
+        
+        const { data } = await api.post('/coupons/validate', { code, cartTotal, cartItemsCount });
+        console.log('Coupon validation response:', data);
+        
         dispatch(validateCouponSuccess(data));
         return { success: true, data };
     } catch (error) {
+        console.error('Coupon validation error:', error.response?.data);
         const message = error.response?.data?.message || 'Invalid coupon code';
         dispatch(validateCouponFailure(message));
         return { error: { message } };

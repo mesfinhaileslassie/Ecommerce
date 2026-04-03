@@ -181,6 +181,11 @@ const handleDiscountChange = (amount) => {
             </div>
         );
     }
+    const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
+    console.log('Cart items:', items);
+    console.log('Total items count:', totalItems);
+
+
 
     const finalTotal = calculateFinalTotal();
 
@@ -392,7 +397,11 @@ const handleDiscountChange = (amount) => {
                     </div>
                     
                     <div style={styles.couponSection}>
-                       <CouponInput cartTotal={totalPrice} onDiscountChange={handleDiscountChange} />
+                     <CouponInput 
+                            cartTotal={totalPrice} 
+                            cartItemsCount={totalItems}
+                            onDiscountChange={handleDiscountChange} 
+                        />
                     </div>
                     
                     <div style={styles.priceDetails}>

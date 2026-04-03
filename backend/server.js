@@ -303,64 +303,26 @@ const admin = async (req, res, next) => {
 
 
 // ============================================
-// COUPON MODEL
+// COUPON MODEL - Updated with minItems
 // ============================================
 const couponSchema = new mongoose.Schema({
-    code: {
-        type: String,
-        required: true,
-        unique: true,
-        uppercase: true,
-        trim: true
-    },
-    description: {
-        type: String,
-        required: true
-    },
-    discountType: {
-        type: String,
-        enum: ['percentage', 'fixed'],
-        required: true
-    },
-    discountValue: {
-        type: Number,
-        required: true,
-        min: 0
-    },
-    minimumOrder: {
-        type: Number,
-        default: 0
-    },
-    maxDiscount: {
-        type: Number,
-        default: null
-    },
-    startDate: {
-        type: Date,
-        required: true,
-        default: Date.now
-    },
-    endDate: {
-        type: Date,
-        required: true
-    },
-    usageLimit: {
-        type: Number,
-        default: null
-    },
-    usedCount: {
-        type: Number,
-        default: 0
-    },
-    isActive: {
-        type: Boolean,
-        default: true
-    },
-    createdAt: {
-        type: Date,
-        default: Date.now
-    }
+    code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    description: { type: String, required: true },
+    discountType: { type: String, enum: ['percentage', 'fixed'], required: true },
+    discountValue: { type: Number, required: true, min: 0 },
+    minimumOrder: { type: Number, default: 0 },
+    minimumItems: { type: Number, default: 0 },  // Make sure this line exists
+    maxDiscount: { type: Number, default: null },
+    startDate: { type: Date, required: true, default: Date.now },
+    endDate: { type: Date, required: true },
+    usageLimit: { type: Number, default: null },
+    usedCount: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now }
 });
+
+
+
 // ============================================
 // COUPON ROUTES
 // ============================================
@@ -393,7 +355,17 @@ app.get('/api/coupons/active', async (req, res) => {
 // Create coupon (Admin only)
 app.post('/api/coupons', protect, admin, async (req, res) => {
     try {
-        const { code, description, discountType, discountValue, minimumOrder, maxDiscount, startDate, endDate, usageLimit } = req.body;
+        const { 
+            code, description, discountType, discountValue, 
+            minimumOrder, minimumItems, maxDiscount, 
+            startDate, endDate, usageLimit 
+        } = req.body;
+        
+        console.log('Creating coupon with data:', { 
+            code, description, discountType, discountValue, 
+            minimumOrder, minimumItems, maxDiscount, 
+            startDate, endDate, usageLimit 
+        });
         
         const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
         if (existingCoupon) {
@@ -404,25 +376,30 @@ app.post('/api/coupons', protect, admin, async (req, res) => {
             code: code.toUpperCase(),
             description,
             discountType,
-            discountValue,
-            minimumOrder: minimumOrder || 0,
-            maxDiscount: maxDiscount || null,
+            discountValue: Number(discountValue),
+            minimumOrder: Number(minimumOrder) || 0,
+            minimumItems: Number(minimumItems) || 0,  // Make sure this is saved
+            maxDiscount: maxDiscount ? Number(maxDiscount) : null,
             startDate,
             endDate,
-            usageLimit: usageLimit || null
+            usageLimit: usageLimit ? Number(usageLimit) : null
         });
         
         await coupon.save();
+        console.log('Coupon created successfully:', coupon);
         res.status(201).json({ success: true, coupon });
     } catch (error) {
+        console.error('Create coupon error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// Validate coupon
+// Validate coupon - Fix minimum items validation
 app.post('/api/coupons/validate', async (req, res) => {
     try {
-        const { code, cartTotal } = req.body;
+        const { code, cartTotal, cartItemsCount } = req.body;
+        
+        console.log('Coupon validation request:', { code, cartTotal, cartItemsCount });
         
         const coupon = await Coupon.findOne({ 
             code: code.toUpperCase(),
@@ -435,15 +412,36 @@ app.post('/api/coupons/validate', async (req, res) => {
             return res.status(400).json({ success: false, message: 'Invalid or expired coupon code' });
         }
         
+        console.log('Found coupon:', { 
+            code: coupon.code, 
+            minimumItems: coupon.minimumItems,
+            minimumOrder: coupon.minimumOrder,
+            cartItemsCount: cartItemsCount,
+            cartTotal: cartTotal
+        });
+        
         if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
             return res.status(400).json({ success: false, message: 'Coupon usage limit reached' });
         }
         
-        if (cartTotal < coupon.minimumOrder) {
-            return res.status(400).json({ 
-                success: false, 
-                message: `Minimum order amount of $${coupon.minimumOrder} required` 
-            });
+        // Check minimum number of items - FIX THIS SECTION
+        if (coupon.minimumItems && coupon.minimumItems > 0) {
+            if (cartItemsCount < coupon.minimumItems) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `❌ This coupon requires ${coupon.minimumItems} or more items in your cart. You currently have ${cartItemsCount} item${cartItemsCount !== 1 ? 's' : ''}. Please add ${coupon.minimumItems - cartItemsCount} more item${coupon.minimumItems - cartItemsCount !== 1 ? 's' : ''} to use this coupon.` 
+                });
+            }
+        }
+        
+        // Check minimum order amount
+        if (coupon.minimumOrder && coupon.minimumOrder > 0) {
+            if (cartTotal < coupon.minimumOrder) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Minimum order amount of $${coupon.minimumOrder} required. Your total is $${cartTotal.toFixed(2)}.` 
+                });
+            }
         }
         
         let discountAmount = 0;
@@ -456,6 +454,11 @@ app.post('/api/coupons/validate', async (req, res) => {
             discountAmount = coupon.discountValue;
         }
         
+        // Ensure discount doesn't exceed cart total
+        if (discountAmount > cartTotal) {
+            discountAmount = cartTotal;
+        }
+        
         res.json({
             success: true,
             coupon: {
@@ -464,13 +467,19 @@ app.post('/api/coupons/validate', async (req, res) => {
                 discountType: coupon.discountType,
                 discountValue: coupon.discountValue,
                 discountAmount: discountAmount.toFixed(2),
-                finalTotal: (cartTotal - discountAmount).toFixed(2)
+                finalTotal: (cartTotal - discountAmount).toFixed(2),
+                minimumItems: coupon.minimumItems,
+                minimumOrder: coupon.minimumOrder
             }
         });
     } catch (error) {
+        console.error('Coupon validation error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+
 
 // Apply coupon to order
 app.post('/api/coupons/apply', protect, async (req, res) => {
