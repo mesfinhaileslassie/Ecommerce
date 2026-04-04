@@ -6,7 +6,6 @@ const jwt = require('jsonwebtoken');
 const cors = require('cors'); 
 const { OAuth2Client } = require('google-auth-library');
 
-
 dotenv.config();
 
 const app = express();
@@ -27,97 +26,6 @@ app.use((req, res, next) => {
     next();
 });
 
-
-
-// ============================================
-// GOOGLE AUTH ROUTE
-// ============================================
-
-// Initialize Google OAuth client
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-app.post('/api/auth/google', async (req, res) => {
-    const { token } = req.body;
-
-    if (!token) {
-        return res.status(400).json({ success: false, message: 'No token provided' });
-    }
-
-    try {
-        const ticket = await googleClient.verifyIdToken({
-            idToken: token,
-            audience: process.env.GOOGLE_CLIENT_ID,
-        });
-
-        const payload = ticket.getPayload();
-        const { email, name, picture, sub: googleId } = payload;
-
-        if (!email) {
-            return res.status(400).json({ success: false, message: 'Email not provided by Google' });
-        }
-
-        console.log(`🔐 Google login attempt for: ${email}`);
-
-        // Check if user exists
-        let user = await User.findOne({ email });
-
-        if (!user) {
-            // Create new user
-            const randomPassword = Math.random().toString(36).slice(-8);
-            const hashedPassword = await hashPassword(randomPassword);
-
-            user = new User({
-                name: name || email.split('@')[0],
-                email: email,
-                password: hashedPassword,
-                avatar: picture || '',
-                googleId: googleId, // Save Google ID
-                isAdmin: false,
-            });
-            await user.save();
-            console.log(`✅ New user created via Google: ${email}`);
-        } else {
-            // Update googleId if not already set
-            if (!user.googleId) {
-                user.googleId = googleId;
-                await user.save();
-            }
-            // Update avatar if not set
-            if (picture && !user.avatar) {
-                user.avatar = picture;
-                await user.save();
-            }
-            console.log(`✅ Existing user logged in via Google: ${email}`);
-        }
-
-        const appToken = generateToken(user._id);
-
-        res.json({
-            success: true,
-            message: 'Google login successful',
-            token: appToken,
-            user: {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                isAdmin: user.isAdmin,
-                avatar: user.avatar,
-                googleId: user.googleId,
-                createdAt: user.createdAt,
-            },
-        });
-
-    } catch (error) {
-        console.error('❌ Google token verification failed:', error);
-        res.status(401).json({ success: false, message: 'Google authentication failed' });
-    }
-});
-
-
-
-
-
-
-
 // ============================================
 // USER MODEL
 // ============================================
@@ -127,9 +35,9 @@ const userSchema = new mongoose.Schema({
     password: { type: String, required: true },
     isAdmin: { type: Boolean, default: false },
     avatar: { type: String, default: '' },
-    googleId: { type: String, default: null }, // Add this field
+    googleId: { type: String, default: null },
     createdAt: { type: Date, default: Date.now }
-})
+});
 
 const User = mongoose.model('User', userSchema);
 
@@ -142,6 +50,41 @@ async function hashPassword(password) {
 const generateToken = (id) => {
     return jwt.sign({ id }, process.env.JWT_SECRET, { expiresIn: '30d' });
 };
+
+// ============================================
+// SIZE VARIANT SCHEMA - Define BEFORE product
+// ============================================
+const sizeVariantSchema = new mongoose.Schema({
+    size: {
+        type: String,
+        required: true,
+        enum: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 
+               '28', '30', '32', '34', '36', '38', '40', '42', '44', '46',
+               '6', '7', '8', '9', '10', '11', '12', '13', '14',
+               'One Size', 'Free Size',
+               'Small', 'Medium', 'Large', 'Extra Large',
+               'X', 'XL', 'XXL', 'XXXL',  // Add these
+               'S/M', 'M/L', 'L/XL',      // Add these
+               'OS', 'ONESIZE'            // Add these
+        ]
+    },
+    price: {
+        type: Number,
+        required: true,
+        min: 0
+    },
+    countInStock: {
+        type: Number,
+        required: true,
+        default: 0,
+        min: 0
+    },
+    sku: {
+        type: String,
+        unique: true,
+        sparse: true
+    }
+});
 
 // ============================================
 // REVIEW MODEL
@@ -187,6 +130,8 @@ const productSchema = new mongoose.Schema({
     numReviews: { type: Number, default: 0 },
     isFeatured: { type: Boolean, default: false },
     reviews: [reviewSchema],
+    hasSizes: { type: Boolean, default: false },
+    sizes: [sizeVariantSchema],
     createdAt: { type: Date, default: Date.now }
 });
 
@@ -209,7 +154,8 @@ const cartItemSchema = new mongoose.Schema({
         required: true,
         min: 1,
         default: 1
-    }
+    },
+    size: { type: String, default: null }  // Add this field
 });
 
 const cartSchema = new mongoose.Schema({
@@ -366,6 +312,27 @@ const addressSchema = new mongoose.Schema({
 const Address = mongoose.model('Address', addressSchema);
 
 // ============================================
+// COUPON MODEL
+// ============================================
+const couponSchema = new mongoose.Schema({
+    code: { type: String, required: true, unique: true, uppercase: true, trim: true },
+    description: { type: String, required: true },
+    discountType: { type: String, enum: ['percentage', 'fixed'], required: true },
+    discountValue: { type: Number, required: true, min: 0 },
+    minimumOrder: { type: Number, default: 0 },
+    minimumItems: { type: Number, default: 0 },
+    maxDiscount: { type: Number, default: null },
+    startDate: { type: Date, required: true, default: Date.now },
+    endDate: { type: Date, required: true },
+    usageLimit: { type: Number, default: null },
+    usedCount: { type: Number, default: 0 },
+    isActive: { type: Boolean, default: true },
+    createdAt: { type: Date, default: Date.now }
+});
+
+const Coupon = mongoose.model('Coupon', couponSchema);
+
+// ============================================
 // PROTECT MIDDLEWARE
 // ============================================
 const protect = async (req, res, next) => {
@@ -396,228 +363,83 @@ const admin = async (req, res, next) => {
     }
 };
 
-
 // ============================================
-// COUPON MODEL - Updated with minItems
+// GOOGLE AUTH ROUTE
 // ============================================
-const couponSchema = new mongoose.Schema({
-    code: { type: String, required: true, unique: true, uppercase: true, trim: true },
-    description: { type: String, required: true },
-    discountType: { type: String, enum: ['percentage', 'fixed'], required: true },
-    discountValue: { type: Number, required: true, min: 0 },
-    minimumOrder: { type: Number, default: 0 },
-    minimumItems: { type: Number, default: 0 },  // Make sure this line exists
-    maxDiscount: { type: Number, default: null },
-    startDate: { type: Date, required: true, default: Date.now },
-    endDate: { type: Date, required: true },
-    usageLimit: { type: Number, default: null },
-    usedCount: { type: Number, default: 0 },
-    isActive: { type: Boolean, default: true },
-    createdAt: { type: Date, default: Date.now }
-});
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
 
+app.post('/api/auth/google', async (req, res) => {
+    const { token } = req.body;
 
-
-// ============================================
-// COUPON ROUTES
-// ============================================
-
-// Get all coupons (Admin only)
-app.get('/api/coupons', protect, admin, async (req, res) => {
-    try {
-        const coupons = await Coupon.find({}).sort({ createdAt: -1 });
-        res.json({ success: true, coupons });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+    if (!token) {
+        return res.status(400).json({ success: false, message: 'No token provided' });
     }
-});
 
-// Get active coupons for customers
-app.get('/api/coupons/active', async (req, res) => {
     try {
-        const now = new Date();
-        const coupons = await Coupon.find({
-            isActive: true,
-            startDate: { $lte: now },
-            endDate: { $gte: now }
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
         });
-        res.json({ success: true, coupons });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
 
-// Create coupon (Admin only)
-app.post('/api/coupons', protect, admin, async (req, res) => {
-    try {
-        const { 
-            code, description, discountType, discountValue, 
-            minimumOrder, minimumItems, maxDiscount, 
-            startDate, endDate, usageLimit 
-        } = req.body;
-        
-        console.log('Creating coupon with data:', { 
-            code, description, discountType, discountValue, 
-            minimumOrder, minimumItems, maxDiscount, 
-            startDate, endDate, usageLimit 
-        });
-        
-        const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
-        if (existingCoupon) {
-            return res.status(400).json({ success: false, message: 'Coupon code already exists' });
-        }
-        
-        const coupon = new Coupon({
-            code: code.toUpperCase(),
-            description,
-            discountType,
-            discountValue: Number(discountValue),
-            minimumOrder: Number(minimumOrder) || 0,
-            minimumItems: Number(minimumItems) || 0,  // Make sure this is saved
-            maxDiscount: maxDiscount ? Number(maxDiscount) : null,
-            startDate,
-            endDate,
-            usageLimit: usageLimit ? Number(usageLimit) : null
-        });
-        
-        await coupon.save();
-        console.log('Coupon created successfully:', coupon);
-        res.status(201).json({ success: true, coupon });
-    } catch (error) {
-        console.error('Create coupon error:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
+        const payload = ticket.getPayload();
+        const { email, name, picture, sub: googleId } = payload;
 
-// Validate coupon - Fix minimum items validation
-app.post('/api/coupons/validate', async (req, res) => {
-    try {
-        const { code, cartTotal, cartItemsCount } = req.body;
-        
-        console.log('Coupon validation request:', { code, cartTotal, cartItemsCount });
-        
-        const coupon = await Coupon.findOne({ 
-            code: code.toUpperCase(),
-            isActive: true,
-            startDate: { $lte: new Date() },
-            endDate: { $gte: new Date() }
-        });
-        
-        if (!coupon) {
-            return res.status(400).json({ success: false, message: 'Invalid or expired coupon code' });
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email not provided by Google' });
         }
-        
-        console.log('Found coupon:', { 
-            code: coupon.code, 
-            minimumItems: coupon.minimumItems,
-            minimumOrder: coupon.minimumOrder,
-            cartItemsCount: cartItemsCount,
-            cartTotal: cartTotal
-        });
-        
-        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
-            return res.status(400).json({ success: false, message: 'Coupon usage limit reached' });
-        }
-        
-        // Check minimum number of items - FIX THIS SECTION
-        if (coupon.minimumItems && coupon.minimumItems > 0) {
-            if (cartItemsCount < coupon.minimumItems) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: `❌ This coupon requires ${coupon.minimumItems} or more items in your cart. You currently have ${cartItemsCount} item${cartItemsCount !== 1 ? 's' : ''}. Please add ${coupon.minimumItems - cartItemsCount} more item${coupon.minimumItems - cartItemsCount !== 1 ? 's' : ''} to use this coupon.` 
-                });
-            }
-        }
-        
-        // Check minimum order amount
-        if (coupon.minimumOrder && coupon.minimumOrder > 0) {
-            if (cartTotal < coupon.minimumOrder) {
-                return res.status(400).json({ 
-                    success: false, 
-                    message: `Minimum order amount of $${coupon.minimumOrder} required. Your total is $${cartTotal.toFixed(2)}.` 
-                });
-            }
-        }
-        
-        let discountAmount = 0;
-        if (coupon.discountType === 'percentage') {
-            discountAmount = (cartTotal * coupon.discountValue) / 100;
-            if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
-                discountAmount = coupon.maxDiscount;
-            }
+
+        console.log(`🔐 Google login attempt for: ${email}`);
+
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            const randomPassword = Math.random().toString(36).slice(-8);
+            const hashedPassword = await hashPassword(randomPassword);
+
+            user = new User({
+                name: name || email.split('@')[0],
+                email: email,
+                password: hashedPassword,
+                avatar: picture || '',
+                googleId: googleId,
+                isAdmin: false,
+            });
+            await user.save();
+            console.log(`✅ New user created via Google: ${email}`);
         } else {
-            discountAmount = coupon.discountValue;
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
+            if (picture && !user.avatar) {
+                user.avatar = picture;
+                await user.save();
+            }
+            console.log(`✅ Existing user logged in via Google: ${email}`);
         }
-        
-        // Ensure discount doesn't exceed cart total
-        if (discountAmount > cartTotal) {
-            discountAmount = cartTotal;
-        }
-        
+
+        const appToken = generateToken(user._id);
+
         res.json({
             success: true,
-            coupon: {
-                code: coupon.code,
-                description: coupon.description,
-                discountType: coupon.discountType,
-                discountValue: coupon.discountValue,
-                discountAmount: discountAmount.toFixed(2),
-                finalTotal: (cartTotal - discountAmount).toFixed(2),
-                minimumItems: coupon.minimumItems,
-                minimumOrder: coupon.minimumOrder
-            }
+            message: 'Google login successful',
+            token: appToken,
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                avatar: user.avatar,
+                googleId: user.googleId,
+                createdAt: user.createdAt,
+            },
         });
+
     } catch (error) {
-        console.error('Coupon validation error:', error);
-        res.status(500).json({ success: false, message: error.message });
+        console.error('❌ Google token verification failed:', error);
+        res.status(401).json({ success: false, message: 'Google authentication failed' });
     }
 });
-
-
-
-
-// Apply coupon to order
-app.post('/api/coupons/apply', protect, async (req, res) => {
-    try {
-        const { code, orderId } = req.body;
-        
-        const coupon = await Coupon.findOne({ code: code.toUpperCase() });
-        if (!coupon) {
-            return res.status(400).json({ success: false, message: 'Coupon not found' });
-        }
-        
-        coupon.usedCount += 1;
-        await coupon.save();
-        
-        res.json({ success: true, message: 'Coupon applied successfully' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Update coupon (Admin only)
-app.put('/api/coupons/:id', protect, admin, async (req, res) => {
-    try {
-        const coupon = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true });
-        res.json({ success: true, coupon });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Delete coupon (Admin only)
-app.delete('/api/coupons/:id', protect, admin, async (req, res) => {
-    try {
-        await Coupon.findByIdAndDelete(req.params.id);
-        res.json({ success: true, message: 'Coupon deleted' });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-const Coupon = mongoose.model('Coupon', couponSchema);
-
-
 
 // ============================================
 // TEST ROUTES
@@ -634,7 +456,7 @@ app.get('/api/test', (req, res) => {
 // AUTH ROUTES
 // ============================================
 
-// Register endpoint - Updated with better error messages
+// Register
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
@@ -646,7 +468,6 @@ app.post('/api/auth/register', async (req, res) => {
             });
         }
         
-        // Email format validation
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
             return res.status(400).json({ 
@@ -698,11 +519,6 @@ app.post('/api/auth/register', async (req, res) => {
     }
 });
 
-
-
-
-
-
 // Login
 app.post('/api/auth/login', async (req, res) => {
     try {
@@ -724,7 +540,14 @@ app.post('/api/auth/login', async (req, res) => {
             success: true,
             message: 'Login successful',
             token,
-            user: { _id: user._id, name: user.name, email: user.email, isAdmin: user.isAdmin }
+            user: { 
+                _id: user._id, 
+                name: user.name, 
+                email: user.email, 
+                isAdmin: user.isAdmin,
+                avatar: user.avatar,
+                createdAt: user.createdAt 
+            }
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -741,12 +564,7 @@ app.get('/api/auth/profile', protect, async (req, res) => {
     }
 });
 
-
-
 // Update user profile
-
-
-
 app.put('/api/auth/profile', protect, async (req, res) => {
     try {
         const { name, email, currentPassword, newPassword } = req.body;
@@ -759,23 +577,17 @@ app.put('/api/auth/profile', protect, async (req, res) => {
         console.log('Profile update request for user:', user.email);
         console.log('Is Google user:', !!user.googleId);
         
-        // Update name and email
         if (name) user.name = name;
         if (email) user.email = email;
         
-        // Update password if provided
         if (newPassword) {
-            // For Google users: they don't have a current password to verify
-            // They can set a password for the first time
             if (user.googleId && !currentPassword) {
-                // Google user setting password for first time
                 if (newPassword.length < 6) {
                     return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
                 }
                 user.password = await hashPassword(newPassword);
                 console.log('Google user set password for first time');
             } 
-            // For regular users: require current password verification
             else if (!user.googleId) {
                 if (!currentPassword) {
                     return res.status(401).json({ success: false, message: 'Current password is required to change password' });
@@ -823,18 +635,33 @@ app.put('/api/auth/profile', protect, async (req, res) => {
     }
 });
 
-
-
-
-
-
-
+// Upload avatar
+app.post('/api/auth/avatar', protect, async (req, res) => {
+    try {
+        const { avatar } = req.body;
+        const user = await User.findById(req.userId);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
+        user.avatar = avatar;
+        await user.save();
+        
+        res.json({
+            success: true,
+            message: 'Avatar updated successfully',
+            avatar: user.avatar
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 // ============================================
 // PRODUCT ROUTES
 // ============================================
 
-// Get all products
 // Get all products with search, filter, and sort
 app.get('/api/products', async (req, res) => {
     try {
@@ -850,10 +677,8 @@ app.get('/api/products', async (req, res) => {
             limit = 12
         } = req.query;
         
-        // Build query object
         let query = {};
         
-        // Search by keyword (name or description)
         if (keyword) {
             query.$or = [
                 { name: { $regex: keyword, $options: 'i' } },
@@ -861,24 +686,20 @@ app.get('/api/products', async (req, res) => {
             ];
         }
         
-        // Filter by category
         if (category && category !== 'All') {
             query.category = category;
         }
         
-        // Filter by price range
         if (minPrice || maxPrice) {
             query.price = {};
             if (minPrice) query.price.$gte = Number(minPrice);
             if (maxPrice) query.price.$lte = Number(maxPrice);
         }
         
-        // Filter by rating
         if (rating) {
             query.rating = { $gte: Number(rating) };
         }
         
-        // Build sort object
         let sortObject = {};
         switch(sortBy) {
             case 'price':
@@ -894,10 +715,8 @@ app.get('/api/products', async (req, res) => {
                 sortObject.createdAt = -1;
         }
         
-        // Calculate pagination
         const skip = (parseInt(page) - 1) * parseInt(limit);
         
-        // Execute query
         const products = await Product.find(query)
             .sort(sortObject)
             .skip(skip)
@@ -918,7 +737,7 @@ app.get('/api/products', async (req, res) => {
     }
 });
 
-// Get unique categories (for filter dropdown)
+// Get categories
 app.get('/api/categories', async (req, res) => {
     try {
         const categories = await Product.distinct('category');
@@ -954,7 +773,7 @@ app.get('/api/products/:id', async (req, res) => {
 // Create product (Admin only)
 app.post('/api/products', protect, admin, async (req, res) => {
     try {
-        const { name, description, price, category, countInStock, imageUrl, isFeatured } = req.body;
+        const { name, description, price, category, countInStock, imageUrl, isFeatured, hasSizes, sizes } = req.body;
         
         if (!name || !description || !price || !category) {
             return res.status(400).json({ success: false, message: 'Missing required fields' });
@@ -970,7 +789,9 @@ app.post('/api/products', protect, admin, async (req, res) => {
             category,
             countInStock: countInStock || 0,
             imageUrl: imageUrl || 'https://via.placeholder.com/300',
-            isFeatured: isFeatured || false
+            isFeatured: isFeatured || false,
+            hasSizes: hasSizes || false,
+            sizes: sizes || []
         });
         
         await product.save();
@@ -1126,10 +947,18 @@ app.get('/api/cart', protect, async (req, res) => {
     }
 });
 
-// Add item to cart
+
+
+
+
+
+
+// Add item to cart - Updated to handle size
 app.post('/api/cart/add', protect, async (req, res) => {
     try {
-        const { productId, quantity = 1 } = req.body;
+        const { productId, quantity = 1, size = null } = req.body;
+        
+        console.log('Add to cart request:', { productId, quantity, size });
         
         if (!productId) {
             return res.status(400).json({ success: false, message: 'Product ID required' });
@@ -1140,7 +969,20 @@ app.post('/api/cart/add', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
         
-        if (product.countInStock < quantity) {
+        // Determine price and stock based on size
+        let finalPrice = product.price;
+        let currentStock = product.countInStock;
+        
+        if (size && product.hasSizes) {
+            const sizeVariant = product.sizes.find(s => s.size === size);
+            if (!sizeVariant) {
+                return res.status(400).json({ success: false, message: 'Invalid size selected' });
+            }
+            finalPrice = sizeVariant.price;
+            currentStock = sizeVariant.countInStock;
+        }
+        
+        if (currentStock < quantity) {
             return res.status(400).json({ success: false, message: 'Insufficient stock' });
         }
         
@@ -1149,8 +991,9 @@ app.post('/api/cart/add', protect, async (req, res) => {
             cart = new Cart({ user: req.userId, items: [] });
         }
         
+        // Check if product with same size already exists in cart
         const existingItemIndex = cart.items.findIndex(
-            item => item.product.toString() === productId
+            item => item.product.toString() === productId && item.size === size
         );
         
         if (existingItemIndex > -1) {
@@ -1159,12 +1002,14 @@ app.post('/api/cart/add', protect, async (req, res) => {
             cart.items.push({
                 product: productId,
                 name: product.name,
-                price: product.price,
+                price: finalPrice,
                 imageUrl: product.imageUrl,
-                quantity: quantity
+                quantity: quantity,
+                size: size
             });
         }
         
+        // Update cart total
         let total = 0;
         for (const item of cart.items) {
             total += item.price * item.quantity;
@@ -1188,6 +1033,9 @@ app.post('/api/cart/add', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+
 
 // Update cart item quantity
 app.put('/api/cart/update/:productId', protect, async (req, res) => {
@@ -1656,6 +1504,178 @@ app.put('/api/addresses/:id/default', protect, async (req, res) => {
         );
         
         res.json({ success: true, message: 'Default address set', address });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// COUPON ROUTES
+// ============================================
+
+// Get all coupons (Admin only)
+app.get('/api/coupons', protect, admin, async (req, res) => {
+    try {
+        const coupons = await Coupon.find({}).sort({ createdAt: -1 });
+        res.json({ success: true, coupons });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get active coupons for customers
+app.get('/api/coupons/active', async (req, res) => {
+    try {
+        const now = new Date();
+        const coupons = await Coupon.find({
+            isActive: true,
+            startDate: { $lte: now },
+            endDate: { $gte: now }
+        });
+        res.json({ success: true, coupons });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Create coupon (Admin only)
+app.post('/api/coupons', protect, admin, async (req, res) => {
+    try {
+        const { 
+            code, description, discountType, discountValue, 
+            minimumOrder, minimumItems, maxDiscount, 
+            startDate, endDate, usageLimit 
+        } = req.body;
+        
+        const existingCoupon = await Coupon.findOne({ code: code.toUpperCase() });
+        if (existingCoupon) {
+            return res.status(400).json({ success: false, message: 'Coupon code already exists' });
+        }
+        
+        const coupon = new Coupon({
+            code: code.toUpperCase(),
+            description,
+            discountType,
+            discountValue: Number(discountValue),
+            minimumOrder: Number(minimumOrder) || 0,
+            minimumItems: Number(minimumItems) || 0,
+            maxDiscount: maxDiscount ? Number(maxDiscount) : null,
+            startDate,
+            endDate,
+            usageLimit: usageLimit ? Number(usageLimit) : null
+        });
+        
+        await coupon.save();
+        res.status(201).json({ success: true, coupon });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Validate coupon
+app.post('/api/coupons/validate', async (req, res) => {
+    try {
+        const { code, cartTotal, cartItemsCount } = req.body;
+        
+        const coupon = await Coupon.findOne({ 
+            code: code.toUpperCase(),
+            isActive: true,
+            startDate: { $lte: new Date() },
+            endDate: { $gte: new Date() }
+        });
+        
+        if (!coupon) {
+            return res.status(400).json({ success: false, message: 'Invalid or expired coupon code' });
+        }
+        
+        if (coupon.usageLimit && coupon.usedCount >= coupon.usageLimit) {
+            return res.status(400).json({ success: false, message: 'Coupon usage limit reached' });
+        }
+        
+        if (coupon.minimumItems && coupon.minimumItems > 0) {
+            if (cartItemsCount < coupon.minimumItems) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `This coupon requires ${coupon.minimumItems} or more items in your cart. You have ${cartItemsCount} item(s).` 
+                });
+            }
+        }
+        
+        if (coupon.minimumOrder && coupon.minimumOrder > 0) {
+            if (cartTotal < coupon.minimumOrder) {
+                return res.status(400).json({ 
+                    success: false, 
+                    message: `Minimum order amount of $${coupon.minimumOrder} required.` 
+                });
+            }
+        }
+        
+        let discountAmount = 0;
+        if (coupon.discountType === 'percentage') {
+            discountAmount = (cartTotal * coupon.discountValue) / 100;
+            if (coupon.maxDiscount && discountAmount > coupon.maxDiscount) {
+                discountAmount = coupon.maxDiscount;
+            }
+        } else {
+            discountAmount = coupon.discountValue;
+        }
+        
+        if (discountAmount > cartTotal) {
+            discountAmount = cartTotal;
+        }
+        
+        res.json({
+            success: true,
+            coupon: {
+                code: coupon.code,
+                description: coupon.description,
+                discountType: coupon.discountType,
+                discountValue: coupon.discountValue,
+                discountAmount: discountAmount.toFixed(2),
+                finalTotal: (cartTotal - discountAmount).toFixed(2),
+                minimumItems: coupon.minimumItems,
+                minimumOrder: coupon.minimumOrder
+            }
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Apply coupon to order
+app.post('/api/coupons/apply', protect, async (req, res) => {
+    try {
+        const { code, orderId } = req.body;
+        
+        const coupon = await Coupon.findOne({ code: code.toUpperCase() });
+        if (!coupon) {
+            return res.status(400).json({ success: false, message: 'Coupon not found' });
+        }
+        
+        coupon.usedCount += 1;
+        await coupon.save();
+        
+        res.json({ success: true, message: 'Coupon applied successfully' });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Update coupon (Admin only)
+app.put('/api/coupons/:id', protect, admin, async (req, res) => {
+    try {
+        const coupon = await Coupon.findByIdAndUpdate(req.params.id, req.body, { new: true });
+        res.json({ success: true, coupon });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Delete coupon (Admin only)
+app.delete('/api/coupons/:id', protect, admin, async (req, res) => {
+    try {
+        await Coupon.findByIdAndDelete(req.params.id);
+        res.json({ success: true, message: 'Coupon deleted' });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }

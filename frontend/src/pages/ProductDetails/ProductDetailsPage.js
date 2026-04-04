@@ -5,8 +5,9 @@ import { fetchProduct } from '../../redux/slices/productSlice';
 import { addToCart } from '../../redux/slices/cartSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
 import Reviews from '../../components/Products/Reviews';
+import SizeSelector from '../../components/Products/SizeSelector';
 import toast from 'react-hot-toast';
-import { FaStar, FaShoppingCart, FaHeart, FaRegHeart } from 'react-icons/fa';
+import { FaStar, FaShoppingCart, FaSpinner } from 'react-icons/fa';
 
 const ProductDetailsPage = () => {
     const { id } = useParams();
@@ -15,7 +16,7 @@ const ProductDetailsPage = () => {
     const { user } = useSelector((state) => state.auth);
     const [quantity, setQuantity] = useState(1);
     const [adding, setAdding] = useState(false);
-    const [selectedImage, setSelectedImage] = useState(0);
+    const [selectedSize, setSelectedSize] = useState(null);
 
     useEffect(() => {
         if (id) {
@@ -23,7 +24,25 @@ const ProductDetailsPage = () => {
         }
     }, [dispatch, id]);
 
-    // Get product image with fallback
+    // Reset selected size when product changes
+    useEffect(() => {
+        if (product) {
+            console.log('Product data:', product);
+            console.log('Has sizes:', product.hasSizes);
+            console.log('Sizes array:', product.sizes);
+            
+            if (product.hasSizes && product.sizes && product.sizes.length > 0) {
+                // Find first available size
+                const availableSize = product.sizes.find(s => s.countInStock > 0);
+                setSelectedSize(availableSize || product.sizes[0]);
+            } else {
+                setSelectedSize(null);
+            }
+            // Reset quantity when product changes
+            setQuantity(1);
+        }
+    }, [product]);
+
     const getProductImage = () => {
         if (product?.imageUrl && product.imageUrl !== 'https://via.placeholder.com/300') {
             return product.imageUrl;
@@ -38,14 +57,18 @@ const ProductDetailsPage = () => {
         return categoryImages[product?.category] || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=600&h=400&fit=crop';
     };
 
-    // Sample product images gallery
-    const getGalleryImages = () => {
-        const mainImage = getProductImage();
-        return [
-            mainImage,
-            mainImage.replace('w=600', 'w=600&sat=-50'),
-            mainImage.replace('w=600', 'w=600&bright=-20'),
-        ];
+    const getCurrentPrice = () => {
+        if (product?.hasSizes && selectedSize) {
+            return selectedSize.price;
+        }
+        return product?.price || 0;
+    };
+
+    const getCurrentStock = () => {
+        if (product?.hasSizes && selectedSize) {
+            return selectedSize.countInStock;
+        }
+        return product?.countInStock || 0;
     };
 
     const handleAddToCart = async () => {
@@ -54,17 +77,46 @@ const ProductDetailsPage = () => {
             return;
         }
         
-        if (product.countInStock === 0) {
-            toast.error('Product is out of stock');
+        if (product.hasSizes && !selectedSize) {
+            toast.error('Please select a size');
+            return;
+        }
+        
+        const currentStock = getCurrentStock();
+        if (currentStock === 0) {
+            toast.error('Selected size is out of stock');
             return;
         }
         
         setAdding(true);
         try {
-            await dispatch(addToCart(product._id, quantity));
-            await dispatch(fetchCart());
-            toast.success(`${product.name} added to cart!`);
+            // Prepare cart item with size information
+            const cartItem = {
+                productId: product._id,
+                quantity: quantity,
+                size: selectedSize?.size || null,
+                price: getCurrentPrice()
+            };
+            
+            console.log('Adding to cart:', cartItem);
+            
+            const result = await dispatch(addToCart(
+                product._id, 
+                quantity, 
+                selectedSize?.size || null,
+                getCurrentPrice()
+            ));
+            
+            console.log('Add to cart result:', result);
+            
+            if (result.error) {
+                toast.error(result.error.message || 'Failed to add to cart');
+            } else {
+                await dispatch(fetchCart());
+                toast.success(`${product.name}${selectedSize ? ` (${selectedSize.size})` : ''} added to cart!`);
+            }
         } catch (error) {
+            console.error('Add to cart error:', error);
             toast.error('Failed to add to cart');
         } finally {
             setAdding(false);
@@ -74,7 +126,7 @@ const ProductDetailsPage = () => {
     if (loading) {
         return (
             <div style={styles.center}>
-                <div className="spinner"></div>
+                <FaSpinner style={styles.spinner} />
                 <p>Loading product...</p>
             </div>
         );
@@ -84,7 +136,8 @@ const ProductDetailsPage = () => {
         return <div style={styles.center}>Product not found</div>;
     }
 
-    const galleryImages = getGalleryImages();
+    const currentPrice = getCurrentPrice();
+    const currentStock = getCurrentStock();
 
     return (
         <div style={styles.container}>
@@ -92,25 +145,10 @@ const ProductDetailsPage = () => {
                 {/* Image Gallery */}
                 <div style={styles.imageSection}>
                     <img 
-                        src={galleryImages[selectedImage]} 
+                        src={getProductImage()} 
                         alt={product.name}
                         style={styles.mainImage}
                     />
-                    <div style={styles.thumbnailContainer}>
-                        {galleryImages.map((img, index) => (
-                            <img
-                                key={index}
-                                src={img}
-                                alt={`${product.name} ${index + 1}`}
-                                style={{
-                                    ...styles.thumbnail,
-                                    border: selectedImage === index ? '2px solid var(--primary)' : '2px solid transparent',
-                                }}
-                                onMouseEnter={() => setSelectedImage(index)}
-                                onClick={() => setSelectedImage(index)}
-                            />
-                        ))}
-                    </div>
                 </div>
                 
                 {/* Product Info */}
@@ -127,13 +165,35 @@ const ProductDetailsPage = () => {
                         <span style={styles.reviewCount}>({product.numReviews} reviews)</span>
                     </div>
                     <p style={styles.category}>Category: {product.category}</p>
-                    <p style={styles.price}>${product.price.toFixed(2)}</p>
-                    <p style={styles.description}>{product.description}</p>
-                    <p style={styles.stock}>
-                        {product.countInStock > 0 ? `✅ In Stock: ${product.countInStock} units` : '❌ Out of Stock'}
-                    </p>
                     
-                    {product.countInStock > 0 && (
+                    {/* Size Selector - Show only if product has sizes */}
+                    {product.hasSizes && product.sizes && product.sizes.length > 0 && (
+                        <SizeSelector
+                            sizes={product.sizes}
+                            selectedSize={selectedSize}
+                            onSizeChange={setSelectedSize}
+                        />
+                    )}
+                    
+                    <p style={styles.description}>{product.description}</p>
+                    
+                    <div style={styles.priceSection}>
+                        <div style={styles.priceContainer}>
+                            <label style={styles.priceLabel}>Price:</label>
+                            <p style={styles.price}>${currentPrice.toFixed(2)}</p>
+                        </div>
+                        {product.hasSizes && (
+                            <p style={styles.priceNote}>* Price varies by size</p>
+                        )}
+                    </div>
+                    
+                    <div style={styles.stockSection}>
+                        <p style={currentStock > 0 ? styles.inStock : styles.outOfStock}>
+                            {currentStock > 0 ? `✅ In Stock: ${currentStock} units` : '❌ Out of Stock'}
+                        </p>
+                    </div>
+                    
+                    {currentStock > 0 && (
                         <div style={styles.quantitySection}>
                             <label style={styles.label}>Quantity:</label>
                             <select 
@@ -141,7 +201,7 @@ const ProductDetailsPage = () => {
                                 onChange={(e) => setQuantity(Number(e.target.value))}
                                 style={styles.select}
                             >
-                                {[...Array(Math.min(10, product.countInStock))].map((_, i) => (
+                                {[...Array(Math.min(10, currentStock))].map((_, i) => (
                                     <option key={i + 1} value={i + 1}>{i + 1}</option>
                                 ))}
                             </select>
@@ -151,10 +211,10 @@ const ProductDetailsPage = () => {
                     <div style={styles.buttonGroup}>
                         <button 
                             onClick={handleAddToCart}
-                            disabled={product.countInStock === 0 || adding}
+                            disabled={currentStock === 0 || adding}
                             style={{
                                 ...styles.addBtn,
-                                ...(product.countInStock === 0 && styles.disabledBtn)
+                                ...(currentStock === 0 && styles.disabledBtn)
                             }}
                         >
                             <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
@@ -186,7 +246,7 @@ const styles = {
         borderRadius: '1rem',
         padding: '30px',
         marginBottom: '30px',
-        boxShadow: '0 4px 6px rgba(0,0,0,0.1)',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
     },
     imageSection: {
         display: 'flex',
@@ -198,20 +258,6 @@ const styles = {
         height: '400px',
         objectFit: 'cover',
         borderRadius: '0.5rem',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    },
-    thumbnailContainer: {
-        display: 'flex',
-        gap: '0.5rem',
-        justifyContent: 'center',
-    },
-    thumbnail: {
-        width: '80px',
-        height: '80px',
-        objectFit: 'cover',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        transition: 'all 0.3s',
     },
     infoSection: {
         display: 'flex',
@@ -238,18 +284,47 @@ const styles = {
     category: {
         color: '#666',
     },
-    price: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: '#6366f1',
-    },
     description: {
         color: '#555',
         lineHeight: '1.6',
     },
-    stock: {
+    priceSection: {
+        marginTop: '10px',
+        padding: '10px 0',
+        borderTop: '1px solid #eee',
+        borderBottom: '1px solid #eee',
+    },
+    priceContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+    },
+    priceLabel: {
+        fontWeight: 'bold',
+        color: '#333',
+    },
+    price: {
+        fontSize: '1.5rem',
+        fontWeight: 'bold',
+        color: '#6366f1',
+        margin: 0,
+    },
+    priceNote: {
+        fontSize: '0.8rem',
+        color: '#999',
+        marginTop: '5px',
+        fontStyle: 'italic',
+    },
+    stockSection: {
+        marginTop: '5px',
+    },
+    inStock: {
         fontWeight: 'bold',
         color: '#10b981',
+    },
+    outOfStock: {
+        fontWeight: 'bold',
+        color: '#ef4444',
     },
     quantitySection: {
         display: 'flex',
@@ -301,6 +376,22 @@ const styles = {
         textAlign: 'center',
         padding: '50px',
     },
+    spinner: {
+        animation: 'spin 1s linear infinite',
+        fontSize: '2rem',
+        color: '#6366f1',
+        marginBottom: '1rem',
+    },
 };
+
+// Add keyframes for spinner
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(styleSheet);
 
 export default ProductDetailsPage;

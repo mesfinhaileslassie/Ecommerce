@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, deleteProduct } from '../../redux/slices/productSlice';
-import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar, FaImage } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar, FaImage, FaBoxes, FaTimes } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -11,6 +11,9 @@ const AdminProductsPage = () => {
     const [showModal, setShowModal] = useState(false);
     const [editingProduct, setEditingProduct] = useState(null);
     const [imagePreview, setImagePreview] = useState('');
+    const [hasSizes, setHasSizes] = useState(false);
+    const [sizes, setSizes] = useState([]);
+    const [newSize, setNewSize] = useState({ size: '', price: '', countInStock: '' });
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -44,20 +47,60 @@ const AdminProductsPage = () => {
         setImagePreview(url);
     };
 
+    const addSize = () => {
+        if (!newSize.size) {
+            toast.error('Please enter a size');
+            return;
+        }
+        if (!newSize.price) {
+            toast.error('Please enter a price');
+            return;
+        }
+        
+        setSizes([...sizes, { 
+            size: newSize.size.toUpperCase(), 
+            price: parseFloat(newSize.price), 
+            countInStock: parseInt(newSize.countInStock) || 0 
+        }]);
+        setNewSize({ size: '', price: '', countInStock: '' });
+        toast.success('Size added');
+    };
+
+    const removeSize = (index) => {
+        setSizes(sizes.filter((_, i) => i !== index));
+        toast.success('Size removed');
+    };
+
     const handleSubmit = async (e) => {
         e.preventDefault();
+        
+        const productData = {
+            name: formData.name,
+            description: formData.description,
+            price: parseFloat(formData.price),
+            category: formData.category,
+            countInStock: parseInt(formData.countInStock) || 0,
+            imageUrl: formData.imageUrl || '',
+            isFeatured: formData.isFeatured,
+            hasSizes: hasSizes,
+            sizes: hasSizes ? sizes : []
+        };
+        
+        console.log('Saving product:', productData);
+        
         try {
             if (editingProduct) {
-                await api.put(`/products/${editingProduct._id}`, formData);
+                await api.put(`/products/${editingProduct._id}`, productData);
                 toast.success('Product updated successfully');
             } else {
-                await api.post('/products', formData);
+                await api.post('/products', productData);
                 toast.success('Product created successfully');
             }
             dispatch(fetchProducts());
             setShowModal(false);
             resetForm();
         } catch (error) {
+            console.error('Error saving product:', error);
             toast.error(error.response?.data?.message || 'Operation failed');
         }
     };
@@ -74,6 +117,8 @@ const AdminProductsPage = () => {
             isFeatured: product.isFeatured || false,
         });
         setImagePreview(product.imageUrl || '');
+        setHasSizes(product.hasSizes || false);
+        setSizes(product.sizes || []);
         setShowModal(true);
     };
 
@@ -114,6 +159,9 @@ const AdminProductsPage = () => {
             isFeatured: false,
         });
         setImagePreview('');
+        setHasSizes(false);
+        setSizes([]);
+        setNewSize({ size: '', price: '', countInStock: '' });
     };
 
     // Get placeholder image based on category
@@ -163,6 +211,7 @@ const AdminProductsPage = () => {
                             <th>Category</th>
                             <th>Price</th>
                             <th>Stock</th>
+                            <th>Sizes</th>
                             <th>Featured</th>
                             <th>Actions</th>
                         </tr>
@@ -191,6 +240,15 @@ const AdminProductsPage = () => {
                                     }}>
                                         {product.countInStock}
                                     </span>
+                                </td>
+                                <td>
+                                    {product.hasSizes && product.sizes?.length > 0 ? (
+                                        <span style={styles.sizesBadge}>
+                                            <FaBoxes /> {product.sizes.length} sizes
+                                        </span>
+                                    ) : (
+                                        <span style={styles.noSizesBadge}>No sizes</span>
+                                    )}
                                 </td>
                                 <td>
                                     <button 
@@ -224,7 +282,10 @@ const AdminProductsPage = () => {
             {showModal && (
                 <div style={styles.modal}>
                     <div style={styles.modalContent}>
-                        <h2>{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+                        <div style={styles.modalHeader}>
+                            <h2>{editingProduct ? 'Edit Product' : 'Add New Product'}</h2>
+                            <button onClick={() => setShowModal(false)} style={styles.modalCloseBtn}>×</button>
+                        </div>
                         <form onSubmit={handleSubmit} style={styles.form}>
                             <input
                                 type="text"
@@ -251,12 +312,13 @@ const AdminProductsPage = () => {
                                 onChange={handleInputChange}
                                 required
                                 style={styles.input}
+                                step="0.01"
                             />
                             <select
                                 name="category"
                                 value={formData.category}
                                 onChange={handleInputChange}
-                                style={styles.input}
+                                style={styles.select}
                             >
                                 <option value="Electronics">Electronics</option>
                                 <option value="Clothing">Clothing</option>
@@ -265,15 +327,82 @@ const AdminProductsPage = () => {
                                 <option value="Sports">Sports</option>
                                 <option value="Other">Other</option>
                             </select>
-                            <input
-                                type="number"
-                                name="countInStock"
-                                placeholder="Stock Quantity"
-                                value={formData.countInStock}
-                                onChange={handleInputChange}
-                                required
-                                style={styles.input}
-                            />
+                            
+                            {/* Has Sizes Checkbox */}
+                            <label style={styles.checkboxLabel}>
+                                <input
+                                    type="checkbox"
+                                    checked={hasSizes}
+                                    onChange={(e) => setHasSizes(e.target.checked)}
+                                    style={styles.checkbox}
+                                />
+                                <span>This product has different sizes/variants</span>
+                            </label>
+                            
+                            {/* Size Management Section */}
+                            {hasSizes && (
+                                <div style={styles.sizesSection}>
+                                    <h4 style={styles.sizesTitle}>Size Variants</h4>
+                                    {sizes.length > 0 && (
+                                        <div style={styles.sizesList}>
+                                            {sizes.map((size, index) => (
+                                                <div key={index} style={styles.sizeItem}>
+                                                    <span style={styles.sizeName}>{size.size}</span>
+                                                    <span style={styles.sizePrice}>${size.price.toFixed(2)}</span>
+                                                    <span style={styles.sizeStock}>Stock: {size.countInStock}</span>
+                                                    <button 
+                                                        onClick={() => removeSize(index)} 
+                                                        style={styles.removeSizeBtn}
+                                                        title="Remove size"
+                                                    >
+                                                        <FaTimes />
+                                                    </button>
+                                                </div>
+                                            ))}
+                                        </div>
+                                    )}
+                                    <div style={styles.addSizeForm}>
+                                        <input
+                                            type="text"
+                                            placeholder="Size (e.g., S, M, L, XL)"
+                                            value={newSize.size}
+                                            onChange={(e) => setNewSize({ ...newSize, size: e.target.value })}
+                                            style={styles.sizeInput}
+                                        />
+                                        <input
+                                            type="number"
+                                            placeholder="Price"
+                                            value={newSize.price}
+                                            onChange={(e) => setNewSize({ ...newSize, price: e.target.value })}
+                                            style={styles.sizeInput}
+                                            step="0.01"
+                                        />
+                                        <input
+                                            type="number"
+                                            placeholder="Stock"
+                                            value={newSize.countInStock}
+                                            onChange={(e) => setNewSize({ ...newSize, countInStock: e.target.value })}
+                                            style={styles.sizeInput}
+                                        />
+                                        <button type="button" onClick={addSize} style={styles.addSizeBtn}>
+                                            <FaPlus /> Add Size
+                                        </button>
+                                    </div>
+                                </div>
+                            )}
+                            
+                            {/* Regular stock input (only if no sizes) */}
+                            {!hasSizes && (
+                                <input
+                                    type="number"
+                                    name="countInStock"
+                                    placeholder="Stock Quantity"
+                                    value={formData.countInStock}
+                                    onChange={handleInputChange}
+                                    required
+                                    style={styles.input}
+                                />
+                            )}
                             
                             {/* Image URL Input with Preview */}
                             <div style={styles.imageInputContainer}>
@@ -316,6 +445,7 @@ const AdminProductsPage = () => {
                                 />
                                 <span>Feature this product (show on homepage)</span>
                             </label>
+                            
                             <div style={styles.modalButtons}>
                                 <button type="submit" style={styles.saveBtn}>
                                     {editingProduct ? 'Update' : 'Create'}
@@ -341,7 +471,7 @@ const AdminProductsPage = () => {
 
 const styles = {
     container: {
-        maxWidth: '1200px',
+        maxWidth: '1400px',
         margin: '0 auto',
         padding: '20px',
     },
@@ -354,6 +484,7 @@ const styles = {
         gap: '15px',
     },
     title: {
+        fontSize: '1.8rem',
         color: '#333',
         margin: 0,
     },
@@ -362,11 +493,11 @@ const styles = {
         backgroundColor: '#28a745',
         color: '#fff',
         border: 'none',
-        borderRadius: '5px',
+        borderRadius: '0.5rem',
         cursor: 'pointer',
         display: 'flex',
         alignItems: 'center',
-        gap: '5px',
+        gap: '8px',
         fontSize: '14px',
     },
     tableContainer: {
@@ -378,7 +509,7 @@ const styles = {
     table: {
         width: '100%',
         borderCollapse: 'collapse',
-        minWidth: '800px',
+        minWidth: '900px',
     },
     productImage: {
         width: '50px',
@@ -408,6 +539,24 @@ const styles = {
         fontSize: '12px',
         fontWeight: '500',
     },
+    sizesBadge: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '5px',
+        padding: '4px 8px',
+        backgroundColor: '#dbeafe',
+        borderRadius: '4px',
+        fontSize: '12px',
+        color: '#1e40af',
+    },
+    noSizesBadge: {
+        display: 'inline-block',
+        padding: '4px 8px',
+        backgroundColor: '#f3f4f6',
+        borderRadius: '4px',
+        fontSize: '12px',
+        color: '#6b7280',
+    },
     featuredBtn: {
         padding: '6px 12px',
         border: 'none',
@@ -422,7 +571,7 @@ const styles = {
         transition: 'all 0.3s',
     },
     editBtn: {
-        padding: '6px 12px',
+        padding: '6px 10px',
         backgroundColor: '#ffc107',
         color: '#333',
         border: 'none',
@@ -431,7 +580,7 @@ const styles = {
         marginRight: '5px',
     },
     deleteBtn: {
-        padding: '6px 12px',
+        padding: '6px 10px',
         backgroundColor: '#dc3545',
         color: '#fff',
         border: 'none',
@@ -455,9 +604,22 @@ const styles = {
         padding: '30px',
         borderRadius: '8px',
         width: '90%',
-        maxWidth: '500px',
+        maxWidth: '600px',
         maxHeight: '90vh',
         overflow: 'auto',
+    },
+    modalHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px',
+    },
+    modalCloseBtn: {
+        background: 'none',
+        border: 'none',
+        fontSize: '28px',
+        cursor: 'pointer',
+        color: '#999',
     },
     form: {
         display: 'flex',
@@ -477,6 +639,95 @@ const styles = {
         fontSize: '16px',
         minHeight: '100px',
         fontFamily: 'inherit',
+    },
+    select: {
+        padding: '10px',
+        border: '1px solid #ddd',
+        borderRadius: '5px',
+        fontSize: '16px',
+        backgroundColor: '#fff',
+    },
+    checkboxLabel: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        cursor: 'pointer',
+    },
+    checkbox: {
+        width: '18px',
+        height: '18px',
+        cursor: 'pointer',
+    },
+    sizesSection: {
+        backgroundColor: '#f8f9fa',
+        padding: '15px',
+        borderRadius: '8px',
+        border: '1px solid #e9ecef',
+    },
+    sizesTitle: {
+        marginBottom: '10px',
+        fontSize: '14px',
+        color: '#495057',
+    },
+    sizesList: {
+        marginBottom: '15px',
+        maxHeight: '200px',
+        overflow: 'auto',
+    },
+    sizeItem: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '15px',
+        padding: '8px',
+        backgroundColor: '#fff',
+        borderRadius: '5px',
+        marginBottom: '8px',
+        border: '1px solid #e9ecef',
+    },
+    sizeName: {
+        fontWeight: 'bold',
+        minWidth: '50px',
+    },
+    sizePrice: {
+        color: '#28a745',
+        fontWeight: '500',
+        minWidth: '80px',
+    },
+    sizeStock: {
+        color: '#6c757d',
+        fontSize: '12px',
+        flex: 1,
+    },
+    removeSizeBtn: {
+        background: 'none',
+        border: 'none',
+        color: '#dc3545',
+        cursor: 'pointer',
+        padding: '5px',
+    },
+    addSizeForm: {
+        display: 'flex',
+        gap: '10px',
+        flexWrap: 'wrap',
+    },
+    sizeInput: {
+        flex: 1,
+        padding: '8px',
+        border: '1px solid #ddd',
+        borderRadius: '5px',
+        fontSize: '14px',
+        minWidth: '100px',
+    },
+    addSizeBtn: {
+        padding: '8px 16px',
+        backgroundColor: '#6366f1',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        gap: '5px',
     },
     imageInputContainer: {
         display: 'flex',
@@ -501,17 +752,6 @@ const styles = {
         alignItems: 'center',
         gap: '5px',
         marginTop: '5px',
-    },
-    checkboxLabel: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        cursor: 'pointer',
-    },
-    checkbox: {
-        width: '18px',
-        height: '18px',
-        cursor: 'pointer',
     },
     modalButtons: {
         display: 'flex',

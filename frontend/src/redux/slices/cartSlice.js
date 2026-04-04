@@ -88,27 +88,22 @@ export const fetchCart = () => async (dispatch) => {
     }
 };
 
-export const addToCart = (productId, quantity) => async (dispatch) => {
+
+
+export const addToCart = (productId, quantity, size = null, price = null) => async (dispatch) => {
     try {
-        console.log('🛒 Adding to cart - Product ID:', productId, 'Quantity:', quantity);
-        
-        const { data } = await api.post('/cart/add', { productId, quantity });
-        
-        console.log('📦 Add to cart response:', data);
-        console.log('📋 Cart items after add:', data.cart.items);
-        console.log('💰 Cart total after add:', data.cart.totalPrice);
-        console.log('🔢 Item count:', data.cart.itemCount);
-        
+        console.log('Adding to cart:', { productId, quantity, size, price });
+        const { data } = await api.post('/cart/add', { productId, quantity, size, price });
         dispatch(addToCartSuccess(data.cart));
-        console.log('✅ addToCartSuccess dispatched');
-        
         return { success: true, cart: data.cart };
     } catch (error) {
-        console.error('❌ Add to cart error:', error.response?.data || error);
+        console.error('Add to cart error:', error.response || error);
         const message = error.response?.data?.message || 'Failed to add to cart';
         return { error: { message } };
     }
 };
+
+
 
 export const updateCartItem = (productId, quantity) => async (dispatch) => {
     try {
