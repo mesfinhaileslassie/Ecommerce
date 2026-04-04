@@ -770,39 +770,63 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
-// Create product (Admin only)
+
+
+// Create product (Admin only) - Updated validation
 app.post('/api/products', protect, admin, async (req, res) => {
     try {
         const { name, description, price, category, countInStock, imageUrl, isFeatured, hasSizes, sizes } = req.body;
         
-        if (!name || !description || !price || !category) {
-            return res.status(400).json({ success: false, message: 'Missing required fields' });
+        // Basic validation - name, description, category are always required
+        if (!name || !description || !category) {
+            return res.status(400).json({ success: false, message: 'Missing required fields: name, description, category' });
+        }
+        
+        // If product does NOT have sizes, price is required
+        if (!hasSizes && (!price || price === 0)) {
+            return res.status(400).json({ success: false, message: 'Price is required for products without sizes' });
+        }
+        
+        // If product has sizes, at least one size is required
+        if (hasSizes && (!sizes || sizes.length === 0)) {
+            return res.status(400).json({ success: false, message: 'At least one size variant is required' });
         }
         
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         
-        const product = new Product({
+        // Build product data
+        const productData = {
             name,
             slug,
             description,
-            price,
             category,
-            countInStock: countInStock || 0,
             imageUrl: imageUrl || 'https://via.placeholder.com/300',
             isFeatured: isFeatured || false,
             hasSizes: hasSizes || false,
             sizes: sizes || []
-        });
+        };
         
+        // Set price and stock based on whether product has sizes
+        if (hasSizes) {
+            productData.price = 0; // Will be overridden by size prices
+            productData.countInStock = 0; // Will be managed per size
+        } else {
+            productData.price = price;
+            productData.countInStock = countInStock || 0;
+        }
+        
+        const product = new Product(productData);
         await product.save();
         
         res.status(201).json({ success: true, product });
     } catch (error) {
+        console.error('Create product error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
 
-// Update product (Admin only)
+
+// Update product (Admin only) - Updated validation
 app.put('/api/products/:id', protect, admin, async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
@@ -810,8 +834,25 @@ app.put('/api/products/:id', protect, admin, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
         
-        if (req.body.name) {
-            req.body.slug = req.body.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        const { name, hasSizes, sizes, price, countInStock } = req.body;
+        
+        // Validate based on hasSizes
+        if (hasSizes && (!sizes || sizes.length === 0)) {
+            return res.status(400).json({ success: false, message: 'At least one size variant is required' });
+        }
+        
+        if (!hasSizes && (!price || price === 0)) {
+            return res.status(400).json({ success: false, message: 'Price is required for products without sizes' });
+        }
+        
+        if (name) {
+            req.body.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+        }
+        
+        // If hasSizes is true, reset main price and stock
+        if (hasSizes) {
+            req.body.price = 0;
+            req.body.countInStock = 0;
         }
         
         const updatedProduct = await Product.findByIdAndUpdate(
@@ -822,9 +863,11 @@ app.put('/api/products/:id', protect, admin, async (req, res) => {
         
         res.json({ success: true, product: updatedProduct });
     } catch (error) {
+        console.error('Update product error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // Delete product (Admin only)
 app.delete('/api/products/:id', protect, admin, async (req, res) => {

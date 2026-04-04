@@ -5,6 +5,14 @@ import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar, FaImage, FaBoxes, FaTimes }
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
+// Predefined size options
+const SIZE_OPTIONS = [
+    'XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL',
+    '28', '30', '32', '34', '36', '38', '40', '42', '44', '46',
+    '6', '7', '8', '9', '10', '11', '12', '13', '14',
+    'One Size', 'Free Size'
+];
+
 const AdminProductsPage = () => {
     const dispatch = useDispatch();
     const { products, loading } = useSelector((state) => state.products);
@@ -35,7 +43,6 @@ const AdminProductsPage = () => {
             [name]: type === 'checkbox' ? checked : value,
         });
         
-        // Update image preview when image URL changes
         if (name === 'imageUrl') {
             setImagePreview(value);
         }
@@ -49,7 +56,7 @@ const AdminProductsPage = () => {
 
     const addSize = () => {
         if (!newSize.size) {
-            toast.error('Please enter a size');
+            toast.error('Please select a size');
             return;
         }
         if (!newSize.price) {
@@ -57,8 +64,14 @@ const AdminProductsPage = () => {
             return;
         }
         
+        // Check if size already exists
+        if (sizes.some(s => s.size === newSize.size)) {
+            toast.error('This size already exists');
+            return;
+        }
+        
         setSizes([...sizes, { 
-            size: newSize.size.toUpperCase(), 
+            size: newSize.size, 
             price: parseFloat(newSize.price), 
             countInStock: parseInt(newSize.countInStock) || 0 
         }]);
@@ -71,39 +84,61 @@ const AdminProductsPage = () => {
         toast.success('Size removed');
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        const productData = {
-            name: formData.name,
-            description: formData.description,
-            price: parseFloat(formData.price),
-            category: formData.category,
-            countInStock: parseInt(formData.countInStock) || 0,
-            imageUrl: formData.imageUrl || '',
-            isFeatured: formData.isFeatured,
-            hasSizes: hasSizes,
-            sizes: hasSizes ? sizes : []
-        };
-        
-        console.log('Saving product:', productData);
-        
-        try {
-            if (editingProduct) {
-                await api.put(`/products/${editingProduct._id}`, productData);
-                toast.success('Product updated successfully');
-            } else {
-                await api.post('/products', productData);
-                toast.success('Product created successfully');
-            }
-            dispatch(fetchProducts());
-            setShowModal(false);
-            resetForm();
-        } catch (error) {
-            console.error('Error saving product:', error);
-            toast.error(error.response?.data?.message || 'Operation failed');
-        }
+   const handleSubmit = async (e) => {
+    e.preventDefault();
+    
+    // Validate based on hasSizes
+    if (hasSizes && sizes.length === 0) {
+        toast.error('Please add at least one size variant');
+        return;
+    }
+    
+    if (!hasSizes && (!formData.price || formData.price <= 0)) {
+        toast.error('Please enter a valid price');
+        return;
+    }
+    
+    const productData = {
+        name: formData.name,
+        description: formData.description,
+        category: formData.category,
+        imageUrl: formData.imageUrl || '',
+        isFeatured: formData.isFeatured,
+        hasSizes: hasSizes,
     };
+    
+    // Only add price and stock if no sizes
+    if (!hasSizes) {
+        productData.price = parseFloat(formData.price);
+        productData.countInStock = parseInt(formData.countInStock) || 0;
+    }
+    
+    // Add sizes if present
+    if (hasSizes) {
+        productData.sizes = sizes;
+    }
+    
+    console.log('Saving product:', productData);
+    
+    try {
+        if (editingProduct) {
+            await api.put(`/products/${editingProduct._id}`, productData);
+            toast.success('Product updated successfully');
+        } else {
+            await api.post('/products', productData);
+            toast.success('Product created successfully');
+        }
+        dispatch(fetchProducts());
+        setShowModal(false);
+        resetForm();
+    } catch (error) {
+        console.error('Error saving product:', error);
+        toast.error(error.response?.data?.message || 'Operation failed');
+    }
+};
+
+
+
 
     const handleEdit = (product) => {
         setEditingProduct(product);
@@ -164,7 +199,6 @@ const AdminProductsPage = () => {
         setNewSize({ size: '', price: '', countInStock: '' });
     };
 
-    // Get placeholder image based on category
     const getPlaceholderImage = (category) => {
         const categoryImages = {
             'Electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=50&h=50&fit=crop',
@@ -176,7 +210,6 @@ const AdminProductsPage = () => {
         return categoryImages[category] || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=50&h=50&fit=crop';
     };
 
-    // Get product image with fallback
     const getProductImage = (product) => {
         if (product.imageUrl && product.imageUrl !== 'https://via.placeholder.com/300') {
             return product.imageUrl;
@@ -231,14 +264,20 @@ const AdminProductsPage = () => {
                                 </td>
                                 <td style={styles.productName}>{product.name}</td>
                                 <td><span style={styles.categoryBadge}>{product.category}</span></td>
-                                <td style={styles.priceCell}>${product.price.toFixed(2)}</td>
+                                <td style={styles.priceCell}>
+                                    {product.hasSizes ? (
+                                        <span style={styles.variantPrice}>Varies by size</span>
+                                    ) : (
+                                        `$${product.price.toFixed(2)}`
+                                    )}
+                                </td>
                                 <td>
                                     <span style={{
                                         ...styles.stockBadge,
                                         backgroundColor: product.countInStock > 0 ? '#d4edda' : '#f8d7da',
                                         color: product.countInStock > 0 ? '#155724' : '#721c24',
                                     }}>
-                                        {product.countInStock}
+                                        {product.hasSizes ? 'Varies' : product.countInStock}
                                     </span>
                                 </td>
                                 <td>
@@ -304,16 +343,6 @@ const AdminProductsPage = () => {
                                 required
                                 style={styles.textarea}
                             />
-                            <input
-                                type="number"
-                                name="price"
-                                placeholder="Price"
-                                value={formData.price}
-                                onChange={handleInputChange}
-                                required
-                                style={styles.input}
-                                step="0.01"
-                            />
                             <select
                                 name="category"
                                 value={formData.category}
@@ -339,6 +368,41 @@ const AdminProductsPage = () => {
                                 <span>This product has different sizes/variants</span>
                             </label>
                             
+                            {/* Price Field - Disabled when hasSizes is true */}
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Base Price</label>
+                                <input
+                                    type="number"
+                                    name="price"
+                                    placeholder="Price"
+                                    value={formData.price}
+                                    onChange={handleInputChange}
+                                    required={!hasSizes}
+                                    disabled={hasSizes}
+                                    style={{
+                                        ...styles.input,
+                                        ...(hasSizes && styles.disabledInput)
+                                    }}
+                                    step="0.01"
+                                />
+                                {hasSizes && (
+                                    <small style={styles.hintText}>Price will be set per size below</small>
+                                )}
+                            </div>
+                            
+                            {/* Stock Field - Disabled when hasSizes is true */}
+                            {!hasSizes && (
+                                <input
+                                    type="number"
+                                    name="countInStock"
+                                    placeholder="Stock Quantity"
+                                    value={formData.countInStock}
+                                    onChange={handleInputChange}
+                                    required
+                                    style={styles.input}
+                                />
+                            )}
+                            
                             {/* Size Management Section */}
                             {hasSizes && (
                                 <div style={styles.sizesSection}>
@@ -362,13 +426,16 @@ const AdminProductsPage = () => {
                                         </div>
                                     )}
                                     <div style={styles.addSizeForm}>
-                                        <input
-                                            type="text"
-                                            placeholder="Size (e.g., S, M, L, XL)"
+                                        <select
                                             value={newSize.size}
                                             onChange={(e) => setNewSize({ ...newSize, size: e.target.value })}
-                                            style={styles.sizeInput}
-                                        />
+                                            style={styles.sizeSelect}
+                                        >
+                                            <option value="">Select Size</option>
+                                            {SIZE_OPTIONS.map(size => (
+                                                <option key={size} value={size}>{size}</option>
+                                            ))}
+                                        </select>
                                         <input
                                             type="number"
                                             placeholder="Price"
@@ -385,23 +452,10 @@ const AdminProductsPage = () => {
                                             style={styles.sizeInput}
                                         />
                                         <button type="button" onClick={addSize} style={styles.addSizeBtn}>
-                                            <FaPlus /> Add Size
+                                            <FaPlus /> Add
                                         </button>
                                     </div>
                                 </div>
-                            )}
-                            
-                            {/* Regular stock input (only if no sizes) */}
-                            {!hasSizes && (
-                                <input
-                                    type="number"
-                                    name="countInStock"
-                                    placeholder="Stock Quantity"
-                                    value={formData.countInStock}
-                                    onChange={handleInputChange}
-                                    required
-                                    style={styles.input}
-                                />
                             )}
                             
                             {/* Image URL Input with Preview */}
@@ -422,17 +476,10 @@ const AdminProductsPage = () => {
                                             style={styles.imagePreview}
                                             onError={(e) => {
                                                 e.target.style.display = 'none';
-                                                document.getElementById('previewError').style.display = 'block';
                                             }}
                                         />
-                                        <div id="previewError" style={{ display: 'none', color: '#dc3545', fontSize: '12px', marginTop: '5px' }}>
-                                            Invalid image URL
-                                        </div>
                                     </div>
                                 )}
-                                <p style={styles.imageHint}>
-                                    <FaImage /> Leave empty for auto-generated images based on category
-                                </p>
                             </div>
                             
                             <label style={styles.checkboxLabel}>
@@ -532,6 +579,11 @@ const styles = {
         fontWeight: 'bold',
         color: '#28a745',
     },
+    variantPrice: {
+        fontSize: '12px',
+        color: '#6c757d',
+        fontStyle: 'italic',
+    },
     stockBadge: {
         display: 'inline-block',
         padding: '4px 8px',
@@ -626,11 +678,26 @@ const styles = {
         flexDirection: 'column',
         gap: '15px',
     },
+    formGroup: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '5px',
+    },
+    label: {
+        fontWeight: '500',
+        fontSize: '0.85rem',
+        color: '#555',
+    },
     input: {
         padding: '10px',
         border: '1px solid #ddd',
         borderRadius: '5px',
         fontSize: '16px',
+    },
+    disabledInput: {
+        backgroundColor: '#e9ecef',
+        color: '#6c757d',
+        cursor: 'not-allowed',
     },
     textarea: {
         padding: '10px',
@@ -657,6 +724,11 @@ const styles = {
         width: '18px',
         height: '18px',
         cursor: 'pointer',
+    },
+    hintText: {
+        fontSize: '11px',
+        color: '#6c757d',
+        marginTop: '2px',
     },
     sizesSection: {
         backgroundColor: '#f8f9fa',
@@ -686,7 +758,7 @@ const styles = {
     },
     sizeName: {
         fontWeight: 'bold',
-        minWidth: '50px',
+        minWidth: '60px',
     },
     sizePrice: {
         color: '#28a745',
@@ -709,6 +781,15 @@ const styles = {
         display: 'flex',
         gap: '10px',
         flexWrap: 'wrap',
+    },
+    sizeSelect: {
+        flex: 1,
+        padding: '8px',
+        border: '1px solid #ddd',
+        borderRadius: '5px',
+        fontSize: '14px',
+        minWidth: '100px',
+        backgroundColor: '#fff',
     },
     sizeInput: {
         flex: 1,
@@ -744,14 +825,6 @@ const styles = {
         maxHeight: '150px',
         borderRadius: '5px',
         objectFit: 'contain',
-    },
-    imageHint: {
-        fontSize: '12px',
-        color: '#6c757d',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '5px',
-        marginTop: '5px',
     },
     modalButtons: {
         display: 'flex',
