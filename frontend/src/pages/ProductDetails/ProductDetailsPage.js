@@ -6,8 +6,10 @@ import { addToCart } from '../../redux/slices/cartSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
 import Reviews from '../../components/Products/Reviews';
 import SizeSelector from '../../components/Products/SizeSelector';
+import ProductRecommendations from '../../components/Products/ProductRecommendations';
 import toast from 'react-hot-toast';
-import { FaStar, FaShoppingCart, FaSpinner } from 'react-icons/fa';
+import { FaStar, FaShoppingCart, FaSpinner, FaArrowLeft } from 'react-icons/fa';
+import api from '../../services/api';
 
 const ProductDetailsPage = () => {
     const { id } = useParams();
@@ -17,6 +19,7 @@ const ProductDetailsPage = () => {
     const [quantity, setQuantity] = useState(1);
     const [adding, setAdding] = useState(false);
     const [selectedSize, setSelectedSize] = useState(null);
+    const [selectedImage, setSelectedImage] = useState(0);
 
     useEffect(() => {
         if (id) {
@@ -32,16 +35,22 @@ const ProductDetailsPage = () => {
             console.log('Sizes array:', product.sizes);
             
             if (product.hasSizes && product.sizes && product.sizes.length > 0) {
-                // Find first available size
                 const availableSize = product.sizes.find(s => s.countInStock > 0);
                 setSelectedSize(availableSize || product.sizes[0]);
             } else {
                 setSelectedSize(null);
             }
-            // Reset quantity when product changes
             setQuantity(1);
         }
     }, [product]);
+
+    // Track recently viewed product
+    useEffect(() => {
+        if (product && user) {
+            api.post('/products/recently-viewed', { productId: product._id })
+                .catch(err => console.error('Failed to track view:', err));
+        }
+    }, [product, user]);
 
     const getProductImage = () => {
         if (product?.imageUrl && product.imageUrl !== 'https://via.placeholder.com/300') {
@@ -90,7 +99,6 @@ const ProductDetailsPage = () => {
         
         setAdding(true);
         try {
-            // Prepare cart item with size information
             const cartItem = {
                 productId: product._id,
                 quantity: quantity,
@@ -106,8 +114,6 @@ const ProductDetailsPage = () => {
                 selectedSize?.size || null,
                 getCurrentPrice()
             ));
-            
-            console.log('Add to cart result:', result);
             
             if (result.error) {
                 toast.error(result.error.message || 'Failed to add to cart');
@@ -138,14 +144,19 @@ const ProductDetailsPage = () => {
 
     const currentPrice = getCurrentPrice();
     const currentStock = getCurrentStock();
+    const galleryImages = [getProductImage()];
 
     return (
         <div style={styles.container}>
+            <Link to="/products" style={styles.backLink}>
+                <FaArrowLeft /> Back to Products
+            </Link>
+            
             <div style={styles.productContainer}>
                 {/* Image Gallery */}
                 <div style={styles.imageSection}>
                     <img 
-                        src={getProductImage()} 
+                        src={galleryImages[selectedImage]} 
                         alt={product.name}
                         style={styles.mainImage}
                     />
@@ -166,7 +177,7 @@ const ProductDetailsPage = () => {
                     </div>
                     <p style={styles.category}>Category: {product.category}</p>
                     
-                    {/* Size Selector - Show only if product has sizes */}
+                    {/* Size Selector */}
                     {product.hasSizes && product.sizes && product.sizes.length > 0 && (
                         <SizeSelector
                             sizes={product.sizes}
@@ -220,14 +231,26 @@ const ProductDetailsPage = () => {
                             <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
                         </button>
                     </div>
-                    
-                    <Link to="/products" style={styles.backBtn}>
-                        ← Back to Products
-                    </Link>
                 </div>
             </div>
             
+            {/* Reviews Section */}
             <Reviews productId={product._id} />
+            
+            {/* Product Recommendations */}
+            <ProductRecommendations 
+                type="similar" 
+                productId={product._id} 
+                title="You Might Also Like" 
+                limit={4} 
+            />
+            
+            <ProductRecommendations 
+                type="bought-together" 
+                productId={product._id} 
+                title="Frequently Bought Together" 
+                limit={4} 
+            />
         </div>
     );
 };
@@ -237,6 +260,15 @@ const styles = {
         maxWidth: '1200px',
         margin: '0 auto',
         padding: '20px',
+    },
+    backLink: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '8px',
+        color: '#666',
+        textDecoration: 'none',
+        marginBottom: '20px',
+        transition: 'color 0.3s',
     },
     productContainer: {
         display: 'grid',
@@ -362,15 +394,6 @@ const styles = {
     disabledBtn: {
         backgroundColor: '#ccc',
         cursor: 'not-allowed',
-    },
-    backBtn: {
-        textAlign: 'center',
-        padding: '10px',
-        backgroundColor: '#6c757d',
-        color: '#fff',
-        textDecoration: 'none',
-        borderRadius: '0.5rem',
-        transition: 'all 0.3s',
     },
     center: {
         textAlign: 'center',

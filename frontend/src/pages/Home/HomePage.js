@@ -3,10 +3,12 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { fetchProducts } from '../../redux/slices/productSlice';
 import ProductCard from '../../components/Products/ProductCard';
+import ProductRecommendations from '../../components/Products/ProductRecommendations';
 
 const HomePage = () => {
     const dispatch = useDispatch();
     const { products, loading } = useSelector((state) => state.products);
+    const { user } = useSelector((state) => state.auth);
     const featuredProducts = products.filter(p => p.isFeatured).slice(0, 4);
 
     useEffect(() => {
@@ -64,6 +66,13 @@ const HomePage = () => {
                 </div>
             </div>
 
+            {/* Best Sellers Section */}
+            <ProductRecommendations 
+                type="best-sellers" 
+                title="Best Sellers" 
+                limit={4} 
+            />
+
             {/* Featured Products */}
             {featuredProducts.length > 0 && (
                 <div className="section">
@@ -77,6 +86,22 @@ const HomePage = () => {
                         </div>
                     </div>
                 </div>
+            )}
+
+            {/* Top Rated Products */}
+            <ProductRecommendations 
+                type="top-rated" 
+                title="Top Rated Products" 
+                limit={4} 
+            />
+
+            {/* Recently Viewed Products (only for logged in users) */}
+            {user && (
+                <ProductRecommendations 
+                    type="recently-viewed" 
+                    title="Recently Viewed" 
+                    limit={4} 
+                />
             )}
 
             {/* All Products */}
@@ -98,7 +123,7 @@ const HomePage = () => {
 // Inject CSS Styles for Full Width Hero
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    /* FULL WIDTH HERO SECTION - USING #6366f1 COLOR */
+    /* FULL WIDTH HERO SECTION */
     .home-hero-fullwidth {
         position: relative;
         width: 100%;
@@ -246,6 +271,21 @@ styleSheet.textContent = `
         gap: 2rem;
     }
     
+    /* Spinner */
+    .spinner {
+        width: 40px;
+        height: 40px;
+        border: 4px solid #f3f4f6;
+        border-top-color: #6366f1;
+        border-radius: 50%;
+        animation: spin 1s linear infinite;
+        margin: 0 auto;
+    }
+    
+    @keyframes spin {
+        to { transform: rotate(360deg); }
+    }
+    
     /* Responsive Styles */
     @media (max-width: 768px) {
         .home-hero-fullwidth {
@@ -271,6 +311,10 @@ styleSheet.textContent = `
         
         .section {
             padding: 2rem 0;
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
         }
     }
     

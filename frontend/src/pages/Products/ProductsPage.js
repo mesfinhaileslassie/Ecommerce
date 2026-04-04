@@ -74,12 +74,13 @@ const ProductsPage = () => {
         setFilters(prev => ({ ...prev, keyword: '' }));
     };
 
+    // FIXED: Only show badge for non-category filters
     const getActiveFiltersCount = () => {
         let count = 0;
         if (filters.keyword) count++;
-        if (filters.category !== 'All') count++;
         if (filters.minPrice || filters.maxPrice) count++;
         if (filters.rating) count++;
+        // Category filter doesn't add to badge count
         return count;
     };
 
@@ -228,6 +229,12 @@ const ProductsPage = () => {
                             <span style={styles.activeFilter}>
                                 Rating: {filters.rating}★ & above
                                 <button onClick={() => handleFilterChange({ ...filters, rating: '' })} style={styles.removeFilter}>×</button>
+                            </span>
+                        )}
+                        {filters.keyword && (
+                            <span style={styles.activeFilter}>
+                                Search: "{filters.keyword}"
+                                <button onClick={() => handleFilterChange({ ...filters, keyword: '' })} style={styles.removeFilter}>×</button>
                             </span>
                         )}
                     </div>

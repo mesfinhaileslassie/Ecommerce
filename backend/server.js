@@ -88,7 +88,11 @@ const userSchema = new mongoose.Schema({
     isAdmin: { type: Boolean, default: false },
     avatar: { type: String, default: '' },
     googleId: { type: String, default: null },
-    createdAt: { type: Date, default: Date.now }
+    createdAt: { type: Date, default: Date.now },
+    recentlyViewed: [{
+        type: mongoose.Schema.Types.ObjectId,
+        ref: 'Product'
+    }]
 });
 
 const User = mongoose.model('User', userSchema);
@@ -1005,6 +1009,218 @@ app.put('/api/products/:id/featured', protect, admin, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+
+
+// ============================================
+// PRODUCT RECOMMENDATIONS
+// ============================================
+
+// Get similar products (based on category)
+app.get('/api/products/similar/:id', async (req, res) => {
+    try {
+        const product = await Product.findById(req.params.id);
+        if (!product) {
+            return res.status(404).json({ success: false, message: 'Product not found' });
+        }
+        
+        // Find products in same category, exclude current product
+        const similarProducts = await Product.find({
+            category: product.category,
+            _id: { $ne: product._id }
+        }).limit(4);
+        
+        res.json({
+            success: true,
+            products: similarProducts,
+            count: similarProducts.length
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get frequently bought together (based on order history)
+app.get('/api/products/bought-together/:productId', protect, async (req, res) => {
+    try {
+        const { productId } = req.params;
+        
+        // Find orders that contain this product
+        const orders = await Order.find({
+            'items.product': productId,
+            user: req.userId
+        }).populate('items.product');
+        
+        // Count frequency of other products bought with this one
+        const productFrequency = {};
+        
+        orders.forEach(order => {
+            order.items.forEach(item => {
+                if (item.product._id.toString() !== productId) {
+                    const id = item.product._id.toString();
+                    productFrequency[id] = (productFrequency[id] || 0) + item.quantity;
+                }
+            });
+        });
+        
+        // Sort by frequency and get top products
+        const topProductIds = Object.entries(productFrequency)
+            .sort((a, b) => b[1] - a[1])
+            .slice(0, 4)
+            .map(([id]) => id);
+        
+        const recommendations = await Product.find({
+            _id: { $in: topProductIds }
+        });
+        
+        res.json({
+            success: true,
+            products: recommendations,
+            count: recommendations.length
+        });
+    } catch (error) {
+        // If no orders found, return similar products instead
+        try {
+            const product = await Product.findById(productId);
+            const similarProducts = await Product.find({
+                category: product.category,
+                _id: { $ne: productId }
+            }).limit(4);
+            
+            res.json({
+                success: true,
+                products: similarProducts,
+                count: similarProducts.length,
+                fallback: true
+            });
+        } catch (fallbackError) {
+            res.status(500).json({ success: false, message: error.message });
+        }
+    }
+});
+
+// Get top rated products
+app.get('/api/products/top-rated', async (req, res) => {
+    try {
+        const topRated = await Product.find({ rating: { $gt: 0 } })
+            .sort({ rating: -1, numReviews: -1 })
+            .limit(8);
+        
+        res.json({
+            success: true,
+            products: topRated,
+            count: topRated.length
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get best selling products
+app.get('/api/products/best-sellers', async (req, res) => {
+    try {
+        // Aggregate sales from orders
+        const bestSellers = await Order.aggregate([
+            { $unwind: '$items' },
+            { $group: {
+                _id: '$items.product',
+                totalSold: { $sum: '$items.quantity' }
+            }},
+            { $sort: { totalSold: -1 } },
+            { $limit: 8 }
+        ]);
+        
+        const productIds = bestSellers.map(item => item._id);
+        const products = await Product.find({ _id: { $in: productIds } });
+        
+        // Preserve order
+        const orderedProducts = productIds.map(id => 
+            products.find(p => p._id.toString() === id.toString())
+        ).filter(p => p);
+        
+        res.json({
+            success: true,
+            products: orderedProducts,
+            count: orderedProducts.length
+        });
+    } catch (error) {
+        // If no sales, return featured products
+        const featured = await Product.find({ isFeatured: true }).limit(8);
+        res.json({
+            success: true,
+            products: featured,
+            count: featured.length,
+            fallback: true
+        });
+    }
+});
+
+// Track recently viewed products
+app.post('/api/products/recently-viewed', protect, async (req, res) => {
+    try {
+        const { productId } = req.body;
+        const user = await User.findById(req.userId);
+        
+        let recentlyViewed = user.recentlyViewed || [];
+        
+        // Remove if already exists
+        recentlyViewed = recentlyViewed.filter(id => id.toString() !== productId);
+        
+        // Add to beginning
+        recentlyViewed.unshift(productId);
+        
+        // Keep only last 10
+        recentlyViewed = recentlyViewed.slice(0, 10);
+        
+        user.recentlyViewed = recentlyViewed;
+        await user.save();
+        
+        res.json({ success: true });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get recently viewed products
+app.get('/api/products/recently-viewed', protect, async (req, res) => {
+    try {
+        const user = await User.findById(req.userId);
+        const recentlyViewedIds = user.recentlyViewed || [];
+        
+        const products = await Product.find({
+            _id: { $in: recentlyViewedIds }
+        });
+        
+        // Preserve order
+        const orderedProducts = recentlyViewedIds.map(id => 
+            products.find(p => p._id.toString() === id.toString())
+        ).filter(p => p);
+        
+        res.json({
+            success: true,
+            products: orderedProducts,
+            count: orderedProducts.length
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 // ============================================
 // REVIEW ROUTES
