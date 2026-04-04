@@ -4,7 +4,7 @@ import { Link } from 'react-router-dom';
 import { fetchWishlist, removeFromWishlist } from '../../redux/slices/wishlistSlice';
 import { addToCart } from '../../redux/slices/cartSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
-import { FaHeart, FaShoppingCart, FaTrash } from 'react-icons/fa';
+import { FaHeart, FaShoppingCart, FaTrash, FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const WishlistPage = () => {
@@ -28,7 +28,18 @@ const WishlistPage = () => {
     };
 
     const handleAddToCart = async (product) => {
+        if (!product) {
+            toast.error('Product not available');
+            return;
+        }
+        
         try {
+            // Check if product has sizes
+            if (product.hasSizes && product.sizes && product.sizes.length > 0) {
+                toast.error('Please select a size from product page');
+                return;
+            }
+            
             await dispatch(addToCart(product._id, 1));
             await dispatch(fetchCart());
             toast.success(`${product.name} added to cart!`);
@@ -48,10 +59,18 @@ const WishlistPage = () => {
     }
 
     if (loading) {
-        return <div style={styles.center}>Loading wishlist...</div>;
+        return (
+            <div style={styles.center}>
+                <FaSpinner style={styles.spinner} />
+                <p>Loading wishlist...</p>
+            </div>
+        );
     }
 
-    if (items.length === 0) {
+    // Filter out any null or undefined items
+    const validItems = items?.filter(item => item && item.product) || [];
+
+    if (validItems.length === 0) {
         return (
             <div style={styles.center}>
                 <FaHeart size={48} color="#ccc" />
@@ -65,41 +84,50 @@ const WishlistPage = () => {
     return (
         <div style={styles.container}>
             <h1 style={styles.title}>My Wishlist</h1>
-            <p style={styles.subtitle}>{itemCount} item{itemCount !== 1 ? 's' : ''} saved</p>
+            <p style={styles.subtitle}>{validItems.length} item{validItems.length !== 1 ? 's' : ''} saved</p>
             
             <div style={styles.wishlistGrid}>
-                {items.map((item) => (
-                    <div key={item.product._id} style={styles.wishlistCard}>
-                        <Link to={`/products/${item.product._id}`}>
-                            <img 
-                                src={item.imageUrl || 'https://via.placeholder.com/200'} 
-                                alt={item.name}
-                                style={styles.productImage}
-                            />
-                        </Link>
-                        <div style={styles.productInfo}>
-                            <Link to={`/products/${item.product._id}`} style={styles.productName}>
-                                {item.name}
+                {validItems.map((item) => {
+                    const product = item.product;
+                    if (!product) return null;
+                    
+                    return (
+                        <div key={product._id} style={styles.wishlistCard}>
+                            <Link to={`/products/${product._id}`}>
+                                <img 
+                                    src={product.imageUrl || 'https://via.placeholder.com/200'} 
+                                    alt={product.name}
+                                    style={styles.productImage}
+                                />
                             </Link>
-                            <p style={styles.productCategory}>{item.product?.category}</p>
-                            <p style={styles.productPrice}>${item.price.toFixed(2)}</p>
-                            <div style={styles.buttonGroup}>
-                                <button 
-                                    onClick={() => handleAddToCart(item.product)}
-                                    style={styles.cartBtn}
-                                >
-                                    <FaShoppingCart /> Add to Cart
-                                </button>
-                                <button 
-                                    onClick={() => handleRemoveFromWishlist(item.product._id, item.name)}
-                                    style={styles.removeBtn}
-                                >
-                                    <FaTrash /> Remove
-                                </button>
+                            <div style={styles.productInfo}>
+                                <Link to={`/products/${product._id}`} style={styles.productName}>
+                                    {product.name}
+                                </Link>
+                                <p style={styles.productCategory}>{product.category}</p>
+                                <p style={styles.productPrice}>${product.price?.toFixed(2) || '0.00'}</p>
+                                <div style={styles.buttonGroup}>
+                                    <button 
+                                        onClick={() => handleAddToCart(product)}
+                                        disabled={product.countInStock === 0}
+                                        style={{
+                                            ...styles.cartBtn,
+                                            ...(product.countInStock === 0 && styles.disabledBtn)
+                                        }}
+                                    >
+                                        <FaShoppingCart /> Add to Cart
+                                    </button>
+                                    <button 
+                                        onClick={() => handleRemoveFromWishlist(product._id, product.name)}
+                                        style={styles.removeBtn}
+                                    >
+                                        <FaTrash /> Remove
+                                    </button>
+                                </div>
                             </div>
                         </div>
-                    </div>
-                ))}
+                    );
+                })}
             </div>
         </div>
     );
@@ -158,7 +186,7 @@ const styles = {
     productPrice: {
         fontSize: '1.2rem',
         fontWeight: 'bold',
-        color: '#007bff',
+        color: '#6366f1',
         marginBottom: '12px',
     },
     buttonGroup: {
@@ -193,6 +221,10 @@ const styles = {
         gap: '5px',
         fontSize: '12px',
     },
+    disabledBtn: {
+        backgroundColor: '#ccc',
+        cursor: 'not-allowed',
+    },
     center: {
         textAlign: 'center',
         padding: '50px',
@@ -201,7 +233,7 @@ const styles = {
         display: 'inline-block',
         marginTop: '20px',
         padding: '10px 30px',
-        backgroundColor: '#007bff',
+        backgroundColor: '#6366f1',
         color: '#fff',
         textDecoration: 'none',
         borderRadius: '5px',
@@ -210,11 +242,27 @@ const styles = {
         display: 'inline-block',
         marginTop: '20px',
         padding: '10px 30px',
-        backgroundColor: '#007bff',
+        backgroundColor: '#6366f1',
         color: '#fff',
         textDecoration: 'none',
         borderRadius: '5px',
     },
+    spinner: {
+        animation: 'spin 1s linear infinite',
+        fontSize: '2rem',
+        color: '#6366f1',
+        marginBottom: '1rem',
+    },
 };
+
+// Add keyframes for spinner
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+`;
+document.head.appendChild(styleSheet);
 
 export default WishlistPage;

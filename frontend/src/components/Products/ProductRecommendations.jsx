@@ -2,7 +2,7 @@ import React, { useEffect, useState } from 'react';
 import { useSelector } from 'react-redux';
 import ProductCard from './ProductCard';
 import api from '../../services/api';
-import { FaSpinner } from 'react-icons/fa';
+import { FaSpinner, FaStar, FaFire, FaHistory, FaThumbsUp } from 'react-icons/fa';
 
 const ProductRecommendations = ({ type, productId, title, limit = 4 }) => {
     const [products, setProducts] = useState([]);
@@ -17,27 +17,34 @@ const ProductRecommendations = ({ type, productId, title, limit = 4 }) => {
         setLoading(true);
         try {
             let response;
+            let url = '';
             
             switch(type) {
                 case 'similar':
-                    response = await api.get(`/products/similar/${productId}`);
+                    url = `/products/similar/${productId}`;
+                    response = await api.get(url);
                     break;
                 case 'bought-together':
                     if (user) {
-                        response = await api.get(`/products/bought-together/${productId}`);
+                        url = `/products/bought-together/${productId}`;
+                        response = await api.get(url);
                     } else {
-                        response = await api.get(`/products/similar/${productId}`);
+                        url = `/products/similar/${productId}`;
+                        response = await api.get(url);
                     }
                     break;
                 case 'top-rated':
-                    response = await api.get('/products/top-rated');
+                    url = '/products/top-rated';
+                    response = await api.get(url);
                     break;
                 case 'best-sellers':
-                    response = await api.get('/products/best-sellers');
+                    url = '/products/best-sellers';
+                    response = await api.get(url);
                     break;
                 case 'recently-viewed':
                     if (user) {
-                        response = await api.get('/products/recently-viewed');
+                        url = '/products/recently-viewed';
+                        response = await api.get(url);
                     } else {
                         setProducts([]);
                         setLoading(false);
@@ -45,16 +52,35 @@ const ProductRecommendations = ({ type, productId, title, limit = 4 }) => {
                     }
                     break;
                 default:
+                    setLoading(false);
                     return;
             }
             
-            if (response.data.success) {
+            if (response && response.data && response.data.success && response.data.products) {
                 setProducts(response.data.products.slice(0, limit));
+            } else {
+                setProducts([]);
             }
         } catch (error) {
             console.error(`Failed to fetch ${type} recommendations:`, error);
+            setProducts([]);
         } finally {
             setLoading(false);
+        }
+    };
+
+    const getIcon = () => {
+        switch(type) {
+            case 'similar':
+                return <FaThumbsUp style={{ marginRight: '10px', color: '#6366f1' }} />;
+            case 'best-sellers':
+                return <FaFire style={{ marginRight: '10px', color: '#f59e0b' }} />;
+            case 'top-rated':
+                return <FaStar style={{ marginRight: '10px', color: '#fbbf24' }} />;
+            case 'recently-viewed':
+                return <FaHistory style={{ marginRight: '10px', color: '#10b981' }} />;
+            default:
+                return null;
         }
     };
 
@@ -67,13 +93,16 @@ const ProductRecommendations = ({ type, productId, title, limit = 4 }) => {
         );
     }
 
-    if (products.length === 0) {
+    if (!products || products.length === 0) {
         return null;
     }
 
     return (
         <div style={styles.container}>
-            <h2 style={styles.title}>{title}</h2>
+            <div style={styles.header}>
+                {getIcon()}
+                <h2 style={styles.title}>{title}</h2>
+            </div>
             <div style={styles.grid}>
                 {products.map(product => (
                     <ProductCard key={product._id} product={product} />
@@ -85,19 +114,29 @@ const ProductRecommendations = ({ type, productId, title, limit = 4 }) => {
 
 const styles = {
     container: {
-        marginTop: '40px',
-        padding: '20px 0',
-        borderTop: '1px solid #eee',
+        marginTop: '50px',
+        padding: '30px 0',
+        borderTop: '1px solid #e5e7eb',
+        backgroundColor: '#f9fafb',
+        borderRadius: '1rem',
+    },
+    header: {
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: '25px',
+        padding: '0 20px',
     },
     title: {
         fontSize: '1.5rem',
-        marginBottom: '20px',
-        color: '#333',
+        fontWeight: 'bold',
+        color: '#1f2937',
+        margin: 0,
     },
     grid: {
         display: 'grid',
         gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-        gap: '20px',
+        gap: '25px',
+        padding: '0 20px',
     },
     loadingContainer: {
         textAlign: 'center',

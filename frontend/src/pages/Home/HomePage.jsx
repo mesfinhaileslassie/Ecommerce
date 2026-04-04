@@ -3,7 +3,6 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { fetchProducts } from '../../redux/slices/productSlice';
 import ProductCard from '../../components/Products/ProductCard';
-import ProductRecommendations from '../../components/Products/ProductRecommendations';
 
 const HomePage = () => {
     const dispatch = useDispatch();
@@ -66,13 +65,6 @@ const HomePage = () => {
                 </div>
             </div>
 
-            {/* Best Sellers Section */}
-            <ProductRecommendations 
-                type="best-sellers" 
-                title="Best Sellers" 
-                limit={4} 
-            />
-
             {/* Featured Products */}
             {featuredProducts.length > 0 && (
                 <div className="section">
@@ -86,22 +78,6 @@ const HomePage = () => {
                         </div>
                     </div>
                 </div>
-            )}
-
-            {/* Top Rated Products */}
-            <ProductRecommendations 
-                type="top-rated" 
-                title="Top Rated Products" 
-                limit={4} 
-            />
-
-            {/* Recently Viewed Products (only for logged in users) */}
-            {user && (
-                <ProductRecommendations 
-                    type="recently-viewed" 
-                    title="Recently Viewed" 
-                    limit={4} 
-                />
             )}
 
             {/* All Products */}
@@ -317,10 +293,6 @@ styleSheet.textContent = `
         .section-title {
             font-size: 1.5rem;
         }
-        
-        .products-grid {
-            gap: 1rem;
-        }
     }
     
     @media (max-width: 480px) {
@@ -339,6 +311,10 @@ styleSheet.textContent = `
         .home-hero-fullwidth-btn {
             padding: 0.6rem 1.2rem;
             font-size: 0.8rem;
+        }
+        
+        .products-grid {
+            gap: 1rem;
         }
     }
 `;
