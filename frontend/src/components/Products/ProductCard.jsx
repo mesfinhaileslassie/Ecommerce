@@ -1,10 +1,10 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../redux/slices/cartSlice';
 import { addToWishlist, removeFromWishlist, fetchWishlist } from '../../redux/slices/wishlistSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
-import { FaHeart, FaRegHeart, FaShoppingCart, FaStar, FaEye } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaShoppingCart, FaStar, FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const ProductCard = ({ product, viewMode = 'grid' }) => {
@@ -12,6 +12,7 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
     const { user } = useSelector((state) => state.auth);
     const { items: wishlistItems } = useSelector((state) => state.wishlist);
     const [adding, setAdding] = React.useState(false);
+    const [imageLoaded, setImageLoaded] = useState(false);
     
     const isInWishlist = wishlistItems?.some(item => item.product?._id === product._id);
 
@@ -22,13 +23,13 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
         }
         // Category-based placeholder images
         const categoryImages = {
-            'Electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=300&h=200&fit=crop',
-            'Clothing': 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=300&h=200&fit=crop',
-            'Books': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=300&h=200&fit=crop',
-            'Home': 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=300&h=200&fit=crop',
-            'Sports': 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=300&h=200&fit=crop',
+            'Electronics': 'https://images.unsplash.com/photo-1498049794561-7780e7231661?w=400&h=400&fit=crop',
+            'Clothing': 'https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=400&h=400&fit=crop',
+            'Books': 'https://images.unsplash.com/photo-1512820790803-83ca734da794?w=400&h=400&fit=crop',
+            'Home': 'https://images.unsplash.com/photo-1484154218962-a197022b5858?w=400&h=400&fit=crop',
+            'Sports': 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=400&h=400&fit=crop',
         };
-        return categoryImages[product.category] || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=300&h=200&fit=crop';
+        return categoryImages[product.category] || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=400&fit=crop';
     };
 
     const handleAddToCart = async () => {
@@ -104,17 +105,29 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                 </button>
                 
                 <Link to={`/products/${product._id}`} style={styles.imageLink}>
-                    <img 
-                        src={getProductImage()} 
-                        alt={product.name}
-                        style={styles.gridImage}
-                        onError={(e) => {
-                            e.target.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=300&h=200&fit=crop';
-                        }}
-                    />
-                    {product.isFeatured && (
-                        <span style={styles.featuredBadge}>Featured</span>
-                    )}
+                    <div style={styles.imageContainer}>
+                        {!imageLoaded && (
+                            <div style={styles.imagePlaceholder}>
+                                <FaSpinner style={styles.spinnerIcon} />
+                            </div>
+                        )}
+                        <img 
+                            src={getProductImage()} 
+                            alt={product.name}
+                            style={{
+                                ...styles.gridImage,
+                                opacity: imageLoaded ? 1 : 0
+                            }}
+                            onLoad={() => setImageLoaded(true)}
+                            onError={(e) => {
+                                e.target.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=400&fit=crop';
+                                setImageLoaded(true);
+                            }}
+                        />
+                        {product.isFeatured && (
+                            <span style={styles.featuredBadge}>Featured</span>
+                        )}
+                    </div>
                 </Link>
                 
                 <div style={styles.gridContent}>
@@ -157,14 +170,16 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
         <div style={styles.listCard}>
             <div style={styles.listImageContainer}>
                 <Link to={`/products/${product._id}`}>
-                    <img 
-                        src={getProductImage()} 
-                        alt={product.name}
-                        style={styles.listImage}
-                        onError={(e) => {
-                            e.target.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=100&h=100&fit=crop';
-                        }}
-                    />
+                    <div style={styles.listImageWrapper}>
+                        <img 
+                            src={getProductImage()} 
+                            alt={product.name}
+                            style={styles.listImage}
+                            onError={(e) => {
+                                e.target.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=100&h=100&fit=crop';
+                            }}
+                        />
+                    </div>
                 </Link>
                 <button onClick={handleWishlist} style={styles.listWishlistBtn}>
                     {isInWishlist ? <FaHeart color="#ef4444" size={16} /> : <FaRegHeart size={16} />}
@@ -199,7 +214,7 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                     </div>
                     <div style={styles.listActions}>
                         <Link to={`/products/${product._id}`} style={styles.viewBtn}>
-                            <FaEye /> View Details
+                            View Details
                         </Link>
                         <button 
                             onClick={handleAddToCart}
@@ -254,11 +269,38 @@ const styles = {
         position: 'relative',
         overflow: 'hidden',
     },
-    gridImage: {
+    imageContainer: {
+        position: 'relative',
         width: '100%',
-        height: '220px',
+        paddingTop: '100%', // 1:1 Aspect Ratio
+        backgroundColor: '#f5f5f5',
+        overflow: 'hidden',
+    },
+    imagePlaceholder: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        backgroundColor: '#f5f5f5',
+    },
+    spinnerIcon: {
+        animation: 'spin 1s linear infinite',
+        fontSize: '24px',
+        color: '#6366f1',
+    },
+    gridImage: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
         objectFit: 'cover',
-        transition: 'transform 0.5s',
+        objectPosition: 'center',
+        transition: 'transform 0.5s, opacity 0.3s',
     },
     featuredBadge: {
         position: 'absolute',
@@ -358,11 +400,19 @@ const styles = {
         position: 'relative',
         flexShrink: 0,
     },
-    listImage: {
+    listImageWrapper: {
         width: '180px',
         height: '180px',
-        objectFit: 'cover',
+        overflow: 'hidden',
         borderRadius: '0.5rem',
+        backgroundColor: '#f5f5f5',
+    },
+    listImage: {
+        width: '100%',
+        height: '100%',
+        objectFit: 'cover',
+        objectPosition: 'center',
+        transition: 'transform 0.3s',
     },
     listWishlistBtn: {
         position: 'absolute',
@@ -409,6 +459,10 @@ const styles = {
         color: '#666',
         lineHeight: '1.5',
         margin: 0,
+        display: '-webkit-box',
+        WebkitLineClamp: 3,
+        WebkitBoxOrient: 'vertical',
+        overflow: 'hidden',
     },
     listFooter: {
         display: 'flex',
@@ -463,30 +517,67 @@ const styles = {
     },
 };
 
-// Add hover effects
+// Add keyframes for spinner animation
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    .product-card:hover {
-        transform: translateY(-4px);
-        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
     }
-    .product-card:hover img {
+    
+    .product-card:hover .grid-image {
         transform: scale(1.05);
     }
+    
+    .product-card:hover .list-image {
+        transform: scale(1.05);
+    }
+    
     .wishlist-btn:hover {
         transform: scale(1.1);
     }
+    
     .add-to-cart-btn:hover {
         background-color: #4f46e5;
     }
+    
     .list-card:hover {
         box-shadow: 0 4px 15px rgba(0,0,0,0.12);
     }
+    
     .view-btn:hover {
         background-color: #e5e7eb;
     }
+    
     .list-add-btn:hover {
         background-color: #4f46e5;
+    }
+    
+    @media (max-width: 768px) {
+        .list-image-wrapper {
+            width: 120px;
+            height: 120px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .list-card {
+            flex-direction: column;
+        }
+        
+        .list-image-wrapper {
+            width: 100%;
+            height: 200px;
+        }
+        
+        .list-actions {
+            flex-direction: column;
+        }
+        
+        .view-btn, .list-add-btn {
+            width: 100%;
+            justify-content: center;
+        }
     }
 `;
 document.head.appendChild(styleSheet);

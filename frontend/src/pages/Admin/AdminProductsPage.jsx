@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts, deleteProduct } from '../../redux/slices/productSlice';
-import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar, FaImage, FaBoxes, FaTimes } from 'react-icons/fa';
+import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar, FaImage, FaBoxes, FaTimes, FaUpload, FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
@@ -22,6 +22,7 @@ const AdminProductsPage = () => {
     const [hasSizes, setHasSizes] = useState(false);
     const [sizes, setSizes] = useState([]);
     const [newSize, setNewSize] = useState({ size: '', price: '', countInStock: '' });
+    const [uploadingImage, setUploadingImage] = useState(false);
     const [formData, setFormData] = useState({
         name: '',
         description: '',
@@ -48,10 +49,46 @@ const AdminProductsPage = () => {
         }
     };
 
-    const handleImageUrlChange = (e) => {
-        const url = e.target.value;
-        setFormData({ ...formData, imageUrl: url });
-        setImagePreview(url);
+    const handleImageUpload = async (e) => {
+        const file = e.target.files[0];
+        if (!file) return;
+        
+        // Validate file type
+        if (!file.type.startsWith('image/')) {
+            toast.error('Please select an image file');
+            return;
+        }
+        
+        // Validate file size (max 5MB)
+        if (file.size > 5 * 1024 * 1024) {
+            toast.error('Image size should be less than 5MB');
+            return;
+        }
+        
+        const formData = new FormData();
+        formData.append('image', file);
+        
+        setUploadingImage(true);
+        
+        try {
+            const response = await api.post('/upload', formData, {
+                headers: {
+                    'Content-Type': 'multipart/form-data',
+                },
+            });
+            
+            if (response.data.success) {
+                const imageUrl = response.data.imageUrl;
+                setFormData(prev => ({ ...prev, imageUrl: imageUrl }));
+                setImagePreview(imageUrl);
+                toast.success('Image uploaded successfully!');
+            }
+        } catch (error) {
+            console.error('Upload error:', error);
+            toast.error(error.response?.data?.message || 'Failed to upload image');
+        } finally {
+            setUploadingImage(false);
+        }
     };
 
     const addSize = () => {
@@ -64,7 +101,6 @@ const AdminProductsPage = () => {
             return;
         }
         
-        // Check if size already exists
         if (sizes.some(s => s.size === newSize.size)) {
             toast.error('This size already exists');
             return;
@@ -84,61 +120,55 @@ const AdminProductsPage = () => {
         toast.success('Size removed');
     };
 
-   const handleSubmit = async (e) => {
-    e.preventDefault();
-    
-    // Validate based on hasSizes
-    if (hasSizes && sizes.length === 0) {
-        toast.error('Please add at least one size variant');
-        return;
-    }
-    
-    if (!hasSizes && (!formData.price || formData.price <= 0)) {
-        toast.error('Please enter a valid price');
-        return;
-    }
-    
-    const productData = {
-        name: formData.name,
-        description: formData.description,
-        category: formData.category,
-        imageUrl: formData.imageUrl || '',
-        isFeatured: formData.isFeatured,
-        hasSizes: hasSizes,
-    };
-    
-    // Only add price and stock if no sizes
-    if (!hasSizes) {
-        productData.price = parseFloat(formData.price);
-        productData.countInStock = parseInt(formData.countInStock) || 0;
-    }
-    
-    // Add sizes if present
-    if (hasSizes) {
-        productData.sizes = sizes;
-    }
-    
-    console.log('Saving product:', productData);
-    
-    try {
-        if (editingProduct) {
-            await api.put(`/products/${editingProduct._id}`, productData);
-            toast.success('Product updated successfully');
-        } else {
-            await api.post('/products', productData);
-            toast.success('Product created successfully');
+    const handleSubmit = async (e) => {
+        e.preventDefault();
+        
+        if (hasSizes && sizes.length === 0) {
+            toast.error('Please add at least one size variant');
+            return;
         }
-        dispatch(fetchProducts());
-        setShowModal(false);
-        resetForm();
-    } catch (error) {
-        console.error('Error saving product:', error);
-        toast.error(error.response?.data?.message || 'Operation failed');
-    }
-};
-
-
-
+        
+        if (!hasSizes && (!formData.price || formData.price <= 0)) {
+            toast.error('Please enter a valid price');
+            return;
+        }
+        
+        const productData = {
+            name: formData.name,
+            description: formData.description,
+            category: formData.category,
+            imageUrl: formData.imageUrl || '',
+            isFeatured: formData.isFeatured,
+            hasSizes: hasSizes,
+        };
+        
+        if (!hasSizes) {
+            productData.price = parseFloat(formData.price);
+            productData.countInStock = parseInt(formData.countInStock) || 0;
+        }
+        
+        if (hasSizes) {
+            productData.sizes = sizes;
+        }
+        
+        console.log('Saving product:', productData);
+        
+        try {
+            if (editingProduct) {
+                await api.put(`/products/${editingProduct._id}`, productData);
+                toast.success('Product updated successfully');
+            } else {
+                await api.post('/products', productData);
+                toast.success('Product created successfully');
+            }
+            dispatch(fetchProducts());
+            setShowModal(false);
+            resetForm();
+        } catch (error) {
+            console.error('Error saving product:', error);
+            toast.error(error.response?.data?.message || 'Operation failed');
+        }
+    };
 
     const handleEdit = (product) => {
         setEditingProduct(product);
@@ -403,6 +433,57 @@ const AdminProductsPage = () => {
                                 />
                             )}
                             
+                            {/* Image Upload Section */}
+                            <div style={styles.imageUploadSection}>
+                                <label style={styles.label}>Product Image</label>
+                                <div style={styles.imageUploadContainer}>
+                                    {imagePreview ? (
+                                        <div style={styles.imagePreviewWrapper}>
+                                            <img 
+                                                src={imagePreview} 
+                                                alt="Preview" 
+                                                style={styles.imagePreview}
+                                                onError={(e) => {
+                                                    e.target.style.display = 'none';
+                                                }}
+                                            />
+                                            <button
+                                                type="button"
+                                                onClick={() => {
+                                                    setImagePreview('');
+                                                    setFormData(prev => ({ ...prev, imageUrl: '' }));
+                                                }}
+                                                style={styles.removeImageBtn}
+                                            >
+                                                <FaTimes />
+                                            </button>
+                                        </div>
+                                    ) : (
+                                        <div style={styles.uploadArea}>
+                                            <FaImage size={40} color="#999" />
+                                            <p>Click or drag to upload image</p>
+                                            <input
+                                                type="file"
+                                                accept="image/*"
+                                                onChange={handleImageUpload}
+                                                style={styles.fileInput}
+                                                disabled={uploadingImage}
+                                            />
+                                            {uploadingImage && <FaSpinner style={styles.uploadSpinner} />}
+                                        </div>
+                                    )}
+                                </div>
+                                <small style={styles.hintText}>Upload JPG, PNG, or GIF (Max 5MB)</small>
+                                <input
+                                    type="text"
+                                    name="imageUrl"
+                                    placeholder="Or enter image URL"
+                                    value={formData.imageUrl}
+                                    onChange={handleInputChange}
+                                    style={styles.input}
+                                />
+                            </div>
+                            
                             {/* Size Management Section */}
                             {hasSizes && (
                                 <div style={styles.sizesSection}>
@@ -457,30 +538,6 @@ const AdminProductsPage = () => {
                                     </div>
                                 </div>
                             )}
-                            
-                            {/* Image URL Input with Preview */}
-                            <div style={styles.imageInputContainer}>
-                                <input
-                                    type="text"
-                                    name="imageUrl"
-                                    placeholder="Image URL (optional - leave empty for auto-generated)"
-                                    value={formData.imageUrl}
-                                    onChange={handleImageUrlChange}
-                                    style={styles.input}
-                                />
-                                {imagePreview && (
-                                    <div style={styles.imagePreviewContainer}>
-                                        <img 
-                                            src={imagePreview} 
-                                            alt="Preview" 
-                                            style={styles.imagePreview}
-                                            onError={(e) => {
-                                                e.target.style.display = 'none';
-                                            }}
-                                        />
-                                    </div>
-                                )}
-                            </div>
                             
                             <label style={styles.checkboxLabel}>
                                 <input
@@ -656,7 +713,7 @@ const styles = {
         padding: '30px',
         borderRadius: '8px',
         width: '90%',
-        maxWidth: '600px',
+        maxWidth: '650px',
         maxHeight: '90vh',
         overflow: 'auto',
     },
@@ -729,6 +786,74 @@ const styles = {
         fontSize: '11px',
         color: '#6c757d',
         marginTop: '2px',
+    },
+    // Image Upload Styles
+    imageUploadSection: {
+        display: 'flex',
+        flexDirection: 'column',
+        gap: '10px',
+    },
+    imageUploadContainer: {
+        width: '100%',
+        minHeight: '150px',
+    },
+    uploadArea: {
+        border: '2px dashed #ddd',
+        borderRadius: '8px',
+        padding: '20px',
+        textAlign: 'center',
+        position: 'relative',
+        cursor: 'pointer',
+        transition: 'all 0.3s',
+        backgroundColor: '#f8f9fa',
+    },
+    fileInput: {
+        position: 'absolute',
+        top: 0,
+        left: 0,
+        width: '100%',
+        height: '100%',
+        opacity: 0,
+        cursor: 'pointer',
+    },
+    uploadSpinner: {
+        position: 'absolute',
+        top: '50%',
+        left: '50%',
+        transform: 'translate(-50%, -50%)',
+        fontSize: '24px',
+        color: '#6366f1',
+        animation: 'spin 1s linear infinite',
+    },
+    imagePreviewWrapper: {
+        position: 'relative',
+        display: 'inline-block',
+        width: '100%',
+        maxWidth: '200px',
+        margin: '0 auto',
+    },
+    imagePreview: {
+        width: '100%',
+        height: 'auto',
+        maxHeight: '150px',
+        objectFit: 'contain',
+        borderRadius: '8px',
+        border: '1px solid #ddd',
+    },
+    removeImageBtn: {
+        position: 'absolute',
+        top: '-10px',
+        right: '-10px',
+        backgroundColor: '#dc3545',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '50%',
+        width: '24px',
+        height: '24px',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
     },
     sizesSection: {
         backgroundColor: '#f8f9fa',
@@ -810,22 +935,6 @@ const styles = {
         alignItems: 'center',
         gap: '5px',
     },
-    imageInputContainer: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '10px',
-    },
-    imagePreviewContainer: {
-        display: 'flex',
-        justifyContent: 'center',
-        marginTop: '5px',
-    },
-    imagePreview: {
-        maxWidth: '100%',
-        maxHeight: '150px',
-        borderRadius: '5px',
-        objectFit: 'contain',
-    },
     modalButtons: {
         display: 'flex',
         gap: '10px',
@@ -854,5 +963,20 @@ const styles = {
         padding: '50px',
     },
 };
+
+// Add keyframes for spinner
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .upload-area:hover {
+        border-color: #6366f1;
+        background-color: #f0f0ff;
+    }
+`;
+document.head.appendChild(styleSheet);
 
 export default AdminProductsPage;
