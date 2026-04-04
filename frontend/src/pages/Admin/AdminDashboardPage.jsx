@@ -111,29 +111,29 @@ const AdminDashboardPage = () => {
     }
 
     return (
-        <div style={styles.pageWrapper}>
-            {/* Hero Section - Full Width */}
-            <div className="admin-hero-full">
-                <div className="admin-hero-overlay"></div>
-                <div className="admin-hero-content">
-                    <h1 className="admin-hero-title">Admin Dashboard</h1>
-                    <p className="admin-hero-subtitle">Welcome back, {user?.name}!</p>
-                    <div className="admin-period-selector">
+        <div>
+            {/* Full Width Hero Section */}
+            <div className="admin-hero-fullwidth">
+                <div className="admin-hero-fullwidth-overlay"></div>
+                <div className="admin-hero-fullwidth-content">
+                    <h1 className="admin-hero-fullwidth-title">Admin Dashboard</h1>
+                    <p className="admin-hero-fullwidth-subtitle">Welcome back, {user?.name}!</p>
+                    <div className="admin-tab-container">
                         <button 
                             onClick={() => setSelectedPeriod('week')}
-                            className={selectedPeriod === 'week' ? 'admin-period-btn-active' : 'admin-period-btn'}
+                            className={`admin-tab-btn ${selectedPeriod === 'week' ? 'admin-tab-btn-active' : ''}`}
                         >
                             Week
                         </button>
                         <button 
                             onClick={() => setSelectedPeriod('month')}
-                            className={selectedPeriod === 'month' ? 'admin-period-btn-active' : 'admin-period-btn'}
+                            className={`admin-tab-btn ${selectedPeriod === 'month' ? 'admin-tab-btn-active' : ''}`}
                         >
                             Month
                         </button>
                         <button 
                             onClick={() => setSelectedPeriod('year')}
-                            className={selectedPeriod === 'year' ? 'admin-period-btn-active' : 'admin-period-btn'}
+                            className={`admin-tab-btn ${selectedPeriod === 'year' ? 'admin-tab-btn-active' : ''}`}
                         >
                             Year
                         </button>
@@ -141,7 +141,7 @@ const AdminDashboardPage = () => {
                 </div>
             </div>
 
-            {/* Main Content - Centered with max-width */}
+            {/* Main Content */}
             <div style={styles.container}>
                 {/* Main Stats Cards */}
                 <div style={styles.statsGrid}>
@@ -213,10 +213,6 @@ const AdminDashboardPage = () => {
 };
 
 const styles = {
-    pageWrapper: {
-        width: '100%',
-        overflowX: 'hidden',
-    },
     container: {
         maxWidth: '1400px',
         margin: '0 auto',
@@ -363,7 +359,7 @@ const styles = {
     },
 };
 
-// Add CSS styles - Full width hero section
+// Inject CSS Styles
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
     @keyframes spin {
@@ -371,12 +367,12 @@ styleSheet.textContent = `
         to { transform: rotate(360deg); }
     }
     
-    /* Full width hero section - NO WHITE SPACE */
-    .admin-hero-full {
+    /* FULL WIDTH HERO SECTION - NO WHITE SPACE */
+    .admin-hero-fullwidth {
         position: relative;
         width: 100%;
-        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
-        min-height: 300px;
+        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        min-height: 320px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -384,21 +380,19 @@ styleSheet.textContent = `
         overflow: hidden;
         margin: 0;
         padding: 0;
-        left: 0;
-        right: 0;
     }
     
-    .admin-hero-overlay {
+    .admin-hero-fullwidth-overlay {
         position: absolute;
         top: 0;
         left: 0;
         right: 0;
         bottom: 0;
-        background: radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%);
+        background: radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.3) 100%);
         pointer-events: none;
     }
     
-    .admin-hero-content {
+    .admin-hero-fullwidth-content {
         position: relative;
         z-index: 1;
         color: white;
@@ -408,56 +402,63 @@ styleSheet.textContent = `
         margin: 0 auto;
     }
     
-    .admin-hero-title {
-        font-size: 3rem;
+    .admin-hero-fullwidth-title {
+        font-size: 2.5rem;
         font-weight: bold;
-        margin-bottom: 1rem;
+        margin-bottom: 0.75rem;
         animation: fadeIn 0.6s ease-out;
     }
     
-    .admin-hero-subtitle {
-        font-size: 1.2rem;
-        margin-bottom: 2rem;
+    .admin-hero-fullwidth-subtitle {
+        font-size: 1.1rem;
+        margin-bottom: 1.5rem;
         opacity: 0.9;
     }
     
-    .admin-period-selector {
+    /* VISIBLE TABS */
+    .admin-tab-container {
         display: flex;
-        gap: 10px;
+        gap: 15px;
         justify-content: center;
-        margin-top: 1rem;
+        margin-top: 0.5rem;
         flex-wrap: wrap;
     }
     
-    .admin-period-btn {
-        padding: 8px 16px;
-        background: rgba(255,255,255,0.2);
-        border: none;
-        border-radius: 0.5rem;
+    .admin-tab-btn {
+        padding: 10px 30px;
+        background: rgba(255, 255, 255, 0.15);
+        border: 2px solid rgba(255, 255, 255, 0.4);
+        border-radius: 40px;
         color: white;
         cursor: pointer;
-        font-size: 0.9rem;
-        transition: all 0.3s;
+        font-size: 1rem;
+        font-weight: 600;
+        transition: all 0.3s ease;
+        letter-spacing: 0.5px;
     }
     
-    .admin-period-btn-active {
-        padding: 8px 16px;
+    .admin-tab-btn-active {
+        padding: 10px 30px;
         background: white;
-        border: none;
-        border-radius: 0.5rem;
-        color: #4f46e5;
+        border: 2px solid white;
+        border-radius: 40px;
+        color: #667eea;
         cursor: pointer;
-        font-size: 0.9rem;
-        font-weight: bold;
+        font-size: 1rem;
+        font-weight: 700;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.2);
     }
     
-    .admin-period-btn:hover {
-        background: rgba(255,255,255,0.3);
+    .admin-tab-btn:hover {
+        background: rgba(255, 255, 255, 0.3);
         transform: translateY(-2px);
+        border-color: rgba(255, 255, 255, 0.7);
     }
     
-    .admin-period-btn-active:hover {
+    .admin-tab-btn-active:hover {
+        background: white;
         transform: translateY(-2px);
+        box-shadow: 0 6px 20px rgba(0, 0, 0, 0.25);
     }
     
     @keyframes fadeIn {
@@ -482,38 +483,43 @@ styleSheet.textContent = `
         transform: translateY(-2px);
     }
     
-    /* Responsive styles - FULL WIDTH on all screens */
+    /* Responsive Styles */
     @media (max-width: 768px) {
-        .admin-hero-full {
-            min-height: 250px;
+        .admin-hero-fullwidth {
+            min-height: 260px;
         }
         
-        .admin-hero-title {
-            font-size: 2rem;
+        .admin-hero-fullwidth-title {
+            font-size: 1.8rem;
         }
         
-        .admin-hero-subtitle {
-            font-size: 1rem;
+        .admin-hero-fullwidth-subtitle {
+            font-size: 0.9rem;
+            margin-bottom: 1rem;
         }
         
-        .admin-period-selector {
-            flex-wrap: wrap;
+        .admin-tab-btn,
+        .admin-tab-btn-active {
+            padding: 7px 20px;
+            font-size: 0.85rem;
         }
         
-        .admin-period-btn,
-        .admin-period-btn-active {
-            padding: 6px 12px;
-            font-size: 0.8rem;
+        .admin-tab-container {
+            gap: 10px;
         }
     }
     
     @media (max-width: 480px) {
-        .admin-hero-title {
-            font-size: 1.5rem;
+        .admin-hero-fullwidth {
+            min-height: 240px;
         }
         
-        .admin-hero-subtitle {
-            font-size: 0.9rem;
+        .admin-hero-fullwidth-title {
+            font-size: 1.4rem;
+        }
+        
+        .admin-hero-fullwidth-subtitle {
+            font-size: 0.8rem;
         }
         
         .stat-value {
@@ -526,10 +532,14 @@ styleSheet.textContent = `
             font-size: 18px !important;
         }
         
-        .admin-period-btn,
-        .admin-period-btn-active {
-            padding: 4px 10px;
-            font-size: 0.7rem;
+        .admin-tab-btn,
+        .admin-tab-btn-active {
+            padding: 5px 14px;
+            font-size: 0.75rem;
+        }
+        
+        .admin-tab-container {
+            gap: 8px;
         }
     }
 `;
