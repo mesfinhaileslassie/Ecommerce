@@ -4,7 +4,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { addToCart } from '../../redux/slices/cartSlice';
 import { addToWishlist, removeFromWishlist, fetchWishlist } from '../../redux/slices/wishlistSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
-import { FaHeart, FaRegHeart, FaShoppingCart, FaStar, FaSpinner } from 'react-icons/fa';
+import { FaHeart, FaRegHeart, FaShoppingCart, FaStar, FaSpinner, FaInfoCircle } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const ProductCard = ({ product, viewMode = 'grid' }) => {
@@ -15,6 +15,7 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
     const [imageLoaded, setImageLoaded] = useState(false);
     
     const isInWishlist = wishlistItems?.some(item => item.product?._id === product._id);
+    const hasSizes = product.hasSizes && product.sizes && product.sizes.length > 0;
 
     // Get product image with fallback
     const getProductImage = () => {
@@ -30,6 +31,22 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
             'Sports': 'https://images.unsplash.com/photo-1517649763962-0c623066013b?w=400&h=400&fit=crop',
         };
         return categoryImages[product.category] || 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=400&fit=crop';
+    };
+
+    // Get display price
+    const getDisplayPrice = () => {
+        if (hasSizes) {
+            // Find min and max price from sizes
+            const prices = product.sizes.map(s => s.price);
+            const minPrice = Math.min(...prices);
+            const maxPrice = Math.max(...prices);
+            
+            if (minPrice === maxPrice) {
+                return `$${minPrice.toFixed(2)}`;
+            }
+            return `$${minPrice.toFixed(2)} - $${maxPrice.toFixed(2)}`;
+        }
+        return `$${product.price.toFixed(2)}`;
     };
 
     const handleAddToCart = async () => {
@@ -127,6 +144,9 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                         {product.isFeatured && (
                             <span style={styles.featuredBadge}>Featured</span>
                         )}
+                        {hasSizes && (
+                            <span style={styles.sizesBadge}>Multiple Sizes</span>
+                        )}
                     </div>
                 </Link>
                 
@@ -143,23 +163,30 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                     </div>
                     
                     <div style={styles.priceContainer}>
-                        <span style={styles.price}>${product.price.toFixed(2)}</span>
+                        <span style={styles.price}>{getDisplayPrice()}</span>
                         <span className={`product-stock ${product.countInStock > 0 ? 'stock-in' : 'stock-out'}`} style={styles.stockBadge}>
-                            {product.countInStock > 0 ? `${product.countInStock} left` : 'Out of stock'}
+                            {hasSizes ? 'Sizes available' : (product.countInStock > 0 ? `${product.countInStock} left` : 'Out of stock')}
                         </span>
                     </div>
                     
-                    <button 
-                        onClick={handleAddToCart}
-                        disabled={product.countInStock === 0 || adding}
-                        style={{
-                            ...styles.addToCartBtn,
-                            ...(product.countInStock === 0 && styles.disabledBtn)
-                        }}
-                    >
-                        <FaShoppingCart size={14} />
-                        <span>{adding ? 'Adding...' : 'Add to Cart'}</span>
-                    </button>
+                    {hasSizes ? (
+                        <Link to={`/products/${product._id}`} style={styles.selectSizeBtn}>
+                            <FaInfoCircle size={14} />
+                            <span>Select Size</span>
+                        </Link>
+                    ) : (
+                        <button 
+                            onClick={handleAddToCart}
+                            disabled={product.countInStock === 0 || adding}
+                            style={{
+                                ...styles.addToCartBtn,
+                                ...(product.countInStock === 0 && styles.disabledBtn)
+                            }}
+                        >
+                            <FaShoppingCart size={14} />
+                            <span>{adding ? 'Adding...' : 'Add to Cart'}</span>
+                        </button>
+                    )}
                 </div>
             </div>
         );
@@ -179,6 +206,9 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                                 e.target.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=100&h=100&fit=crop';
                             }}
                         />
+                        {hasSizes && (
+                            <span style={styles.listSizesBadge}>Sizes Available</span>
+                        )}
                     </div>
                 </Link>
                 <button onClick={handleWishlist} style={styles.listWishlistBtn}>
@@ -207,26 +237,28 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                 
                 <div style={styles.listFooter}>
                     <div>
-                        <span style={styles.listPrice}>${product.price.toFixed(2)}</span>
+                        <span style={styles.listPrice}>{getDisplayPrice()}</span>
                         <span style={styles.listStock}>
-                            {product.countInStock > 0 ? `✓ In Stock (${product.countInStock})` : '✗ Out of Stock'}
+                            {hasSizes ? 'Multiple sizes available' : (product.countInStock > 0 ? `✓ In Stock (${product.countInStock})` : '✗ Out of Stock')}
                         </span>
                     </div>
                     <div style={styles.listActions}>
                         <Link to={`/products/${product._id}`} style={styles.viewBtn}>
-                            View Details
+                            {hasSizes ? 'Select Size' : 'View Details'}
                         </Link>
-                        <button 
-                            onClick={handleAddToCart}
-                            disabled={product.countInStock === 0 || adding}
-                            style={{
-                                ...styles.listAddBtn,
-                                ...(product.countInStock === 0 && styles.disabledBtn)
-                            }}
-                        >
-                            <FaShoppingCart />
-                            <span>{adding ? 'Adding...' : 'Add to Cart'}</span>
-                        </button>
+                        {!hasSizes && (
+                            <button 
+                                onClick={handleAddToCart}
+                                disabled={product.countInStock === 0 || adding}
+                                style={{
+                                    ...styles.listAddBtn,
+                                    ...(product.countInStock === 0 && styles.disabledBtn)
+                                }}
+                            >
+                                <FaShoppingCart />
+                                <span>{adding ? 'Adding...' : 'Add to Cart'}</span>
+                            </button>
+                        )}
                     </div>
                 </div>
             </div>
@@ -272,7 +304,7 @@ const styles = {
     imageContainer: {
         position: 'relative',
         width: '100%',
-        paddingTop: '100%', // 1:1 Aspect Ratio
+        paddingTop: '100%',
         backgroundColor: '#f5f5f5',
         overflow: 'hidden',
     },
@@ -311,6 +343,18 @@ const styles = {
         padding: '4px 10px',
         borderRadius: '20px',
         fontSize: '11px',
+        fontWeight: 'bold',
+        zIndex: 10,
+    },
+    sizesBadge: {
+        position: 'absolute',
+        bottom: '12px',
+        left: '12px',
+        backgroundColor: '#6366f1',
+        color: '#fff',
+        padding: '4px 10px',
+        borderRadius: '20px',
+        fontSize: '10px',
         fontWeight: 'bold',
         zIndex: 10,
     },
@@ -385,6 +429,23 @@ const styles = {
         fontWeight: '500',
         transition: 'background-color 0.3s',
     },
+    selectSizeBtn: {
+        width: '100%',
+        padding: '0.6rem',
+        backgroundColor: '#10b981',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '0.5rem',
+        cursor: 'pointer',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        fontSize: '0.9rem',
+        fontWeight: '500',
+        textDecoration: 'none',
+        transition: 'background-color 0.3s',
+    },
     
     // List View Styles
     listCard: {
@@ -406,6 +467,7 @@ const styles = {
         overflow: 'hidden',
         borderRadius: '0.5rem',
         backgroundColor: '#f5f5f5',
+        position: 'relative',
     },
     listImage: {
         width: '100%',
@@ -413,6 +475,17 @@ const styles = {
         objectFit: 'cover',
         objectPosition: 'center',
         transition: 'transform 0.3s',
+    },
+    listSizesBadge: {
+        position: 'absolute',
+        bottom: '8px',
+        left: '8px',
+        backgroundColor: '#6366f1',
+        color: '#fff',
+        padding: '2px 8px',
+        borderRadius: '20px',
+        fontSize: '9px',
+        fontWeight: 'bold',
     },
     listWishlistBtn: {
         position: 'absolute',
@@ -539,6 +612,10 @@ styleSheet.textContent = `
     
     .add-to-cart-btn:hover {
         background-color: #4f46e5;
+    }
+    
+    .select-size-btn:hover {
+        background-color: #059669;
     }
     
     .list-card:hover {
