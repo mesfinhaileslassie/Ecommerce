@@ -4,6 +4,8 @@ const dotenv = require('dotenv');
 const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const cors = require('cors'); 
+const { OAuth2Client } = require('google-auth-library');
+
 
 dotenv.config();
 
@@ -24,6 +26,91 @@ app.use((req, res, next) => {
     console.log(`📨 ${req.method} ${req.url}`);
     next();
 });
+
+
+
+// ============================================
+// GOOGLE AUTH ROUTE
+// ============================================
+
+// Initialize Google OAuth client
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+// Google login endpoint
+app.post('/api/auth/google', async (req, res) => {
+    const { token } = req.body;
+
+    if (!token) {
+        return res.status(400).json({ success: false, message: 'No token provided' });
+    }
+
+    try {
+        // Verify the Google token
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const { email, name, picture, sub: googleId } = payload;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email not provided by Google' });
+        }
+
+        console.log(`🔐 Google login attempt for: ${email}`);
+
+        // Check if user exists
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            // Create new user
+            const randomPassword = Math.random().toString(36).slice(-8);
+            const hashedPassword = await hashPassword(randomPassword);
+
+            user = new User({
+                name: name || email.split('@')[0],
+                email: email,
+                password: hashedPassword,
+                avatar: picture || '',
+                isAdmin: false,
+            });
+            await user.save();
+            console.log(`✅ New user created via Google: ${email}`);
+        } else {
+            // Update avatar if not set
+            if (picture && !user.avatar) {
+                user.avatar = picture;
+                await user.save();
+            }
+            console.log(`✅ Existing user logged in via Google: ${email}`);
+        }
+
+        // Generate JWT token
+        const appToken = generateToken(user._id);
+
+        // Return user data
+        res.json({
+            success: true,
+            message: 'Google login successful',
+            token: appToken,
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                avatar: user.avatar,
+                createdAt: user.createdAt,
+            },
+        });
+
+    } catch (error) {
+        console.error('❌ Google token verification failed:', error);
+        res.status(401).json({ success: false, message: 'Google authentication failed' });
+    }
+});
+
+
 
 // ============================================
 // USER MODEL

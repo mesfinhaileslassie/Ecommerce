@@ -2,14 +2,17 @@ import React, { useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { login } from '../../redux/slices/authSlice';
+import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
+import { FaGoogle } from 'react-icons/fa';
 
-const LoginPage = () => {
-    const [email, setEmail] = useState('');
-    const [password, setPassword] = useState('');
+const LoginPageContent = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
-    const { loading, error } = useSelector((state) => state.auth);
+    const [email, setEmail] = useState('');
+    const [password, setPassword] = useState('');
+    const { loading } = useSelector((state) => state.auth);
 
     const handleSubmit = async (e) => {
         e.preventDefault();
@@ -20,16 +23,38 @@ const LoginPage = () => {
         }
 
         try {
-            const result = await dispatch(login(email, password));
-            if (result.error) {
-                toast.error(result.error.message || 'Login failed');
-            } else {
-                toast.success('Login successful!');
-                navigate('/');
-            }
+            await dispatch(login(email, password)).unwrap();
+            toast.success('Login successful!');
+            navigate('/');
         } catch (error) {
             toast.error(error.message || 'Login failed');
         }
+    };
+
+    const handleGoogleSuccess = async (credentialResponse) => {
+        console.log('Google login success:', credentialResponse);
+        const { credential } = credentialResponse;
+        
+        try {
+            const { data } = await api.post('/auth/google', { token: credential });
+            
+            if (data.success) {
+                // Manually dispatch login success
+                dispatch({ type: 'auth/loginSuccess', payload: data });
+                toast.success('Google Login successful!');
+                navigate('/');
+            } else {
+                toast.error(data.message || 'Google login failed');
+            }
+        } catch (error) {
+            console.error('Google login error:', error);
+            toast.error(error.response?.data?.message || 'Google login failed');
+        }
+    };
+
+    const handleGoogleFailure = (error) => {
+        console.error('Google login failed:', error);
+        toast.error('Google login was unsuccessful. Please try again.');
     };
 
     return (
@@ -61,12 +86,6 @@ const LoginPage = () => {
                         />
                     </div>
                     
-                    {error && (
-                        <div style={styles.error}>
-                            {error}
-                        </div>
-                    )}
-                    
                     <button 
                         type="submit" 
                         style={styles.button}
@@ -76,11 +95,48 @@ const LoginPage = () => {
                     </button>
                 </form>
                 
+                {/* Divider */}
+                <div style={styles.divider}>
+                    <span>OR</span>
+                </div>
+                
+                {/* Google Login Button */}
+                <div style={styles.googleButtonWrapper}>
+                    <GoogleLogin
+                        onSuccess={handleGoogleSuccess}
+                        onError={handleGoogleFailure}
+                        useOneTap={false}
+                        theme="outline"
+                        size="large"
+                        text="continue_with"
+                        shape="rectangular"
+                        width="100%"
+                        logo_alignment="center"
+                    />
+                </div>
+                
                 <p style={styles.registerLink}>
                     Don't have an account? <Link to="/register">Register here</Link>
                 </p>
             </div>
         </div>
+    );
+};
+
+// Wrap with GoogleOAuthProvider
+const LoginPage = () => {
+    const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+    
+    if (!googleClientId) {
+        console.error("REACT_APP_GOOGLE_CLIENT_ID is not set");
+        // Fallback to regular login without Google button
+        return <LoginPageContent />;
+    }
+
+    return (
+        <GoogleOAuthProvider clientId={googleClientId}>
+            <LoginPageContent />
+        </GoogleOAuthProvider>
     );
 };
 
@@ -135,17 +191,22 @@ const styles = {
         cursor: 'pointer',
         marginTop: '10px',
     },
+    divider: {
+        textAlign: 'center',
+        margin: '20px 0',
+        color: '#999',
+        position: 'relative',
+    },
+    googleButtonWrapper: {
+        marginTop: '10px',
+        display: 'flex',
+        justifyContent: 'center',
+        width: '100%',
+    },
     registerLink: {
         textAlign: 'center',
         marginTop: '20px',
         color: '#666',
-    },
-    error: {
-        backgroundColor: '#f8d7da',
-        color: '#721c24',
-        padding: '10px',
-        borderRadius: '5px',
-        textAlign: 'center',
     },
 };
 
