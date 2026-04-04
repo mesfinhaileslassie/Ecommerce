@@ -7,20 +7,16 @@ import {
     FaBoxes, 
     FaShoppingCart, 
     FaDollarSign, 
-    FaTachometerAlt,
-    FaChartLine,
-    FaEye,
     FaCheckCircle,
     FaClock,
     FaTruck,
     FaTag,
     FaStar,
-    FaArrowUp,
-    FaArrowDown
+    FaSpinner
 } from 'react-icons/fa';
 
 const AdminDashboardPage = () => {
-    const { token, user } = useSelector((state) => state.auth);
+    const { user } = useSelector((state) => state.auth);
     const [stats, setStats] = useState({
         totalUsers: 0,
         totalProducts: 0,
@@ -30,10 +26,8 @@ const AdminDashboardPage = () => {
         shippedOrders: 0,
         deliveredOrders: 0,
         lowStockProducts: 0,
-        averageOrderValue: 0,
     });
     const [recentOrders, setRecentOrders] = useState([]);
-    const [recentUsers, setRecentUsers] = useState([]);
     const [topProducts, setTopProducts] = useState([]);
     const [loading, setLoading] = useState(true);
     const [selectedPeriod, setSelectedPeriod] = useState('week');
@@ -41,7 +35,6 @@ const AdminDashboardPage = () => {
     useEffect(() => {
         if (user && user.isAdmin) {
             fetchDashboardData();
-            fetchRecentUsers();
             fetchTopProducts();
         }
     }, [user, selectedPeriod]);
@@ -55,22 +48,12 @@ const AdminDashboardPage = () => {
                 shippedOrders: data.stats.shippedOrders || 0,
                 deliveredOrders: data.stats.deliveredOrders || 0,
                 lowStockProducts: data.stats.lowStockProducts || 0,
-                averageOrderValue: data.stats.totalRevenue / (data.stats.totalOrders || 1),
             });
             setRecentOrders(data.recentOrders || []);
         } catch (error) {
             console.error('Failed to fetch dashboard data:', error);
         } finally {
             setLoading(false);
-        }
-    };
-
-    const fetchRecentUsers = async () => {
-        try {
-            const { data } = await api.get('/users?limit=5');
-            setRecentUsers(data.users || []);
-        } catch (error) {
-            console.error('Failed to fetch users:', error);
         }
     };
 
@@ -118,126 +101,79 @@ const AdminDashboardPage = () => {
         },
     ];
 
-    const orderStatusCards = [
-        { 
-            title: 'Pending', 
-            value: stats.pendingOrders, 
-            icon: <FaClock />, 
-            color: '#f59e0b',
-            bgColor: '#fef3c7',
-        },
-        { 
-            title: 'Shipped', 
-            value: stats.shippedOrders, 
-            icon: <FaTruck />, 
-            color: '#3b82f6',
-            bgColor: '#dbeafe',
-        },
-        { 
-            title: 'Delivered', 
-            value: stats.deliveredOrders, 
-            icon: <FaCheckCircle />, 
-            color: '#10b981',
-            bgColor: '#d1fae5',
-        },
-        { 
-            title: 'Low Stock', 
-            value: stats.lowStockProducts, 
-            icon: <FaBoxes />, 
-            color: '#ef4444',
-            bgColor: '#fee2e2',
-        },
-    ];
-
     if (loading) {
         return (
             <div style={styles.center}>
-                <div className="spinner"></div>
+                <FaSpinner style={styles.spinner} />
                 <p>Loading dashboard...</p>
             </div>
         );
     }
 
     return (
-        <div style={styles.container}>
-            <div style={styles.header}>
-                <div>
-                    <h1 style={styles.title}>Admin Dashboard</h1>
-                    <p style={styles.subtitle}>Welcome back, {user?.name}!</p>
-                </div>
-                <div style={styles.periodSelector}>
-                    <button 
-                        onClick={() => setSelectedPeriod('week')}
-                        style={{...styles.periodBtn, ...(selectedPeriod === 'week' && styles.periodBtnActive)}}
-                    >
-                        Week
-                    </button>
-                    <button 
-                        onClick={() => setSelectedPeriod('month')}
-                        style={{...styles.periodBtn, ...(selectedPeriod === 'month' && styles.periodBtnActive)}}
-                    >
-                        Month
-                    </button>
-                    <button 
-                        onClick={() => setSelectedPeriod('year')}
-                        style={{...styles.periodBtn, ...(selectedPeriod === 'year' && styles.periodBtnActive)}}
-                    >
-                        Year
-                    </button>
-                </div>
-            </div>
-
-            {/* Main Stats Cards */}
-            <div style={styles.statsGrid}>
-                {statCards.map((stat, index) => (
-                    <Link to={stat.link} key={index} style={styles.statCard}>
-                        <div style={{...styles.statIcon, backgroundColor: stat.bgColor, color: stat.color}}>
-                            {stat.icon}
-                        </div>
-                        <div style={styles.statInfo}>
-                            <h3 style={styles.statTitle}>{stat.title}</h3>
-                            <p style={styles.statValue}>{stat.value}</p>
-                        </div>
-                    </Link>
-                ))}
-            </div>
-
-            {/* Order Status Cards */}
-            <div style={styles.orderStatusGrid}>
-                {orderStatusCards.map((status, index) => (
-                    <div key={index} style={styles.statusCard}>
-                        <div style={{...styles.statusIcon, backgroundColor: status.bgColor, color: status.color}}>
-                            {status.icon}
-                        </div>
-                        <div>
-                            <h4 style={styles.statusTitle}>{status.title}</h4>
-                            <p style={styles.statusValue}>{status.value}</p>
-                        </div>
+        <div style={styles.pageWrapper}>
+            {/* Hero Section - Full Width */}
+            <div className="admin-hero-full">
+                <div className="admin-hero-overlay"></div>
+                <div className="admin-hero-content">
+                    <h1 className="admin-hero-title">Admin Dashboard</h1>
+                    <p className="admin-hero-subtitle">Welcome back, {user?.name}!</p>
+                    <div className="admin-period-selector">
+                        <button 
+                            onClick={() => setSelectedPeriod('week')}
+                            className={selectedPeriod === 'week' ? 'admin-period-btn-active' : 'admin-period-btn'}
+                        >
+                            Week
+                        </button>
+                        <button 
+                            onClick={() => setSelectedPeriod('month')}
+                            className={selectedPeriod === 'month' ? 'admin-period-btn-active' : 'admin-period-btn'}
+                        >
+                            Month
+                        </button>
+                        <button 
+                            onClick={() => setSelectedPeriod('year')}
+                            className={selectedPeriod === 'year' ? 'admin-period-btn-active' : 'admin-period-btn'}
+                        >
+                            Year
+                        </button>
                     </div>
-                ))}
-            </div>
-
-            {/* Quick Actions */}
-            <div style={styles.section}>
-                <h2 style={styles.sectionTitle}>Quick Actions</h2>
-                <div style={styles.actionButtons}>
-                    <Link to="/admin/products" style={styles.actionBtn}>
-                        <FaBoxes /> Manage Products
-                    </Link>
-                    <Link to="/admin/orders" style={styles.actionBtn}>
-                        <FaShoppingCart /> Manage Orders
-                    </Link>
-                    <Link to="/admin/coupons" style={styles.actionBtn}>
-                        <FaTag /> Manage Coupons
-                    </Link>
-                    <Link to="/admin/users" style={styles.actionBtn}>
-                        <FaUsers /> Manage Users
-                    </Link>
                 </div>
             </div>
 
-            {/* Recent Orders and Top Products */}
-            <div style={styles.twoColumnGrid}>
+            {/* Main Content - Centered with max-width */}
+            <div style={styles.container}>
+                {/* Main Stats Cards */}
+                <div style={styles.statsGrid}>
+                    {statCards.map((stat, index) => (
+                        <Link to={stat.link} key={index} style={styles.statCard}>
+                            <div style={{...styles.statIcon, backgroundColor: stat.bgColor, color: stat.color}}>
+                                {stat.icon}
+                            </div>
+                            <div style={styles.statInfo}>
+                                <h3 style={styles.statTitle}>{stat.title}</h3>
+                                <p style={styles.statValue}>{stat.value}</p>
+                            </div>
+                        </Link>
+                    ))}
+                </div>
+
+                {/* Quick Actions */}
+                <div style={styles.section}>
+                    <h2 style={styles.sectionTitle}>Quick Actions</h2>
+                    <div style={styles.actionButtons}>
+                        <Link to="/admin/products" style={styles.actionBtn}>
+                            <FaBoxes /> Manage Products
+                        </Link>
+                        <Link to="/admin/orders" style={styles.actionBtn}>
+                            <FaShoppingCart /> Manage Orders
+                        </Link>
+                        <Link to="/admin/coupons" style={styles.actionBtn}>
+                            <FaTag /> Manage Coupons
+                        </Link>
+                    </div>
+                </div>
+
                 {/* Recent Orders */}
                 <div style={styles.card}>
                     <div style={styles.cardHeader}>
@@ -252,18 +188,16 @@ const AdminDashboardPage = () => {
                         <div style={styles.orderList}>
                             {recentOrders.map((order) => (
                                 <div key={order._id} style={styles.orderItem}>
-                                    <div style={styles.orderInfo}>
+                                    <div>
                                         <span style={styles.orderId}>#{order._id.slice(-8)}</span>
                                         <span style={styles.orderCustomer}>{order.user?.name || 'Guest'}</span>
                                     </div>
-                                    <div style={styles.orderDetails}>
+                                    <div>
                                         <span style={styles.orderAmount}>${order.totalPrice.toFixed(2)}</span>
                                         <span style={{
                                             ...styles.orderStatus,
-                                            backgroundColor: order.status === 'Delivered' ? '#d1fae5' : 
-                                                           order.status === 'Shipped' ? '#dbeafe' : '#fef3c7',
-                                            color: order.status === 'Delivered' ? '#065f46' : 
-                                                   order.status === 'Shipped' ? '#1e40af' : '#92400e',
+                                            backgroundColor: order.status === 'Delivered' ? '#d1fae5' : '#fef3c7',
+                                            color: order.status === 'Delivered' ? '#065f46' : '#92400e',
                                         }}>
                                             {order.status}
                                         </span>
@@ -273,117 +207,20 @@ const AdminDashboardPage = () => {
                         </div>
                     )}
                 </div>
-
-                {/* Top Products */}
-                <div style={styles.card}>
-                    <div style={styles.cardHeader}>
-                        <h2 style={styles.cardTitle}>
-                            <FaStar /> Top Products
-                        </h2>
-                        <Link to="/admin/products" style={styles.viewAllLink}>View All →</Link>
-                    </div>
-                    {topProducts.length === 0 ? (
-                        <p style={styles.emptyText}>No products yet</p>
-                    ) : (
-                        <div style={styles.productList}>
-                            {topProducts.map((product, index) => (
-                                <div key={product._id} style={styles.productItem}>
-                                    <div style={styles.productRank}>{index + 1}</div>
-                                    <img 
-                                        src={product.imageUrl || 'https://via.placeholder.com/40'} 
-                                        alt={product.name}
-                                        style={styles.productImage}
-                                    />
-                                    <div style={styles.productInfo}>
-                                        <p style={styles.productName}>{product.name}</p>
-                                        <p style={styles.productSales}>{product.soldCount || 0} sold</p>
-                                    </div>
-                                    <div style={styles.productRevenue}>
-                                        ${((product.price * (product.soldCount || 0)).toFixed(2))}
-                                    </div>
-                                </div>
-                            ))}
-                        </div>
-                    )}
-                </div>
-            </div>
-
-            {/* Recent Users */}
-            <div style={styles.card}>
-                <div style={styles.cardHeader}>
-                    <h2 style={styles.cardTitle}>
-                        <FaUsers /> New Users
-                    </h2>
-                    <Link to="/admin/users" style={styles.viewAllLink}>View All →</Link>
-                </div>
-                {recentUsers.length === 0 ? (
-                    <p style={styles.emptyText}>No users yet</p>
-                ) : (
-                    <div style={styles.userList}>
-                        {recentUsers.map((user) => (
-                            <div key={user._id} style={styles.userItem}>
-                                <div style={styles.userAvatar}>
-                                    {user.name?.charAt(0).toUpperCase()}
-                                </div>
-                                <div style={styles.userInfo}>
-                                    <p style={styles.userName}>{user.name}</p>
-                                    <p style={styles.userEmail}>{user.email}</p>
-                                </div>
-                                <div style={styles.userDate}>
-                                    {new Date(user.createdAt).toLocaleDateString()}
-                                </div>
-                            </div>
-                        ))}
-                    </div>
-                )}
             </div>
         </div>
     );
 };
 
 const styles = {
+    pageWrapper: {
+        width: '100%',
+        overflowX: 'hidden',
+    },
     container: {
         maxWidth: '1400px',
         margin: '0 auto',
         padding: '20px',
-    },
-    header: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '30px',
-        flexWrap: 'wrap',
-        gap: '15px',
-    },
-    title: {
-        fontSize: '2rem',
-        color: '#333',
-        marginBottom: '5px',
-    },
-    subtitle: {
-        color: '#666',
-        fontSize: '0.9rem',
-    },
-    periodSelector: {
-        display: 'flex',
-        gap: '10px',
-        backgroundColor: '#f3f4f6',
-        padding: '4px',
-        borderRadius: '0.5rem',
-    },
-    periodBtn: {
-        padding: '8px 16px',
-        border: 'none',
-        backgroundColor: 'transparent',
-        borderRadius: '0.3rem',
-        cursor: 'pointer',
-        fontSize: '0.9rem',
-        transition: 'all 0.3s',
-    },
-    periodBtnActive: {
-        backgroundColor: '#fff',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-        color: '#6366f1',
     },
     statsGrid: {
         display: 'grid',
@@ -400,7 +237,7 @@ const styles = {
         gap: '15px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
         textDecoration: 'none',
-        transition: 'transform 0.3s, box-shadow 0.3s',
+        transition: 'transform 0.3s',
     },
     statIcon: {
         width: '50px',
@@ -421,41 +258,6 @@ const styles = {
     },
     statValue: {
         fontSize: '1.8rem',
-        fontWeight: 'bold',
-        color: '#333',
-        margin: 0,
-    },
-    orderStatusGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '20px',
-        marginBottom: '30px',
-    },
-    statusCard: {
-        backgroundColor: '#fff',
-        borderRadius: '0.75rem',
-        padding: '15px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        boxShadow: '0 1px 3px rgba(0,0,0,0.1)',
-    },
-    statusIcon: {
-        width: '40px',
-        height: '40px',
-        borderRadius: '0.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '18px',
-    },
-    statusTitle: {
-        fontSize: '0.8rem',
-        color: '#666',
-        marginBottom: '5px',
-    },
-    statusValue: {
-        fontSize: '1.2rem',
         fontWeight: 'bold',
         color: '#333',
         margin: 0,
@@ -482,13 +284,7 @@ const styles = {
         color: '#fff',
         textDecoration: 'none',
         borderRadius: '0.5rem',
-        transition: 'background-color 0.3s, transform 0.3s',
-    },
-    twoColumnGrid: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '20px',
-        marginBottom: '30px',
+        transition: 'background-color 0.3s',
     },
     card: {
         backgroundColor: '#fff',
@@ -528,118 +324,27 @@ const styles = {
         padding: '10px',
         backgroundColor: '#f8fafc',
         borderRadius: '0.5rem',
-    },
-    orderInfo: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '4px',
+        flexWrap: 'wrap',
+        gap: '10px',
     },
     orderId: {
         fontWeight: 'bold',
         fontFamily: 'monospace',
         fontSize: '0.85rem',
+        marginRight: '10px',
     },
     orderCustomer: {
         fontSize: '0.75rem',
         color: '#666',
     },
-    orderDetails: {
-        textAlign: 'right',
-    },
     orderAmount: {
         fontWeight: 'bold',
-        display: 'block',
-        marginBottom: '4px',
+        marginRight: '10px',
     },
     orderStatus: {
         fontSize: '0.7rem',
         padding: '2px 8px',
         borderRadius: '20px',
-    },
-    productList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-    },
-    productItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '10px',
-        backgroundColor: '#f8fafc',
-        borderRadius: '0.5rem',
-    },
-    productRank: {
-        width: '30px',
-        height: '30px',
-        backgroundColor: '#e5e7eb',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontWeight: 'bold',
-        fontSize: '0.9rem',
-    },
-    productImage: {
-        width: '40px',
-        height: '40px',
-        objectFit: 'cover',
-        borderRadius: '0.5rem',
-    },
-    productInfo: {
-        flex: 1,
-    },
-    productName: {
-        fontWeight: '500',
-        marginBottom: '4px',
-        fontSize: '0.9rem',
-    },
-    productSales: {
-        fontSize: '0.7rem',
-        color: '#666',
-    },
-    productRevenue: {
-        fontWeight: 'bold',
-        color: '#10b981',
-    },
-    userList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-    },
-    userItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '10px',
-        backgroundColor: '#f8fafc',
-        borderRadius: '0.5rem',
-    },
-    userAvatar: {
-        width: '40px',
-        height: '40px',
-        backgroundColor: '#6366f1',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        color: '#fff',
-        fontWeight: 'bold',
-    },
-    userInfo: {
-        flex: 1,
-    },
-    userName: {
-        fontWeight: '500',
-        marginBottom: '4px',
-    },
-    userEmail: {
-        fontSize: '0.75rem',
-        color: '#666',
-    },
-    userDate: {
-        fontSize: '0.75rem',
-        color: '#999',
     },
     emptyText: {
         textAlign: 'center',
@@ -650,6 +355,184 @@ const styles = {
         textAlign: 'center',
         padding: '50px',
     },
+    spinner: {
+        animation: 'spin 1s linear infinite',
+        fontSize: '2rem',
+        color: '#6366f1',
+        marginBottom: '1rem',
+    },
 };
+
+// Add CSS styles - Full width hero section
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+    @keyframes spin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    /* Full width hero section - NO WHITE SPACE */
+    .admin-hero-full {
+        position: relative;
+        width: 100%;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        min-height: 300px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        overflow: hidden;
+        margin: 0;
+        padding: 0;
+        left: 0;
+        right: 0;
+    }
+    
+    .admin-hero-overlay {
+        position: absolute;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background: radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.4) 100%);
+        pointer-events: none;
+    }
+    
+    .admin-hero-content {
+        position: relative;
+        z-index: 1;
+        color: white;
+        padding: 2rem;
+        max-width: 1200px;
+        width: 100%;
+        margin: 0 auto;
+    }
+    
+    .admin-hero-title {
+        font-size: 3rem;
+        font-weight: bold;
+        margin-bottom: 1rem;
+        animation: fadeIn 0.6s ease-out;
+    }
+    
+    .admin-hero-subtitle {
+        font-size: 1.2rem;
+        margin-bottom: 2rem;
+        opacity: 0.9;
+    }
+    
+    .admin-period-selector {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .admin-period-btn {
+        padding: 8px 16px;
+        background: rgba(255,255,255,0.2);
+        border: none;
+        border-radius: 0.5rem;
+        color: white;
+        cursor: pointer;
+        font-size: 0.9rem;
+        transition: all 0.3s;
+    }
+    
+    .admin-period-btn-active {
+        padding: 8px 16px;
+        background: white;
+        border: none;
+        border-radius: 0.5rem;
+        color: #4f46e5;
+        cursor: pointer;
+        font-size: 0.9rem;
+        font-weight: bold;
+    }
+    
+    .admin-period-btn:hover {
+        background: rgba(255,255,255,0.3);
+        transform: translateY(-2px);
+    }
+    
+    .admin-period-btn-active:hover {
+        transform: translateY(-2px);
+    }
+    
+    @keyframes fadeIn {
+        from {
+            opacity: 0;
+            transform: translateY(20px);
+        }
+        to {
+            opacity: 1;
+            transform: translateY(0);
+        }
+    }
+    
+    /* Hover effects */
+    .stat-card:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
+    }
+    
+    .action-btn:hover {
+        background-color: #4f46e5;
+        transform: translateY(-2px);
+    }
+    
+    /* Responsive styles - FULL WIDTH on all screens */
+    @media (max-width: 768px) {
+        .admin-hero-full {
+            min-height: 250px;
+        }
+        
+        .admin-hero-title {
+            font-size: 2rem;
+        }
+        
+        .admin-hero-subtitle {
+            font-size: 1rem;
+        }
+        
+        .admin-period-selector {
+            flex-wrap: wrap;
+        }
+        
+        .admin-period-btn,
+        .admin-period-btn-active {
+            padding: 6px 12px;
+            font-size: 0.8rem;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .admin-hero-title {
+            font-size: 1.5rem;
+        }
+        
+        .admin-hero-subtitle {
+            font-size: 0.9rem;
+        }
+        
+        .stat-value {
+            font-size: 1.3rem;
+        }
+        
+        .stat-icon {
+            width: 40px !important;
+            height: 40px !important;
+            font-size: 18px !important;
+        }
+        
+        .admin-period-btn,
+        .admin-period-btn-active {
+            padding: 4px 10px;
+            font-size: 0.7rem;
+        }
+    }
+`;
+document.head.appendChild(styleSheet);
 
 export default AdminDashboardPage;
