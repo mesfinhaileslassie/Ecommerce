@@ -367,12 +367,12 @@ styleSheet.textContent = `
         to { transform: rotate(360deg); }
     }
     
-    /* FULL WIDTH HERO SECTION - NO WHITE SPACE */
+    /* FULL WIDTH HERO SECTION - USING #6366f1 COLOR */
     .admin-hero-fullwidth {
         position: relative;
         width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-        min-height: 320px;
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
+        min-height: 300px;
         display: flex;
         align-items: center;
         justify-content: center;
@@ -388,7 +388,7 @@ styleSheet.textContent = `
         left: 0;
         right: 0;
         bottom: 0;
-        background: radial-gradient(circle at center, rgba(0,0,0,0.2) 0%, rgba(0,0,0,0.3) 100%);
+        background: radial-gradient(circle at center, rgba(0,0,0,0.15) 0%, rgba(0,0,0,0.25) 100%);
         pointer-events: none;
     }
     
@@ -415,7 +415,7 @@ styleSheet.textContent = `
         opacity: 0.9;
     }
     
-    /* VISIBLE TABS */
+    /* VISIBLE TABS - USING #6366f1 */
     .admin-tab-container {
         display: flex;
         gap: 15px;
@@ -426,8 +426,8 @@ styleSheet.textContent = `
     
     .admin-tab-btn {
         padding: 10px 30px;
-        background: rgba(255, 255, 255, 0.15);
-        border: 2px solid rgba(255, 255, 255, 0.4);
+        background: rgba(255, 255, 255, 0.2);
+        border: 2px solid rgba(255, 255, 255, 0.5);
         border-radius: 40px;
         color: white;
         cursor: pointer;
@@ -442,7 +442,7 @@ styleSheet.textContent = `
         background: white;
         border: 2px solid white;
         border-radius: 40px;
-        color: #667eea;
+        color: #6366f1;
         cursor: pointer;
         font-size: 1rem;
         font-weight: 700;
@@ -450,9 +450,9 @@ styleSheet.textContent = `
     }
     
     .admin-tab-btn:hover {
-        background: rgba(255, 255, 255, 0.3);
+        background: rgba(255, 255, 255, 0.35);
         transform: translateY(-2px);
-        border-color: rgba(255, 255, 255, 0.7);
+        border-color: rgba(255, 255, 255, 0.8);
     }
     
     .admin-tab-btn-active:hover {

@@ -98,11 +98,11 @@ const HomePage = () => {
 // Inject CSS Styles for Full Width Hero
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    /* FULL WIDTH HERO SECTION - NO WHITE SPACE */
+    /* FULL WIDTH HERO SECTION - USING #6366f1 COLOR */
     .home-hero-fullwidth {
         position: relative;
         width: 100%;
-        background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+        background: linear-gradient(135deg, #6366f1 0%, #4f46e5 100%);
         min-height: 500px;
         display: flex;
         align-items: center;
@@ -150,7 +150,7 @@ styleSheet.textContent = `
         display: inline-block;
         padding: 1rem 2rem;
         background: white;
-        color: #667eea;
+        color: #6366f1;
         text-decoration: none;
         border-radius: 50px;
         font-weight: bold;
@@ -175,6 +175,77 @@ styleSheet.textContent = `
         }
     }
     
+    /* Features Section */
+    .features {
+        padding: 4rem 0;
+        background: white;
+    }
+    
+    .container {
+        max-width: 1280px;
+        margin: 0 auto;
+        padding: 0 1.5rem;
+    }
+    
+    .features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+    }
+    
+    .feature-card {
+        text-align: center;
+        padding: 2rem;
+        background: white;
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.3s;
+    }
+    
+    .feature-card:hover {
+        transform: translateY(-4px);
+    }
+    
+    .feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .feature-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        color: #1f2937;
+    }
+    
+    .feature-desc {
+        color: #6b7280;
+        font-size: 0.875rem;
+    }
+    
+    .section {
+        padding: 4rem 0;
+    }
+    
+    .section-title {
+        font-size: 2rem;
+        text-align: center;
+        margin-bottom: 1rem;
+        color: #1f2937;
+    }
+    
+    .section-subtitle {
+        text-align: center;
+        color: #6b7280;
+        margin-bottom: 3rem;
+    }
+    
+    .products-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+        gap: 2rem;
+    }
+    
     /* Responsive Styles */
     @media (max-width: 768px) {
         .home-hero-fullwidth {
@@ -192,6 +263,14 @@ styleSheet.textContent = `
         .home-hero-fullwidth-btn {
             padding: 0.8rem 1.5rem;
             font-size: 0.9rem;
+        }
+        
+        .features {
+            padding: 2rem 0;
+        }
+        
+        .section {
+            padding: 2rem 0;
         }
     }
     
@@ -211,6 +290,10 @@ styleSheet.textContent = `
         .home-hero-fullwidth-btn {
             padding: 0.6rem 1.2rem;
             font-size: 0.8rem;
+        }
+        
+        .products-grid {
+            gap: 1rem;
         }
     }
 `;

@@ -3,13 +3,15 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts } from '../../redux/slices/productSlice';
 import ProductCard from '../../components/Products/ProductCard';
 import ProductFilters from '../../components/Products/ProductFilters';
-import { FaFilter, FaTh, FaThLarge } from 'react-icons/fa';
+import { FaFilter, FaTh, FaThLarge, FaSearch } from 'react-icons/fa';
 
 const ProductsPage = () => {
     const dispatch = useDispatch();
     const { products, loading, error } = useSelector((state) => state.products);
     const [showFilters, setShowFilters] = useState(false);
     const [viewMode, setViewMode] = useState('grid');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [filters, setFilters] = useState({
         keyword: '',
         category: 'All',
@@ -19,6 +21,17 @@ const ProductsPage = () => {
         sortBy: 'createdAt',
         order: 'desc'
     });
+
+    // Debounce search term for real-time searching
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setDebouncedSearchTerm(searchTerm);
+            // Update filters with new search term
+            setFilters(prev => ({ ...prev, keyword: searchTerm }));
+        }, 500); // 500ms delay
+
+        return () => clearTimeout(timer);
+    }, [searchTerm]);
 
     useEffect(() => {
         // Build query string from filters
@@ -35,20 +48,31 @@ const ProductsPage = () => {
     }, [dispatch, filters]);
 
     const handleFilterChange = (newFilters) => {
-        // This will be called when Apply button is clicked
         setFilters(newFilters);
-        setShowFilters(false); // Close filter modal on mobile after apply
+        setSearchTerm(newFilters.keyword || '');
+        setShowFilters(false);
+    };
+
+    const handleSearchChange = (e) => {
+        const value = e.target.value;
+        setSearchTerm(value);
+    };
+
+    const handleClearSearch = () => {
+        setSearchTerm('');
+        setDebouncedSearchTerm('');
+        setFilters(prev => ({ ...prev, keyword: '' }));
     };
 
     const getActiveFiltersCount = () => {
-    let count = 0;
-    if (filters.keyword) count++;
-    if (filters.category !== 'All') count++;
-    if (filters.minPrice || filters.maxPrice) count++;
-    if (filters.rating) count++;
-    if (filters.sortBy !== 'createdAt' || filters.order !== 'desc') count++;
-    return count;
-};
+        let count = 0;
+        if (filters.keyword) count++;
+        if (filters.category !== 'All') count++;
+        if (filters.minPrice || filters.maxPrice) count++;
+        if (filters.rating) count++;
+        return count;
+    };
+
     if (loading) {
         return (
             <div style={styles.center}>
@@ -100,6 +124,30 @@ const ProductsPage = () => {
                 </div>
             </div>
 
+            {/* Real-Time Search Bar */}
+            <div style={styles.searchSection}>
+                <div style={styles.searchContainer}>
+                    <FaSearch style={styles.searchIcon} />
+                    <input
+                        type="text"
+                        placeholder="Search products in real-time..."
+                        value={searchTerm}
+                        onChange={handleSearchChange}
+                        style={styles.searchInput}
+                    />
+                    {searchTerm && (
+                        <button onClick={handleClearSearch} style={styles.clearSearchBtn}>
+                            ×
+                        </button>
+                    )}
+                </div>
+                {searchTerm && (
+                    <div style={styles.searchingIndicator}>
+                        Searching for: <strong>"{searchTerm}"</strong>
+                    </div>
+                )}
+            </div>
+
             <div style={styles.content}>
                 {/* Filters Sidebar - Desktop */}
                 <div style={{
@@ -133,16 +181,22 @@ const ProductsPage = () => {
                 }}>
                     <div style={styles.resultsInfo}>
                         <p>{products.length} products found</p>
-                        {filters.keyword && (
-                            <span style={styles.activeFilter}>
-                                Search: "{filters.keyword}"
-                                <button onClick={() => handleFilterChange({ ...filters, keyword: '' })} style={styles.removeFilter}>×</button>
-                            </span>
-                        )}
                         {filters.category !== 'All' && (
                             <span style={styles.activeFilter}>
                                 Category: {filters.category}
                                 <button onClick={() => handleFilterChange({ ...filters, category: 'All' })} style={styles.removeFilter}>×</button>
+                            </span>
+                        )}
+                        {(filters.minPrice || filters.maxPrice) && (
+                            <span style={styles.activeFilter}>
+                                Price: ${filters.minPrice || 0} - ${filters.maxPrice || '∞'}
+                                <button onClick={() => handleFilterChange({ ...filters, minPrice: '', maxPrice: '' })} style={styles.removeFilter}>×</button>
+                            </span>
+                        )}
+                        {filters.rating && (
+                            <span style={styles.activeFilter}>
+                                Rating: {filters.rating}★ & above
+                                <button onClick={() => handleFilterChange({ ...filters, rating: '' })} style={styles.removeFilter}>×</button>
                             </span>
                         )}
                     </div>
@@ -159,17 +213,9 @@ const ProductsPage = () => {
                     {products.length === 0 && (
                         <div style={styles.noResults}>
                             <h3>No products found</h3>
-                            <p>Try adjusting your filters or search term</p>
-                            <button onClick={() => handleFilterChange({
-                                keyword: '',
-                                category: 'All',
-                                minPrice: '',
-                                maxPrice: '',
-                                rating: '',
-                                sortBy: 'createdAt',
-                                order: 'desc'
-                            })} style={styles.resetBtn}>
-                                Clear All Filters
+                            <p>Try adjusting your search or filters</p>
+                            <button onClick={handleClearSearch} style={styles.resetBtn}>
+                                Clear Search
                             </button>
                         </div>
                     )}
@@ -248,6 +294,50 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
     },
+    // Real-Time Search Styles
+    searchSection: {
+        marginBottom: '25px',
+    },
+    searchContainer: {
+        position: 'relative',
+        width: '100%',
+        maxWidth: '500px',
+    },
+    searchIcon: {
+        position: 'absolute',
+        left: '15px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        color: '#999',
+        fontSize: '18px',
+    },
+    searchInput: {
+        width: '100%',
+        padding: '14px 45px 14px 45px',
+        border: '2px solid #e5e7eb',
+        borderRadius: '0.75rem',
+        fontSize: '1rem',
+        transition: 'all 0.3s',
+        backgroundColor: '#fff',
+    },
+    clearSearchBtn: {
+        position: 'absolute',
+        right: '15px',
+        top: '50%',
+        transform: 'translateY(-50%)',
+        background: 'none',
+        border: 'none',
+        fontSize: '20px',
+        cursor: 'pointer',
+        color: '#999',
+        padding: '0 5px',
+    },
+    searchingIndicator: {
+        marginTop: '10px',
+        fontSize: '0.85rem',
+        color: '#666',
+        paddingLeft: '5px',
+    },
     content: {
         display: 'flex',
         gap: '30px',
@@ -255,17 +345,12 @@ const styles = {
     filtersDesktop: {
         width: '280px',
         flexShrink: 0,
-        '@media (max-width: 768px)': {
-            display: 'none',
-        },
     },
     productsSection: {
         flex: 1,
     },
     productsSectionWithFilters: {
-        '@media (min-width: 769px)': {
-            width: 'calc(100% - 310px)',
-        },
+        width: 'calc(100% - 310px)',
     },
     resultsInfo: {
         display: 'flex',
