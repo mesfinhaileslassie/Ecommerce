@@ -5,28 +5,61 @@ import { login } from '../../redux/slices/authSlice';
 import { GoogleLogin, GoogleOAuthProvider } from '@react-oauth/google';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
-import { FaGoogle } from 'react-icons/fa';
 
 const LoginPageContent = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const [email, setEmail] = useState('');
     const [password, setPassword] = useState('');
+    const [errors, setErrors] = useState({});
     const { loading } = useSelector((state) => state.auth);
+
+    const isValidEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        
+        if (!email) {
+            newErrors.email = 'Email is required';
+        } else if (!isValidEmail(email)) {
+            newErrors.email = 'Please enter a valid email address';
+        }
+        
+        if (!password) {
+            newErrors.password = 'Password is required';
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!email || !password) {
-            toast.error('Please fill in all fields');
+        if (!validateForm()) {
             return;
         }
 
         try {
-            await dispatch(login(email, password)).unwrap();
-            toast.success('Login successful!');
-            navigate('/');
+            const result = await dispatch(login(email, password));
+            
+            if (result.error) {
+                const errorMessage = result.error.message || 'Login failed';
+                if (errorMessage.includes('Invalid credentials')) {
+                    toast.error('Invalid email or password. Please try again.');
+                    setErrors({ general: 'Invalid email or password' });
+                } else {
+                    toast.error(errorMessage);
+                }
+            } else {
+                toast.success('Login successful!');
+                navigate('/');
+            }
         } catch (error) {
+            console.error('Login error:', error);
             toast.error(error.message || 'Login failed');
         }
     };
@@ -39,7 +72,6 @@ const LoginPageContent = () => {
             const { data } = await api.post('/auth/google', { token: credential });
             
             if (data.success) {
-                // Manually dispatch login success
                 dispatch({ type: 'auth/loginSuccess', payload: data });
                 toast.success('Google Login successful!');
                 navigate('/');
@@ -61,17 +93,31 @@ const LoginPageContent = () => {
         <div style={styles.container}>
             <div style={styles.formContainer}>
                 <h1 style={styles.title}>Login</h1>
+                
+                {errors.general && (
+                    <div style={styles.generalError}>
+                        {errors.general}
+                    </div>
+                )}
+                
                 <form onSubmit={handleSubmit} style={styles.form}>
                     <div style={styles.inputGroup}>
                         <label style={styles.label}>Email</label>
                         <input
                             type="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            style={styles.input}
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                if (errors.email) setErrors({ ...errors, email: '' });
+                                if (errors.general) setErrors({ ...errors, general: '' });
+                            }}
+                            style={{
+                                ...styles.input,
+                                ...(errors.email && styles.inputError)
+                            }}
                             placeholder="Enter your email"
-                            required
                         />
+                        {errors.email && <span style={styles.errorText}>{errors.email}</span>}
                     </div>
                     
                     <div style={styles.inputGroup}>
@@ -79,11 +125,18 @@ const LoginPageContent = () => {
                         <input
                             type="password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={styles.input}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                if (errors.password) setErrors({ ...errors, password: '' });
+                                if (errors.general) setErrors({ ...errors, general: '' });
+                            }}
+                            style={{
+                                ...styles.input,
+                                ...(errors.password && styles.inputError)
+                            }}
                             placeholder="Enter your password"
-                            required
                         />
+                        {errors.password && <span style={styles.errorText}>{errors.password}</span>}
                     </div>
                     
                     <button 
@@ -95,12 +148,10 @@ const LoginPageContent = () => {
                     </button>
                 </form>
                 
-                {/* Divider */}
                 <div style={styles.divider}>
                     <span>OR</span>
                 </div>
                 
-                {/* Google Login Button */}
                 <div style={styles.googleButtonWrapper}>
                     <GoogleLogin
                         onSuccess={handleGoogleSuccess}
@@ -123,13 +174,11 @@ const LoginPageContent = () => {
     );
 };
 
-// Wrap with GoogleOAuthProvider
 const LoginPage = () => {
     const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
     
     if (!googleClientId) {
         console.error("REACT_APP_GOOGLE_CLIENT_ID is not set");
-        // Fallback to regular login without Google button
         return <LoginPageContent />;
     }
 
@@ -161,6 +210,15 @@ const styles = {
         marginBottom: '30px',
         color: '#333',
     },
+    generalError: {
+        backgroundColor: '#f8d7da',
+        color: '#721c24',
+        padding: '10px',
+        borderRadius: '5px',
+        marginBottom: '20px',
+        textAlign: 'center',
+        fontSize: '14px',
+    },
     form: {
         display: 'flex',
         flexDirection: 'column',
@@ -180,6 +238,14 @@ const styles = {
         border: '1px solid #ddd',
         borderRadius: '5px',
         fontSize: '16px',
+    },
+    inputError: {
+        borderColor: '#dc3545',
+        backgroundColor: '#fff8f8',
+    },
+    errorText: {
+        color: '#dc3545',
+        fontSize: '0.75rem',
     },
     button: {
         padding: '12px',

@@ -12,34 +12,76 @@ const RegisterPageContent = () => {
     const [password, setPassword] = useState('');
     const [confirmPassword, setConfirmPassword] = useState('');
     const [loading, setLoading] = useState(false);
+    const [errors, setErrors] = useState({});
     const dispatch = useDispatch();
     const navigate = useNavigate();
+
+    // Email validation function
+    const isValidEmail = (email) => {
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        return emailRegex.test(email);
+    };
+
+    const validateForm = () => {
+        const newErrors = {};
+        
+        if (!name.trim()) {
+            newErrors.name = 'Full name is required';
+        } else if (name.length < 2) {
+            newErrors.name = 'Name must be at least 2 characters';
+        }
+        
+        if (!email) {
+            newErrors.email = 'Email is required';
+        } else if (!isValidEmail(email)) {
+            newErrors.email = 'Please enter a valid email address (e.g., name@example.com)';
+        }
+        
+        if (!password) {
+            newErrors.password = 'Password is required';
+        } else if (password.length < 6) {
+            newErrors.password = 'Password must be at least 6 characters';
+        }
+        
+        if (!confirmPassword) {
+            newErrors.confirmPassword = 'Please confirm your password';
+        } else if (password !== confirmPassword) {
+            newErrors.confirmPassword = 'Passwords do not match';
+        }
+        
+        setErrors(newErrors);
+        return Object.keys(newErrors).length === 0;
+    };
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (!name || !email || !password) {
-            toast.error('Please fill in all fields');
-            return;
-        }
-
-        if (password !== confirmPassword) {
-            toast.error('Passwords do not match');
-            return;
-        }
-
-        if (password.length < 6) {
-            toast.error('Password must be at least 6 characters');
+        if (!validateForm()) {
             return;
         }
 
         setLoading(true);
 
         try {
-            await dispatch(register(name, email, password)).unwrap();
-            toast.success('Registration successful! Please login');
-            navigate('/login');
+            const result = await dispatch(register(name, email, password));
+            
+            if (result.error) {
+                const errorMessage = result.error.message || 'Registration failed';
+                if (errorMessage.includes('already exists')) {
+                    toast.error('An account with this email already exists. Please login instead.');
+                    setErrors({ email: 'An account with this email already exists' });
+                } else if (errorMessage.includes('valid email')) {
+                    toast.error('Please enter a valid email address');
+                    setErrors({ email: 'Please enter a valid email address' });
+                } else {
+                    toast.error(errorMessage);
+                }
+            } else {
+                toast.success('Registration successful! Please login');
+                navigate('/login');
+            }
         } catch (error) {
+            console.error('Registration error:', error);
             toast.error(error.message || 'Registration failed');
         } finally {
             setLoading(false);
@@ -54,7 +96,6 @@ const RegisterPageContent = () => {
             const { data } = await api.post('/auth/google', { token: credential });
             
             if (data.success) {
-                // Dispatch login success to log the user in immediately
                 dispatch({ type: 'auth/loginSuccess', payload: data });
                 toast.success('Registration and login successful!');
                 navigate('/');
@@ -82,11 +123,17 @@ const RegisterPageContent = () => {
                         <input
                             type="text"
                             value={name}
-                            onChange={(e) => setName(e.target.value)}
-                            style={styles.input}
+                            onChange={(e) => {
+                                setName(e.target.value);
+                                if (errors.name) setErrors({ ...errors, name: '' });
+                            }}
+                            style={{
+                                ...styles.input,
+                                ...(errors.name && styles.inputError)
+                            }}
                             placeholder="Enter your full name"
-                            required
                         />
+                        {errors.name && <span style={styles.errorText}>{errors.name}</span>}
                     </div>
                     
                     <div style={styles.inputGroup}>
@@ -94,11 +141,18 @@ const RegisterPageContent = () => {
                         <input
                             type="email"
                             value={email}
-                            onChange={(e) => setEmail(e.target.value)}
-                            style={styles.input}
+                            onChange={(e) => {
+                                setEmail(e.target.value);
+                                if (errors.email) setErrors({ ...errors, email: '' });
+                            }}
+                            style={{
+                                ...styles.input,
+                                ...(errors.email && styles.inputError)
+                            }}
                             placeholder="Enter your email"
-                            required
                         />
+                        {errors.email && <span style={styles.errorText}>{errors.email}</span>}
+                        <small style={styles.hintText}>Enter a valid email address (e.g., name@example.com)</small>
                     </div>
                     
                     <div style={styles.inputGroup}>
@@ -106,11 +160,17 @@ const RegisterPageContent = () => {
                         <input
                             type="password"
                             value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            style={styles.input}
+                            onChange={(e) => {
+                                setPassword(e.target.value);
+                                if (errors.password) setErrors({ ...errors, password: '' });
+                            }}
+                            style={{
+                                ...styles.input,
+                                ...(errors.password && styles.inputError)
+                            }}
                             placeholder="Create a password (min 6 characters)"
-                            required
                         />
+                        {errors.password && <span style={styles.errorText}>{errors.password}</span>}
                     </div>
                     
                     <div style={styles.inputGroup}>
@@ -118,11 +178,17 @@ const RegisterPageContent = () => {
                         <input
                             type="password"
                             value={confirmPassword}
-                            onChange={(e) => setConfirmPassword(e.target.value)}
-                            style={styles.input}
+                            onChange={(e) => {
+                                setConfirmPassword(e.target.value);
+                                if (errors.confirmPassword) setErrors({ ...errors, confirmPassword: '' });
+                            }}
+                            style={{
+                                ...styles.input,
+                                ...(errors.confirmPassword && styles.inputError)
+                            }}
                             placeholder="Confirm your password"
-                            required
                         />
+                        {errors.confirmPassword && <span style={styles.errorText}>{errors.confirmPassword}</span>}
                     </div>
                     
                     <button 
@@ -134,12 +200,10 @@ const RegisterPageContent = () => {
                     </button>
                 </form>
                 
-                {/* Divider */}
                 <div style={styles.divider}>
                     <span>OR</span>
                 </div>
                 
-                {/* Google Sign Up Button */}
                 <div style={styles.googleButtonWrapper}>
                     <GoogleLogin
                         onSuccess={handleGoogleSuccess}
@@ -162,13 +226,11 @@ const RegisterPageContent = () => {
     );
 };
 
-// Wrap with GoogleOAuthProvider
 const RegisterPage = () => {
     const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
     
     if (!googleClientId) {
         console.error("REACT_APP_GOOGLE_CLIENT_ID is not set");
-        // Fallback to regular registration without Google button
         return <RegisterPageContent />;
     }
 
@@ -193,7 +255,7 @@ const styles = {
         borderRadius: '8px',
         boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
         width: '100%',
-        maxWidth: '400px',
+        maxWidth: '450px',
     },
     title: {
         textAlign: 'center',
@@ -222,6 +284,20 @@ const styles = {
         borderRadius: '5px',
         fontSize: '16px',
         transition: 'border-color 0.3s',
+    },
+    inputError: {
+        borderColor: '#dc3545',
+        backgroundColor: '#fff8f8',
+    },
+    errorText: {
+        color: '#dc3545',
+        fontSize: '0.75rem',
+        marginTop: '3px',
+    },
+    hintText: {
+        color: '#999',
+        fontSize: '0.7rem',
+        marginTop: '3px',
     },
     button: {
         padding: '12px',
@@ -254,25 +330,5 @@ const styles = {
         fontSize: '0.9rem',
     },
 };
-
-// Add input focus styles
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-    input:focus {
-        outline: none;
-        border-color: #28a745;
-        box-shadow: 0 0 0 2px rgba(40, 167, 69, 0.1);
-    }
-    
-    button:hover {
-        opacity: 0.9;
-        transform: translateY(-1px);
-    }
-    
-    .google-button {
-        width: 100% !important;
-    }
-`;
-document.head.appendChild(styleSheet);
 
 export default RegisterPage;

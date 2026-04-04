@@ -4,7 +4,7 @@ import { updateProfile, updateAvatar, logout } from '../../redux/slices/authSlic
 import { fetchMyOrders } from '../../redux/slices/orderSlice';
 import { fetchWishlist } from '../../redux/slices/wishlistSlice';
 import { Link, useNavigate } from 'react-router-dom';
-import { FaUser, FaEnvelope, FaLock, FaCamera, FaSignOutAlt, FaShoppingBag, FaHeart, FaMapMarkerAlt, FaSpinner } from 'react-icons/fa';
+import { FaUser, FaEnvelope, FaLock, FaCamera, FaSignOutAlt, FaShoppingBag, FaHeart, FaMapMarkerAlt, FaSpinner, FaGoogle } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const ProfilePage = () => {
@@ -25,29 +25,18 @@ const ProfilePage = () => {
     });
     const [avatarPreview, setAvatarPreview] = useState(user?.avatar || '');
     const [uploadingAvatar, setUploadingAvatar] = useState(false);
+    const [isGoogleUser, setIsGoogleUser] = useState(false);
 
-    // Fetch orders and wishlist when component mounts
     useEffect(() => {
-        console.log('🔍 ProfilePage mounted');
-        console.log('👤 User exists?', !!user);
-        
         if (user) {
-            console.log('📊 Dispatching fetchMyOrders...');
+            console.log('📊 Fetching user data for profile...');
             dispatch(fetchMyOrders());
-            console.log('💖 Dispatching fetchWishlist...');
             dispatch(fetchWishlist());
+            // Check if user is a Google user
+            setIsGoogleUser(!!user.googleId);
+            console.log('Is Google user:', !!user.googleId);
         }
     }, [dispatch, user]);
-
-    // Debug logging for counts
-    useEffect(() => {
-        console.log('========== STATE UPDATE ==========');
-        console.log('Orders:', orders);
-        console.log('Order count:', orders?.length || 0);
-        console.log('Wishlist items:', wishlistItems);
-        console.log('Wishlist count:', wishlistItems?.length || 0);
-        console.log('==================================');
-    }, [orders, wishlistItems]);
 
     const handleChange = (e) => {
         setFormData({
@@ -92,14 +81,38 @@ const ProfilePage = () => {
     const handleSubmit = async (e) => {
         e.preventDefault();
         
-        if (formData.newPassword && formData.newPassword !== formData.confirmPassword) {
-            toast.error('New passwords do not match');
-            return;
-        }
+        const isSettingPassword = formData.newPassword && !formData.currentPassword;
+        const isChangingPassword = formData.currentPassword || formData.newPassword;
         
-        if (formData.newPassword && formData.newPassword.length < 6) {
-            toast.error('Password must be at least 6 characters');
-            return;
+        // For Google users setting password for first time
+        if (isGoogleUser && isSettingPassword) {
+            if (formData.newPassword.length < 6) {
+                toast.error('Password must be at least 6 characters');
+                return;
+            }
+            if (formData.newPassword !== formData.confirmPassword) {
+                toast.error('Passwords do not match');
+                return;
+            }
+        }
+        // For regular users changing password
+        else if (!isGoogleUser && isChangingPassword) {
+            if (!formData.currentPassword) {
+                toast.error('Please enter your current password');
+                return;
+            }
+            if (!formData.newPassword) {
+                toast.error('Please enter a new password');
+                return;
+            }
+            if (formData.newPassword.length < 6) {
+                toast.error('New password must be at least 6 characters');
+                return;
+            }
+            if (formData.newPassword !== formData.confirmPassword) {
+                toast.error('New passwords do not match');
+                return;
+            }
         }
         
         try {
@@ -108,22 +121,33 @@ const ProfilePage = () => {
                 email: formData.email,
             };
             
-            if (formData.currentPassword && formData.newPassword) {
-                updateData.currentPassword = formData.currentPassword;
+            // Handle password update
+            if (formData.newPassword) {
                 updateData.newPassword = formData.newPassword;
+                // For regular users, also send current password
+                if (!isGoogleUser) {
+                    updateData.currentPassword = formData.currentPassword;
+                }
             }
             
-            await dispatch(updateProfile(updateData));
-            toast.success('Profile updated successfully!');
-            setIsEditing(false);
-            setFormData({
-                ...formData,
-                currentPassword: '',
-                newPassword: '',
-                confirmPassword: '',
-            });
+            console.log('Sending update data...');
+            const result = await dispatch(updateProfile(updateData));
+            
+            if (result.error) {
+                toast.error(result.error.message);
+            } else {
+                toast.success('Profile updated successfully!');
+                setIsEditing(false);
+                setFormData({
+                    ...formData,
+                    currentPassword: '',
+                    newPassword: '',
+                    confirmPassword: '',
+                });
+            }
         } catch (error) {
-            toast.error(error.message);
+            console.error('Update error:', error);
+            toast.error(error.message || 'Update failed');
         }
     };
 
@@ -131,6 +155,27 @@ const ProfilePage = () => {
         dispatch(logout());
         toast.success('Logged out successfully');
         navigate('/');
+    };
+
+    const formatDate = (dateString) => {
+        if (!dateString) return 'Recently joined';
+        try {
+            const date = new Date(dateString);
+            if (isNaN(date.getTime())) return 'Recently joined';
+            return date.toLocaleDateString('en-US', { 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+            });
+        } catch (error) {
+            return 'Recently joined';
+        }
+    };
+
+    const getAvatarUrl = () => {
+        if (avatarPreview) return avatarPreview;
+        if (user?.avatar) return user.avatar;
+        return `https://ui-avatars.com/api/?name=${encodeURIComponent(user?.name || 'User')}&background=6366f1&color=fff&size=120`;
     };
 
     const orderCount = Array.isArray(orders) ? orders.length : 0;
@@ -164,7 +209,7 @@ const ProfilePage = () => {
                     <div style={styles.avatarSection}>
                         <div style={styles.avatarContainer}>
                             <img 
-                                src={avatarPreview || user?.avatar || `https://ui-avatars.com/api/?name=${encodeURIComponent(user.name)}&background=6366f1&color=fff&size=120`} 
+                                src={getAvatarUrl()} 
                                 alt={user.name}
                                 style={styles.avatar}
                             />
@@ -182,6 +227,14 @@ const ProfilePage = () => {
                         </div>
                         <h2 style={styles.userName}>{user.name}</h2>
                         <p style={styles.userEmail}>{user.email}</p>
+                        {isGoogleUser && (
+                            <p style={styles.googleBadge}>
+                                <FaGoogle /> Signed in with Google
+                            </p>
+                        )}
+                        <p style={styles.userSince}>
+                            Member since {formatDate(user.createdAt)}
+                        </p>
                         <button onClick={handleLogout} style={styles.logoutBtn}>
                             <FaSignOutAlt /> Logout
                         </button>
@@ -189,17 +242,21 @@ const ProfilePage = () => {
                     
                     <div style={styles.statsSection}>
                         <Link to="/orders" style={styles.statItem}>
-                            <FaShoppingBag size={24} />
+                            <div style={styles.statIconContainer}>
+                                <FaShoppingBag style={styles.statIcon} />
+                            </div>
                             <div>
-                                <h3>{orderCount}</h3>
-                                <p>Orders</p>
+                                <h3 style={styles.statNumber}>{orderCount}</h3>
+                                <p style={styles.statLabel}>Orders</p>
                             </div>
                         </Link>
                         <Link to="/wishlist" style={styles.statItem}>
-                            <FaHeart size={24} />
+                            <div style={styles.statIconContainer}>
+                                <FaHeart style={styles.statIcon} />
+                            </div>
                             <div>
-                                <h3>{wishlistCount}</h3>
-                                <p>Wishlist</p>
+                                <h3 style={styles.statNumber}>{wishlistCount}</h3>
+                                <p style={styles.statLabel}>Wishlist</p>
                             </div>
                         </Link>
                     </div>
@@ -229,6 +286,7 @@ const ProfilePage = () => {
                                     onChange={handleChange}
                                     required
                                     style={styles.input}
+                                    placeholder="Enter your full name"
                                 />
                             </div>
                             
@@ -243,36 +301,48 @@ const ProfilePage = () => {
                                     onChange={handleChange}
                                     required
                                     style={styles.input}
+                                    placeholder="Enter your email"
                                 />
                             </div>
                             
                             <div style={styles.divider} />
                             
-                            <h3 style={styles.subtitle}>Change Password</h3>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>
-                                    <FaLock /> Current Password
-                                </label>
-                                <input
-                                    type="password"
-                                    name="currentPassword"
-                                    value={formData.currentPassword}
-                                    onChange={handleChange}
-                                    placeholder="Leave blank to keep current password"
-                                    style={styles.input}
-                                />
-                            </div>
+                            <h3 style={styles.subtitle}>
+                                {isGoogleUser ? 'Set Password (Optional)' : 'Change Password'}
+                            </h3>
+                            
+                            {isGoogleUser && (
+                                <p style={styles.hintText}>
+                                    You signed up with Google. You can set a password to login with email in the future.
+                                </p>
+                            )}
+                            
+                            {!isGoogleUser && (
+                                <div style={styles.formGroup}>
+                                    <label style={styles.label}>
+                                        <FaLock /> Current Password
+                                    </label>
+                                    <input
+                                        type="password"
+                                        name="currentPassword"
+                                        value={formData.currentPassword}
+                                        onChange={handleChange}
+                                        placeholder="Enter your current password"
+                                        style={styles.input}
+                                    />
+                                </div>
+                            )}
                             
                             <div style={styles.formGroup}>
                                 <label style={styles.label}>
-                                    <FaLock /> New Password
+                                    <FaLock /> {isGoogleUser ? 'New Password (Optional)' : 'New Password'}
                                 </label>
                                 <input
                                     type="password"
                                     name="newPassword"
                                     value={formData.newPassword}
                                     onChange={handleChange}
-                                    placeholder="Min 6 characters"
+                                    placeholder={isGoogleUser ? "Enter new password (min 6 characters)" : "Enter new password (min 6 characters)"}
                                     style={styles.input}
                                 />
                             </div>
@@ -328,19 +398,45 @@ const ProfilePage = () => {
                                 <span>{user.isAdmin ? 'Administrator' : 'Customer'}</span>
                             </div>
                             <div style={styles.infoRow}>
+                                <strong>Login Method:</strong>
+                                <span>{isGoogleUser ? 'Google Account' : 'Email & Password'}</span>
+                            </div>
+                            <div style={styles.infoRow}>
                                 <strong>Member Since:</strong>
-                                <span>{new Date(user.createdAt).toLocaleDateString()}</span>
+                                <span>{formatDate(user.createdAt)}</span>
                             </div>
                             <div style={styles.infoRow}>
                                 <strong>Total Orders:</strong>
-                                <span style={{ fontWeight: 'bold', color: '#28a745' }}>{orderCount}</span>
+                                <span style={styles.orderCount}>{orderCount}</span>
                             </div>
                             <div style={styles.infoRow}>
                                 <strong>Wishlist Items:</strong>
-                                <span style={{ fontWeight: 'bold', color: '#ef4444' }}>{wishlistCount}</span>
+                                <span style={styles.wishlistCount}>{wishlistCount}</span>
                             </div>
                         </div>
                     )}
+                </div>
+            </div>
+            
+            {/* Quick Links */}
+            <div style={styles.quickLinks}>
+                <h2 style={styles.sectionTitle}>Quick Actions</h2>
+                <div style={styles.linksGrid}>
+                    <Link to="/orders" style={styles.linkCard}>
+                        <FaShoppingBag size={24} />
+                        <span>My Orders</span>
+                        <p>{orderCount} order{orderCount !== 1 ? 's' : ''}</p>
+                    </Link>
+                    <Link to="/wishlist" style={styles.linkCard}>
+                        <FaHeart size={24} />
+                        <span>Wishlist</span>
+                        <p>{wishlistCount} item{wishlistCount !== 1 ? 's' : ''}</p>
+                    </Link>
+                    <Link to="/checkout" style={styles.linkCard}>
+                        <FaMapMarkerAlt size={24} />
+                        <span>Checkout</span>
+                        <p>Complete purchase</p>
+                    </Link>
                 </div>
             </div>
         </div>
@@ -399,6 +495,7 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
         cursor: 'pointer',
+        transition: 'all 0.3s',
     },
     spinnerIcon: {
         animation: 'spin 1s linear infinite',
@@ -411,6 +508,22 @@ const styles = {
     userEmail: {
         color: '#666',
         fontSize: '0.875rem',
+        marginBottom: '5px',
+    },
+    googleBadge: {
+        display: 'inline-flex',
+        alignItems: 'center',
+        gap: '6px',
+        backgroundColor: '#e8eaed',
+        color: '#5f6368',
+        padding: '4px 12px',
+        borderRadius: '20px',
+        fontSize: '0.7rem',
+        marginBottom: '10px',
+    },
+    userSince: {
+        color: '#999',
+        fontSize: '0.75rem',
         marginBottom: '15px',
     },
     logoutBtn: {
@@ -423,6 +536,8 @@ const styles = {
         display: 'inline-flex',
         alignItems: 'center',
         gap: '8px',
+        fontSize: '0.875rem',
+        transition: 'all 0.3s',
     },
     statsSection: {
         display: 'flex',
@@ -435,8 +550,37 @@ const styles = {
         display: 'flex',
         alignItems: 'center',
         gap: '12px',
+        textAlign: 'left',
         textDecoration: 'none',
         color: 'inherit',
+        cursor: 'pointer',
+        transition: 'transform 0.3s',
+        padding: '10px',
+        borderRadius: '0.5rem',
+    },
+    statIconContainer: {
+        width: '40px',
+        height: '40px',
+        backgroundColor: '#f3f4f6',
+        borderRadius: '50%',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+    },
+    statIcon: {
+        fontSize: '20px',
+        color: '#6366f1',
+    },
+    statNumber: {
+        fontSize: '1.5rem',
+        fontWeight: 'bold',
+        color: '#333',
+        margin: 0,
+    },
+    statLabel: {
+        fontSize: '0.75rem',
+        color: '#666',
+        margin: 0,
     },
     editCard: {
         backgroundColor: '#fff',
@@ -482,6 +626,7 @@ const styles = {
         border: '1px solid #ddd',
         borderRadius: '0.5rem',
         fontSize: '1rem',
+        transition: 'all 0.3s',
     },
     divider: {
         height: '1px',
@@ -492,6 +637,12 @@ const styles = {
         fontSize: '1rem',
         marginBottom: '10px',
         color: '#333',
+    },
+    hintText: {
+        fontSize: '0.75rem',
+        color: '#666',
+        marginBottom: '10px',
+        fontStyle: 'italic',
     },
     buttonGroup: {
         display: 'flex',
@@ -527,6 +678,41 @@ const styles = {
         padding: '10px 0',
         borderBottom: '1px solid #f0f0f0',
     },
+    orderCount: {
+        fontWeight: 'bold',
+        color: '#28a745',
+    },
+    wishlistCount: {
+        fontWeight: 'bold',
+        color: '#ef4444',
+    },
+    quickLinks: {
+        marginTop: '40px',
+    },
+    sectionTitle: {
+        fontSize: '1.25rem',
+        marginBottom: '20px',
+        color: '#333',
+    },
+    linksGrid: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
+        gap: '20px',
+    },
+    linkCard: {
+        backgroundColor: '#fff',
+        padding: '20px',
+        borderRadius: '1rem',
+        textDecoration: 'none',
+        textAlign: 'center',
+        transition: 'all 0.3s',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+        color: '#333',
+        display: 'flex',
+        flexDirection: 'column',
+        alignItems: 'center',
+        gap: '8px',
+    },
     center: {
         textAlign: 'center',
         padding: '50px',
@@ -552,8 +738,28 @@ const styles = {
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
     @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
+        from {
+            transform: rotate(0deg);
+        }
+        to {
+            transform: rotate(360deg);
+        }
+    }
+    
+    input:focus {
+        outline: none;
+        border-color: #6366f1;
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
+    }
+    
+    .stat-item:hover {
+        transform: translateY(-2px);
+        background-color: #f8fafc;
+    }
+    
+    .link-card:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
 `;
 document.head.appendChild(styleSheet);

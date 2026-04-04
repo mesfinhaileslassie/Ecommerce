@@ -66,41 +66,41 @@ export const login = (email, password) => async (dispatch) => {
         dispatch(loginStart());
         const { data } = await api.post('/auth/login', { email, password });
         dispatch(loginSuccess(data));
-        return data;
+        return { success: true, data };
     } catch (error) {
-        const message = error.response?.data?.message || 'Login failed';
+        const message = error.response?.data?.message || 'Invalid credentials';
         dispatch(loginFailure(message));
-        throw new Error(message);
+        return { error: { message } };
     }
 };
-
-// Register action
+// Register action - Updated
 export const register = (name, email, password) => async (dispatch) => {
     try {
         dispatch(loginStart());
         const { data } = await api.post('/auth/register', { name, email, password });
         dispatch(loginSuccess(data));
-        return data;
+        return { success: true, data };
     } catch (error) {
         const message = error.response?.data?.message || 'Registration failed';
         dispatch(loginFailure(message));
-        throw new Error(message);
+        return { error: { message } };
     }
 };
 
-// Update Profile action
+// Updated Profile action
 export const updateProfile = (profileData) => async (dispatch) => {
     try {
         dispatch(loginStart());
         const { data } = await api.put('/auth/profile', profileData);
         dispatch(updateProfileSuccess(data));
         toast.success('Profile updated successfully!');
-        return data;
+        return { success: true, data };
     } catch (error) {
+        console.error('Update profile error:', error.response?.data);
         const message = error.response?.data?.message || 'Update failed';
         dispatch(loginFailure(message));
         toast.error(message);
-        throw new Error(message);
+        return { error: { message } };
     }
 };
 

@@ -35,8 +35,6 @@ app.use((req, res, next) => {
 
 // Initialize Google OAuth client
 const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-// Google login endpoint
 app.post('/api/auth/google', async (req, res) => {
     const { token } = req.body;
 
@@ -45,7 +43,6 @@ app.post('/api/auth/google', async (req, res) => {
     }
 
     try {
-        // Verify the Google token
         const ticket = await googleClient.verifyIdToken({
             idToken: token,
             audience: process.env.GOOGLE_CLIENT_ID,
@@ -73,11 +70,17 @@ app.post('/api/auth/google', async (req, res) => {
                 email: email,
                 password: hashedPassword,
                 avatar: picture || '',
+                googleId: googleId, // Save Google ID
                 isAdmin: false,
             });
             await user.save();
             console.log(`✅ New user created via Google: ${email}`);
         } else {
+            // Update googleId if not already set
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
             // Update avatar if not set
             if (picture && !user.avatar) {
                 user.avatar = picture;
@@ -86,10 +89,8 @@ app.post('/api/auth/google', async (req, res) => {
             console.log(`✅ Existing user logged in via Google: ${email}`);
         }
 
-        // Generate JWT token
         const appToken = generateToken(user._id);
 
-        // Return user data
         res.json({
             success: true,
             message: 'Google login successful',
@@ -100,6 +101,7 @@ app.post('/api/auth/google', async (req, res) => {
                 email: user.email,
                 isAdmin: user.isAdmin,
                 avatar: user.avatar,
+                googleId: user.googleId,
                 createdAt: user.createdAt,
             },
         });
@@ -112,6 +114,10 @@ app.post('/api/auth/google', async (req, res) => {
 
 
 
+
+
+
+
 // ============================================
 // USER MODEL
 // ============================================
@@ -120,8 +126,10 @@ const userSchema = new mongoose.Schema({
     email: { type: String, required: true, unique: true },
     password: { type: String, required: true },
     isAdmin: { type: Boolean, default: false },
+    avatar: { type: String, default: '' },
+    googleId: { type: String, default: null }, // Add this field
     createdAt: { type: Date, default: Date.now }
-});
+})
 
 const User = mongoose.model('User', userSchema);
 
@@ -626,18 +634,40 @@ app.get('/api/test', (req, res) => {
 // AUTH ROUTES
 // ============================================
 
-// Register
+// Register endpoint - Updated with better error messages
 app.post('/api/auth/register', async (req, res) => {
     try {
         const { name, email, password } = req.body;
         
         if (!name || !email || !password) {
-            return res.status(400).json({ success: false, message: 'Please provide all fields' });
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Please provide name, email and password' 
+            });
+        }
+        
+        // Email format validation
+        const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+        if (!emailRegex.test(email)) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Please provide a valid email address' 
+            });
         }
         
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ success: false, message: 'User already exists' });
+            return res.status(400).json({ 
+                success: false, 
+                message: 'An account with this email already exists. Please login instead.' 
+            });
+        }
+        
+        if (password.length < 6) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Password must be at least 6 characters long' 
+            });
         }
         
         const hashedPassword = await hashPassword(password);
@@ -650,12 +680,28 @@ app.post('/api/auth/register', async (req, res) => {
             success: true,
             message: 'User registered successfully',
             token,
-            user: { _id: user._id, name: user.name, email: user.email, isAdmin: user.isAdmin }
+            user: { 
+                _id: user._id, 
+                name: user.name, 
+                email: user.email, 
+                isAdmin: user.isAdmin,
+                avatar: user.avatar,
+                createdAt: user.createdAt 
+            }
         });
     } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
+        console.error('Registration error:', error);
+        res.status(500).json({ 
+            success: false, 
+            message: 'Server error. Please try again later.' 
+        });
     }
 });
+
+
+
+
+
 
 // Login
 app.post('/api/auth/login', async (req, res) => {
@@ -694,6 +740,95 @@ app.get('/api/auth/profile', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+
+// Update user profile
+
+
+
+app.put('/api/auth/profile', protect, async (req, res) => {
+    try {
+        const { name, email, currentPassword, newPassword } = req.body;
+        const user = await User.findById(req.userId);
+        
+        if (!user) {
+            return res.status(404).json({ success: false, message: 'User not found' });
+        }
+        
+        console.log('Profile update request for user:', user.email);
+        console.log('Is Google user:', !!user.googleId);
+        
+        // Update name and email
+        if (name) user.name = name;
+        if (email) user.email = email;
+        
+        // Update password if provided
+        if (newPassword) {
+            // For Google users: they don't have a current password to verify
+            // They can set a password for the first time
+            if (user.googleId && !currentPassword) {
+                // Google user setting password for first time
+                if (newPassword.length < 6) {
+                    return res.status(400).json({ success: false, message: 'Password must be at least 6 characters' });
+                }
+                user.password = await hashPassword(newPassword);
+                console.log('Google user set password for first time');
+            } 
+            // For regular users: require current password verification
+            else if (!user.googleId) {
+                if (!currentPassword) {
+                    return res.status(401).json({ success: false, message: 'Current password is required to change password' });
+                }
+                
+                const isMatch = await bcrypt.compare(currentPassword, user.password);
+                if (!isMatch) {
+                    return res.status(401).json({ success: false, message: 'Current password is incorrect' });
+                }
+                
+                if (newPassword.length < 6) {
+                    return res.status(400).json({ success: false, message: 'New password must be at least 6 characters' });
+                }
+                
+                user.password = await hashPassword(newPassword);
+                console.log('Regular user updated password');
+            }
+            else {
+                return res.status(400).json({ success: false, message: 'Current password required to change password' });
+            }
+        }
+        
+        await user.save();
+        
+        const updatedUser = {
+            _id: user._id,
+            name: user.name,
+            email: user.email,
+            isAdmin: user.isAdmin,
+            avatar: user.avatar,
+            googleId: user.googleId,
+            createdAt: user.createdAt
+        };
+        
+        console.log('Profile updated successfully for:', user.email);
+        
+        res.json({
+            success: true,
+            message: 'Profile updated successfully',
+            user: updatedUser
+        });
+    } catch (error) {
+        console.error('Profile update error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+
+
+
 
 // ============================================
 // PRODUCT ROUTES
