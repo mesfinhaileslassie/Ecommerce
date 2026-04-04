@@ -12,6 +12,7 @@ const ProductsPage = () => {
     const [viewMode, setViewMode] = useState('grid');
     const [searchTerm, setSearchTerm] = useState('');
     const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
+    const [activeCategory, setActiveCategory] = useState('All');
     const [filters, setFilters] = useState({
         keyword: '',
         category: 'All',
@@ -22,13 +23,15 @@ const ProductsPage = () => {
         order: 'desc'
     });
 
+    // Category options
+    const categories = ['All', 'Electronics', 'Clothing', 'Books', 'Home', 'Sports', 'Other'];
+
     // Debounce search term for real-time searching
     useEffect(() => {
         const timer = setTimeout(() => {
             setDebouncedSearchTerm(searchTerm);
-            // Update filters with new search term
             setFilters(prev => ({ ...prev, keyword: searchTerm }));
-        }, 500); // 500ms delay
+        }, 500);
 
         return () => clearTimeout(timer);
     }, [searchTerm]);
@@ -47,8 +50,15 @@ const ProductsPage = () => {
         dispatch(fetchProducts(queryParams.toString()));
     }, [dispatch, filters]);
 
+    const handleCategoryClick = (category) => {
+        setActiveCategory(category);
+        setFilters(prev => ({ ...prev, category: category }));
+        setShowFilters(false);
+    };
+
     const handleFilterChange = (newFilters) => {
         setFilters(newFilters);
+        setActiveCategory(newFilters.category || 'All');
         setSearchTerm(newFilters.keyword || '');
         setShowFilters(false);
     };
@@ -148,6 +158,27 @@ const ProductsPage = () => {
                 )}
             </div>
 
+            {/* Category Tabs */}
+            <div style={styles.categoryTabs}>
+                {categories.map((category) => (
+                    <button
+                        key={category}
+                        onClick={() => handleCategoryClick(category)}
+                        style={{
+                            ...styles.categoryTab,
+                            ...(activeCategory === category && styles.categoryTabActive)
+                        }}
+                    >
+                        {category}
+                        {category !== 'All' && (
+                            <span style={styles.categoryCount}>
+                                {products.filter(p => p.category === category).length}
+                            </span>
+                        )}
+                    </button>
+                ))}
+            </div>
+
             <div style={styles.content}>
                 {/* Filters Sidebar - Desktop */}
                 <div style={{
@@ -181,18 +212,18 @@ const ProductsPage = () => {
                 }}>
                     <div style={styles.resultsInfo}>
                         <p>{products.length} products found</p>
-                        {filters.category !== 'All' && (
+                        {activeCategory !== 'All' && (
                             <span style={styles.activeFilter}>
-                                Category: {filters.category}
-                                <button onClick={() => handleFilterChange({ ...filters, category: 'All' })} style={styles.removeFilter}>×</button>
+                                Category: {activeCategory}
+                                <button onClick={() => handleCategoryClick('All')} style={styles.removeFilter}>×</button>
                             </span>
                         )}
-                        {(filters.minPrice || filters.maxPrice) && (
+                        {filters.minPrice || filters.maxPrice ? (
                             <span style={styles.activeFilter}>
                                 Price: ${filters.minPrice || 0} - ${filters.maxPrice || '∞'}
                                 <button onClick={() => handleFilterChange({ ...filters, minPrice: '', maxPrice: '' })} style={styles.removeFilter}>×</button>
                             </span>
-                        )}
+                        ) : null}
                         {filters.rating && (
                             <span style={styles.activeFilter}>
                                 Rating: {filters.rating}★ & above
@@ -296,7 +327,7 @@ const styles = {
     },
     // Real-Time Search Styles
     searchSection: {
-        marginBottom: '25px',
+        marginBottom: '20px',
     },
     searchContainer: {
         position: 'relative',
@@ -337,6 +368,41 @@ const styles = {
         fontSize: '0.85rem',
         color: '#666',
         paddingLeft: '5px',
+    },
+    // Category Tabs Styles
+    categoryTabs: {
+        display: 'flex',
+        flexWrap: 'wrap',
+        gap: '10px',
+        marginBottom: '30px',
+        paddingBottom: '10px',
+        borderBottom: '2px solid #f0f0f0',
+    },
+    categoryTab: {
+        padding: '10px 24px',
+        backgroundColor: 'transparent',
+        border: 'none',
+        borderRadius: '30px',
+        cursor: 'pointer',
+        fontSize: '0.95rem',
+        fontWeight: '500',
+        color: '#666',
+        transition: 'all 0.3s',
+        position: 'relative',
+    },
+    categoryTabActive: {
+        backgroundColor: '#6366f1',
+        color: '#fff',
+        boxShadow: '0 2px 8px rgba(99, 102, 241, 0.3)',
+    },
+    categoryCount: {
+        display: 'inline-block',
+        marginLeft: '8px',
+        padding: '2px 6px',
+        backgroundColor: 'rgba(0,0,0,0.1)',
+        borderRadius: '20px',
+        fontSize: '0.7rem',
+        fontWeight: 'normal',
     },
     content: {
         display: 'flex',
