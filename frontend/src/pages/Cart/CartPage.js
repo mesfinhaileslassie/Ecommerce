@@ -2,21 +2,25 @@ import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Link, useNavigate } from 'react-router-dom';
 import { updateCartItem, removeFromCart, clearCart, fetchCart } from '../../redux/slices/cartSlice';
-import { FaTrash, FaPlus, FaMinus, FaCheckSquare, FaSquare, FaMoneyBillWave } from 'react-icons/fa';
+import { FaTrash, FaPlus, FaMinus, FaCheckSquare, FaSquare, FaMoneyBillWave, FaClock, FaExclamationTriangle } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const CartPage = () => {
     const dispatch = useDispatch();
-    const navigate = useNavigate();  // Add this line
+    const navigate = useNavigate();
     const { items, totalPrice, itemCount, loading } = useSelector((state) => state.cart);
     const { user, token } = useSelector((state) => state.auth);
-    const [updating, setUpdating] = React.useState(false);
-    const [selectedItems, setSelectedItems] = React.useState({});
-    const [selectAll, setSelectAll] = React.useState(true);
+    const [updating, setUpdating] = useState(false);
+    const [selectedItems, setSelectedItems] = useState({});
+    const [selectAll, setSelectAll] = useState(true);
+    const [expirationInfo, setExpirationInfo] = useState(null);
+    const [loadingExpiration, setLoadingExpiration] = useState(true);
 
     useEffect(() => {
         if (token && user) {
             loadCart();
+            fetchExpirationInfo();
         }
     }, [dispatch, token, user]);
 
@@ -37,6 +41,17 @@ const CartPage = () => {
             await dispatch(fetchCart());
         } catch (error) {
             console.error('Failed to load cart:', error);
+        }
+    };
+
+    const fetchExpirationInfo = async () => {
+        try {
+            const { data } = await api.get('/cart/expiration');
+            setExpirationInfo(data);
+        } catch (error) {
+            console.error('Failed to fetch expiration info:', error);
+        } finally {
+            setLoadingExpiration(false);
         }
     };
 
@@ -103,6 +118,7 @@ const CartPage = () => {
             } else {
                 toast.success('Cart updated');
                 await loadCart();
+                await fetchExpirationInfo();
             }
         } catch (error) {
             toast.error(error.message || 'Update failed');
@@ -119,6 +135,7 @@ const CartPage = () => {
             } else {
                 toast.success('Item removed');
                 await loadCart();
+                await fetchExpirationInfo();
                 // Remove from selected items
                 setSelectedItems(prev => {
                     const newSelected = { ...prev };
@@ -140,6 +157,7 @@ const CartPage = () => {
                 } else {
                     toast.success('Cart cleared');
                     await loadCart();
+                    await fetchExpirationInfo();
                     setSelectedItems({});
                     setSelectAll(true);
                 }
@@ -147,6 +165,12 @@ const CartPage = () => {
                 toast.error('Clear failed');
             }
         }
+    };
+
+    const handleRefreshCart = () => {
+        loadCart();
+        fetchExpirationInfo();
+        toast.success('Cart refreshed');
     };
 
     const { total: selectedTotal, count: selectedCount } = getSelectedTotal();
@@ -160,10 +184,27 @@ const CartPage = () => {
         );
     }
 
-    if (loading) {
+    if (loading || loadingExpiration) {
         return (
             <div style={styles.center}>
+                <div className="spinner"></div>
                 <h2>Loading your cart...</h2>
+            </div>
+        );
+    }
+
+    // Check if cart is expired
+    if (expirationInfo && expirationInfo.isExpired) {
+        return (
+            <div style={styles.center}>
+                <FaExclamationTriangle size={48} color="#dc3545" />
+                <h2>Your cart has expired</h2>
+                <p>Items in your cart were held for too long and have been removed.</p>
+                <p>Please add items to your cart again to continue shopping.</p>
+                <div style={styles.buttonGroup}>
+                    <Link to="/products" style={styles.shopBtn}>Continue Shopping</Link>
+                    <button onClick={handleRefreshCart} style={styles.refreshBtn}>Refresh Cart</button>
+                </div>
             </div>
         );
     }
@@ -181,6 +222,19 @@ const CartPage = () => {
     return (
         <div style={styles.container}>
             <h1 style={styles.title}>Shopping Cart</h1>
+            
+            {/* Expiration Warning */}
+            {expirationInfo && expirationInfo.hasCart && !expirationInfo.isExpired && (
+                <div style={styles.expirationWarning}>
+                    <FaClock size={16} />
+                    <span>
+                        Items in your cart will expire in{' '}
+                        {expirationInfo.daysRemaining > 0 
+                            ? `${expirationInfo.daysRemaining} day${expirationInfo.daysRemaining !== 1 ? 's' : ''}` 
+                            : `${expirationInfo.hoursRemaining} hour${expirationInfo.hoursRemaining !== 1 ? 's' : ''}`}
+                    </span>
+                </div>
+            )}
             
             <div style={styles.cartContainer}>
                 <div style={styles.itemsSection}>
@@ -300,8 +354,19 @@ const styles = {
         padding: '20px',
     },
     title: {
-        marginBottom: '30px',
+        marginBottom: '20px',
         color: '#333',
+    },
+    expirationWarning: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        backgroundColor: '#fff3cd',
+        color: '#856404',
+        padding: '12px 16px',
+        borderRadius: '8px',
+        marginBottom: '20px',
+        fontSize: '14px',
     },
     cartContainer: {
         display: 'grid',
@@ -485,6 +550,23 @@ const styles = {
         color: '#fff',
         textDecoration: 'none',
         borderRadius: '5px',
+    },
+    refreshBtn: {
+        display: 'inline-block',
+        marginTop: '20px',
+        marginLeft: '10px',
+        padding: '10px 30px',
+        backgroundColor: '#28a745',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+    },
+    buttonGroup: {
+        display: 'flex',
+        gap: '10px',
+        justifyContent: 'center',
+        marginTop: '20px',
     },
 };
 

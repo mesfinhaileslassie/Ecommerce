@@ -193,8 +193,10 @@ const productSchema = new mongoose.Schema({
 
 const Product = mongoose.model('Product', productSchema);
 
+
+
 // ============================================
-// CART MODEL
+// CART ITEM SCHEMA - Define FIRST
 // ============================================
 const cartItemSchema = new mongoose.Schema({
     product: {
@@ -211,8 +213,13 @@ const cartItemSchema = new mongoose.Schema({
         min: 1,
         default: 1
     },
-    size: { type: String, default: null }  // Add this field
+    size: { type: String, default: null }
 });
+
+// ============================================
+// CART MODEL - Define AFTER cartItemSchema
+// ============================================
+const expirationDays = parseInt(process.env.CART_EXPIRATION_DAYS) || 3;
 
 const cartSchema = new mongoose.Schema({
     user: {
@@ -221,10 +228,14 @@ const cartSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    items: [cartItemSchema],
+    items: [cartItemSchema],  // Now cartItemSchema is defined
     totalPrice: {
         type: Number,
         default: 0
+    },
+    expiresAt: {
+        type: Date,
+        default: () => new Date(Date.now() + expirationDays * 24 * 60 * 60 * 1000)
     },
     createdAt: {
         type: Date,
@@ -237,6 +248,12 @@ const cartSchema = new mongoose.Schema({
 });
 
 const Cart = mongoose.model('Cart', cartSchema);
+
+
+
+
+
+
 
 // ============================================
 // ORDER MODEL
@@ -538,21 +555,6 @@ app.get('/api/telebirr/return', async (req, res) => {
 
 
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
 // ============================================
 // IMAGE UPLOAD ROUTE
 // ============================================
@@ -597,6 +599,20 @@ app.post('/api/upload-multiple', protect, admin, upload.array('images', 5), asyn
         console.error('Upload error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
+});
+
+
+
+
+const cron = require('node-cron');
+
+// Run cleanup every day at midnight
+cron.schedule('0 0 * * *', async () => {
+    console.log('Running cart cleanup...');
+    const result = await Cart.deleteMany({
+        expiresAt: { $lt: new Date() }
+    });
+    console.log(`Cleaned up ${result.deletedCount} expired carts`);
 });
 
 
@@ -1493,9 +1509,13 @@ app.get('/api/cart', protect, async (req, res) => {
     try {
         let cart = await Cart.findOne({ user: req.userId }).populate('items.product');
         
+        // When creating a new cart
         if (!cart) {
-            cart = new Cart({ user: req.userId, items: [] });
-            await cart.save();
+            cart = new Cart({ 
+                user: req.userId, 
+                items: [],
+                expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days
+            });
         }
         
         res.json({
@@ -1712,6 +1732,65 @@ app.delete('/api/cart/clear', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+
+// ============================================
+// CART CLEANUP ROUTE
+// ============================================
+
+// Clean up expired carts (can be called by a cron job)
+app.delete('/api/cart/cleanup', async (req, res) => {
+    try {
+        const result = await Cart.deleteMany({
+            expiresAt: { $lt: new Date() }
+        });
+        
+        console.log(`🧹 Cleaned up ${result.deletedCount} expired carts`);
+        
+        res.json({
+            success: true,
+            message: `Cleaned up ${result.deletedCount} expired carts`,
+            deletedCount: result.deletedCount
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get cart expiration info
+app.get('/api/cart/expiration', protect, async (req, res) => {
+    try {
+        const cart = await Cart.findOne({ user: req.userId });
+        
+        if (!cart) {
+            return res.json({
+                success: true,
+                hasCart: false,
+                expiresAt: null
+            });
+        }
+        
+        const now = new Date();
+        const expiresAt = new Date(cart.expiresAt);
+        const hoursRemaining = Math.max(0, Math.floor((expiresAt - now) / (1000 * 60 * 60)));
+        const daysRemaining = Math.floor(hoursRemaining / 24);
+        
+        res.json({
+            success: true,
+            hasCart: true,
+            expiresAt: cart.expiresAt,
+            daysRemaining: daysRemaining,
+            hoursRemaining: hoursRemaining,
+            isExpired: now > expiresAt
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
 
 // ============================================
 // ORDER ROUTES

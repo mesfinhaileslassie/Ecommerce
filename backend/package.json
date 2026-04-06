@@ -11,11 +11,15 @@
     "jsonwebtoken": "^9.0.3",
     "mongoose": "^9.3.3",
     "multer": "^2.1.1",
+    "node-cron": "^4.2.1",
     "nodemailer": "^8.0.4",
     "stripe": "^21.0.1",
     "telebirr-sdk": "^1.0.15"
   },
   "devDependencies": {
     "nodemon": "^3.1.14"
-  }
+  },
+  "scripts": {
+        "cleanup:carts": "node scripts/cleanupCarts.js"
+    }
 }
