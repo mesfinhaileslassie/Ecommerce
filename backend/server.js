@@ -276,8 +276,8 @@ const orderSchema = new mongoose.Schema({
     paymentMethod: {
         type: String,
         required: true,
-        enum: ['Credit Card', 'PayPal', 'Cash on Delivery'],
-        default: 'Credit Card'
+        enum: ['Credit Card', 'PayPal', 'Cash on Delivery', 'CBE Birr', 'Telebirr', 'Mobile Banking'],
+        default: 'Cash on Delivery'
     },
     paymentResult: {
         id: String,
@@ -299,6 +299,22 @@ const orderSchema = new mongoose.Schema({
         type: String,
         enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
         default: 'Pending'
+    },
+    // Add payment tracking fields
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed', 'refunded'],
+        default: 'pending'
+    },
+    transactionId: {
+        type: String,
+        default: null
+    },
+    paymentDetails: {
+        accountNumber: { type: String, default: null },
+        phoneNumber: { type: String, default: null },
+        referenceNumber: { type: String, default: null },
+        paidAt: { type: Date, default: null }
     },
     createdAt: {
         type: Date,
@@ -1291,17 +1307,6 @@ app.get('/api/products/recently-viewed', protect, async (req, res) => {
         });
     }
 });
-
-
-
-
-
-
-
-
-
-
-
 
 
 

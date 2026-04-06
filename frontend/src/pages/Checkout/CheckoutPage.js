@@ -5,8 +5,10 @@ import { createOrder } from '../../redux/slices/orderSlice';
 import { fetchCart, clearCart } from '../../redux/slices/cartSlice';
 import { validateCoupon, clearCoupon } from '../../redux/slices/couponSlice';
 import CouponInput from '../../components/Checkout/CouponInput';
-import { FaSpinner, FaArrowLeft, FaCheckCircle } from 'react-icons/fa';
+import PaymentInstructions from '../../components/Checkout/PaymentInstructions';
+import { FaSpinner, FaArrowLeft, FaCheckCircle, FaMobile, FaUniversity, FaMoneyBillWave } from 'react-icons/fa';
 import toast from 'react-hot-toast';
+import api from '../../services/api';
 
 const CheckoutPage = () => {
     const dispatch = useDispatch();
@@ -29,7 +31,15 @@ const CheckoutPage = () => {
     const [savedAddresses, setSavedAddresses] = useState([]);
     const [useSavedAddress, setUseSavedAddress] = useState(false);
     const [selectedAddressId, setSelectedAddressId] = useState('');
-
+    const [orderCreated, setOrderCreated] = useState(false);
+    const [createdOrder, setCreatedOrder] = useState(null);
+    const [paymentConfirmed, setPaymentConfirmed] = useState(false);
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [referenceNumber, setReferenceNumber] = useState('');
+    const [showPaymentDetails, setShowPaymentDetails] = useState(false);
+    const [accountNumber, setAccountNumber] = useState('');
+    const [phoneNumberError, setPhoneNumberError] = useState('');
+    const [accountNumberError, setAccountNumberError] = useState('');
     useEffect(() => {
         if (token && user) {
             dispatch(fetchCart());
@@ -39,15 +49,10 @@ const CheckoutPage = () => {
 
     const fetchSavedAddresses = async () => {
         try {
-            const response = await fetch('http://localhost:5000/api/addresses', {
-                headers: {
-                    'Authorization': `Bearer ${localStorage.getItem('token')}`
-                }
-            });
-            const data = await response.json();
-            if (data.success && data.addresses) {
-                setSavedAddresses(data.addresses);
-                const defaultAddress = data.addresses.find(addr => addr.isDefault);
+            const response = await api.get('/addresses');
+            if (response.data.success && response.data.addresses) {
+                setSavedAddresses(response.data.addresses);
+                const defaultAddress = response.data.addresses.find(addr => addr.isDefault);
                 if (defaultAddress) {
                     setSelectedAddressId(defaultAddress._id);
                     setShippingAddress({
@@ -65,6 +70,29 @@ const CheckoutPage = () => {
             console.error('Error fetching addresses:', error);
         }
     };
+
+
+    const validateCBEAccount = (number) => {
+    const pattern = /^1000\d{9}$/;
+    return pattern.test(number);
+    };
+
+    // Validate phone number (must start with +2519 followed by 8 digits)
+    const validatePhoneNumber = (number) => {
+        const pattern = /^\+2519\d{8}$/;
+        return pattern.test(number);
+    };
+
+
+    const handlePaymentMethodChange = (method) => {
+        setPaymentMethod(method);
+        setShowPaymentDetails(method === 'CBE Birr' || method === 'Telebirr');
+        setAccountNumber('');
+        setPhoneNumber('');
+        setAccountNumberError('');
+        setPhoneNumberError('');
+    };
+
 
     const handleAddressSelect = async (addressId) => {
         setSelectedAddressId(addressId);
@@ -88,67 +116,157 @@ const CheckoutPage = () => {
         });
     };
 
-    // Add this state and function in CheckoutPage
-const [discount, setDiscount] = useState(0);
-
-const handleDiscountChange = (amount) => {
-    setDiscount(amount);
-};
-
     const calculateFinalTotal = () => {
         return totalPrice - discountAmount;
     };
 
-    const handleSubmit = async (e) => {
-        e.preventDefault();
-        
-        // Validate shipping address
-        if (!shippingAddress.fullName || !shippingAddress.address || !shippingAddress.city || 
-            !shippingAddress.postalCode || !shippingAddress.country || !shippingAddress.phone) {
-            toast.error('Please fill in all shipping address fields');
+
+
+
+
+    const handleCreateOrder = async () => {
+    // Validate shipping address
+    if (!shippingAddress.fullName || !shippingAddress.address || !shippingAddress.city || 
+        !shippingAddress.postalCode || !shippingAddress.country || !shippingAddress.phone) {
+        toast.error('Please fill in all shipping address fields');
+        return;
+    }
+
+    // Validate payment details for mobile payments
+    if (paymentMethod === 'CBE Birr') {
+        if (!accountNumber) {
+            toast.error('Please enter your CBE Birr account number');
             return;
         }
-
-        if (items.length === 0) {
-            toast.error('Your cart is empty');
+        if (!validateCBEAccount(accountNumber)) {
+            toast.error('Invalid CBE Birr account number. Must start with 1000 followed by 9 digits');
             return;
+        }
+        if (!phoneNumber) {
+            toast.error('Please enter your phone number');
+            return;
+        }
+        if (!validatePhoneNumber(phoneNumber)) {
+            toast.error('Invalid phone number format. Use +2519XXXXXXXX');
+            return;
+        }
+    }
+
+    if (paymentMethod === 'Telebirr') {
+        if (!phoneNumber) {
+            toast.error('Please enter your phone number');
+            return;
+        }
+        if (!validatePhoneNumber(phoneNumber)) {
+            toast.error('Invalid phone number format. Use +2519XXXXXXXX');
+            return;
+        }
+    }
+
+    if (items.length === 0) {
+        toast.error('Your cart is empty');
+        return;
+    }
+
+    setSubmitting(true);
+
+    try {
+        const orderData = {
+            shippingAddress: {
+                fullName: shippingAddress.fullName,
+                address: shippingAddress.address,
+                city: shippingAddress.city,
+                postalCode: shippingAddress.postalCode,
+                country: shippingAddress.country,
+                phone: shippingAddress.phone
+            },
+            paymentMethod: paymentMethod,
+            totalAmount: calculateFinalTotal(),
+            discountAmount: discountAmount,
+            couponCode: appliedCoupon?.code || null,
+            paymentStatus: 'pending',
+            paymentDetails: {
+                accountNumber: paymentMethod === 'CBE Birr' ? accountNumber : null,
+                phoneNumber: phoneNumber,
+                referenceNumber: referenceNumber
+            }
+        };
+
+        const result = await dispatch(createOrder(orderData));
+        
+        if (result.error) {
+            toast.error(result.error.message || 'Order creation failed');
+        } else {
+            setOrderCreated(true);
+            setCreatedOrder(result.order);
+            toast.success('Order created! Please complete payment.');
+            
+            if (paymentMethod !== 'Cash on Delivery') {
+                // Show payment instructions
+            } else {
+                dispatch(clearCart());
+                setTimeout(() => {
+                    navigate('/orders');
+                }, 2000);
+            }
+        }
+    } catch (error) {
+        console.error('Order error:', error);
+        toast.error(error.response?.data?.message || 'Failed to create order');
+    } finally {
+        setSubmitting(false);
+    }
+};
+
+
+
+    const handleConfirmPayment = async () => {
+        if (paymentMethod === 'CBE Birr' || paymentMethod === 'Telebirr') {
+            if (!phoneNumber) {
+                toast.error('Please enter your phone number');
+                return;
+            }
+            if (!referenceNumber) {
+                toast.error('Please enter the transaction reference number');
+                return;
+            }
         }
 
         setSubmitting(true);
-
+        
         try {
-            const orderData = {
-                shippingAddress: {
-                    fullName: shippingAddress.fullName,
-                    address: shippingAddress.address,
-                    city: shippingAddress.city,
-                    postalCode: shippingAddress.postalCode,
-                    country: shippingAddress.country,
-                    phone: shippingAddress.phone
-                },
-                paymentMethod: paymentMethod,
-                totalAmount: calculateFinalTotal(),
-                discountAmount: discountAmount,
-                couponCode: appliedCoupon?.code || null
+            // Update order with payment confirmation
+            const updateData = {
+                paymentStatus: 'paid',
+                paymentDetails: {
+                    phoneNumber: phoneNumber,
+                    referenceNumber: referenceNumber,
+                    paidAt: new Date()
+                }
             };
-
-            console.log('Sending order:', orderData);
             
-            const result = await dispatch(createOrder(orderData));
-            console.log('Order result:', result);
+            await api.put(`/orders/${createdOrder._id}`, updateData);
             
-            if (result.error) {
-                toast.error(result.error.message || 'Order failed');
-            } else {
-                toast.success('Order placed successfully!');
+            setPaymentConfirmed(true);
+            toast.success('Payment confirmed! Order completed.');
+            
+            // Clear cart after payment confirmation
+            dispatch(clearCart());
+            
+            // Redirect to orders page after 2 seconds
+            setTimeout(() => {
                 navigate('/orders');
-            }
+            }, 2000);
         } catch (error) {
-            console.error('Order error:', error);
-            toast.error(error.response?.data?.message || 'Failed to place order');
+            console.error('Payment confirmation error:', error);
+            toast.error('Failed to confirm payment. Please contact support.');
         } finally {
             setSubmitting(false);
         }
+    };
+
+    const isMobilePayment = () => {
+        return ['CBE Birr', 'Telebirr', 'Mobile Banking'].includes(paymentMethod);
     };
 
     if (!user) {
@@ -171,7 +289,7 @@ const handleDiscountChange = (amount) => {
         );
     }
 
-    if (items.length === 0) {
+    if (items.length === 0 && !orderCreated) {
         return (
             <div style={styles.center}>
                 <h2>Your cart is empty</h2>
@@ -181,13 +299,79 @@ const handleDiscountChange = (amount) => {
             </div>
         );
     }
-    const totalItems = items.reduce((sum, item) => sum + (item.quantity || 1), 0);
-    console.log('Cart items:', items);
-    console.log('Total items count:', totalItems);
-
-
 
     const finalTotal = calculateFinalTotal();
+
+    // Show payment instructions after order is created
+    if (orderCreated && !paymentConfirmed && isMobilePayment()) {
+        return (
+            <div style={styles.container}>
+                <button onClick={() => setOrderCreated(false)} style={styles.backBtn}>
+                    <FaArrowLeft /> Back to Checkout
+                </button>
+                
+                <div style={styles.paymentContainer}>
+                    <h1 style={styles.title}>Complete Payment</h1>
+                    <p style={styles.orderInfo}>Order ID: {createdOrder?._id}</p>
+                    
+                    <PaymentInstructions 
+                        paymentMethod={paymentMethod}
+                        orderId={createdOrder?._id}
+                        totalAmount={finalTotal}
+                    />
+                    
+                    <div style={styles.paymentForm}>
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>Phone Number</label>
+                            <input
+                                type="tel"
+                                value={phoneNumber}
+                                onChange={(e) => setPhoneNumber(e.target.value)}
+                                placeholder="Enter your phone number"
+                                style={styles.input}
+                                required
+                            />
+                        </div>
+                        
+                        <div style={styles.formGroup}>
+                            <label style={styles.label}>Transaction Reference Number</label>
+                            <input
+                                type="text"
+                                value={referenceNumber}
+                                onChange={(e) => setReferenceNumber(e.target.value)}
+                                placeholder="Enter the reference number from your payment"
+                                style={styles.input}
+                                required
+                            />
+                        </div>
+                        
+                        <button 
+                            onClick={handleConfirmPayment}
+                            style={styles.confirmPaymentBtn}
+                            disabled={submitting}
+                        >
+                            {submitting ? <FaSpinner style={styles.spinnerIcon} /> : <FaCheckCircle />}
+                            {submitting ? 'Confirming...' : 'I Have Paid - Confirm Payment'}
+                        </button>
+                    </div>
+                </div>
+            </div>
+        );
+    }
+
+    // Show success message after payment
+    if (paymentConfirmed) {
+        return (
+            <div style={styles.center}>
+                <FaCheckCircle size={64} color="#10b981" />
+                <h2>Payment Successful!</h2>
+                <p>Your order has been confirmed and will be processed soon.</p>
+                <button onClick={() => navigate('/orders')} style={styles.viewOrdersBtn}>
+                    View My Orders
+                </button>
+            </div>
+        );
+    }
 
     return (
         <div style={styles.container}>
@@ -198,7 +382,7 @@ const handleDiscountChange = (amount) => {
             <h1 style={styles.title}>Checkout</h1>
             
             <div style={styles.checkoutContainer}>
-                <form onSubmit={handleSubmit} style={styles.form}>
+                <form onSubmit={(e) => { e.preventDefault(); handleCreateOrder(); }} style={styles.form}>
                     {/* Saved Addresses */}
                     {savedAddresses.length > 0 && (
                         <div style={styles.section}>
@@ -315,60 +499,109 @@ const handleDiscountChange = (amount) => {
                     </div>
                     
                     {/* Payment Method */}
-                    <div style={styles.section}>
-                        <h2>Payment Method</h2>
-                        
-                        <div style={styles.paymentOptions}>
-                            <label style={styles.paymentLabel}>
-                                <input
-                                    type="radio"
-                                    value="Credit Card"
-                                    checked={paymentMethod === 'Credit Card'}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
-                                />
-                                <div style={styles.paymentCard}>
-                                    <span>💳</span>
-                                    <span>Credit Card</span>
-                                </div>
-                            </label>
-                            
-                            <label style={styles.paymentLabel}>
-                                <input
-                                    type="radio"
-                                    value="PayPal"
-                                    checked={paymentMethod === 'PayPal'}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
-                                />
-                                <div style={styles.paymentCard}>
-                                    <span>💰</span>
-                                    <span>PayPal</span>
-                                </div>
-                            </label>
-                            
-                            <label style={styles.paymentLabel}>
-                                <input
-                                    type="radio"
-                                    value="Cash on Delivery"
-                                    checked={paymentMethod === 'Cash on Delivery'}
-                                    onChange={(e) => setPaymentMethod(e.target.value)}
-                                />
-                                <div style={styles.paymentCard}>
-                                    <span>💵</span>
-                                    <span>Cash on Delivery</span>
-                                </div>
-                            </label>
-                        </div>
-                    </div>
+<div style={styles.section}>
+    <h2>Payment Method</h2>
+    
+    <div style={styles.paymentOptions}>
+        <label style={styles.paymentLabel}>
+            <input
+                type="radio"
+                value="Cash on Delivery"
+                checked={paymentMethod === 'Cash on Delivery'}
+                onChange={(e) => handlePaymentMethodChange(e.target.value)}
+            />
+            <div style={styles.paymentCard}>
+                <FaMoneyBillWave size={20} />
+                <span>Cash on Delivery</span>
+            </div>
+        </label>
+        
+        <label style={styles.paymentLabel}>
+            <input
+                type="radio"
+                value="CBE Birr"
+                checked={paymentMethod === 'CBE Birr'}
+                onChange={(e) => handlePaymentMethodChange(e.target.value)}
+            />
+            <div style={styles.paymentCard}>
+                <FaUniversity size={20} />
+                <span>CBE Birr</span>
+            </div>
+        </label>
+        
+        <label style={styles.paymentLabel}>
+            <input
+                type="radio"
+                value="Telebirr"
+                checked={paymentMethod === 'Telebirr'}
+                onChange={(e) => handlePaymentMethodChange(e.target.value)}
+            />
+            <div style={styles.paymentCard}>
+                <FaMobile size={20} />
+                <span>Telebirr</span>
+            </div>
+        </label>
+    </div>
+</div>
+
+{/* Payment Details for CBE Birr / Telebirr */}
+{showPaymentDetails && (
+    <div style={styles.section}>
+        <h2>Payment Details</h2>
+        
+        {paymentMethod === 'CBE Birr' && (
+            <div style={styles.formGroup}>
+                <label style={styles.label}>CBE Birr Account Number</label>
+                <input
+                    type="text"
+                    value={accountNumber}
+                    onChange={(e) => {
+                        setAccountNumber(e.target.value);
+                        if (validateCBEAccount(e.target.value)) {
+                            setAccountNumberError('');
+                        } else {
+                            setAccountNumberError('Account number must start with 1000 followed by 9 digits (e.g., 1000123456789)');
+                        }
+                    }}
+                    placeholder="1000123456789"
+                    style={{...styles.input, ...(accountNumberError && styles.inputError)}}
+                />
+                {accountNumberError && <span style={styles.errorText}>{accountNumberError}</span>}
+                <small style={styles.hintText}>Account number must start with 1000 followed by 9 digits (total 13 digits)</small>
+            </div>
+        )}
+        
+        <div style={styles.formGroup}>
+            <label style={styles.label}>Phone Number</label>
+            <input
+                type="tel"
+                value={phoneNumber}
+                onChange={(e) => {
+                    setPhoneNumber(e.target.value);
+                    if (validatePhoneNumber(e.target.value)) {
+                        setPhoneNumberError('');
+                    } else {
+                        setPhoneNumberError('Phone number must start with +2519 followed by 8 digits (e.g., +251912345678)');
+                    }
+                }}
+                placeholder="+251912345678"
+                style={{...styles.input, ...(phoneNumberError && styles.inputError)}}
+            />
+            {phoneNumberError && <span style={styles.errorText}>{phoneNumberError}</span>}
+            <small style={styles.hintText}>Enter your phone number in international format (+2519XXXXXXXX)</small>
+        </div>
+    </div>
+)}
                     
                     <button 
-                        type="submit" 
+                        type="submit"
                         style={styles.placeOrderBtn}
                         disabled={submitting || orderLoading}
                     >
                         {submitting || orderLoading ? (
-                            <><FaSpinner style={styles.spinnerIcon} /> Placing Order...</>
+                            <><FaSpinner style={styles.spinnerIcon} /> Creating Order...</>
                         ) : (
-                            <><FaCheckCircle /> Place Order</>
+                            <><FaCheckCircle /> Proceed to Payment</>
                         )}
                     </button>
                 </form>
@@ -387,6 +620,7 @@ const handleDiscountChange = (amount) => {
                                 />
                                 <div style={styles.itemInfo}>
                                     <p style={styles.itemName}>{item.name}</p>
+                                    {item.size && <p style={styles.itemSize}>Size: {item.size}</p>}
                                     <p style={styles.itemQty}>Qty: {item.quantity}</p>
                                 </div>
                                 <div style={styles.itemPrice}>
@@ -397,11 +631,7 @@ const handleDiscountChange = (amount) => {
                     </div>
                     
                     <div style={styles.couponSection}>
-                     <CouponInput 
-                            cartTotal={totalPrice} 
-                            cartItemsCount={totalItems}
-                            onDiscountChange={handleDiscountChange} 
-                        />
+                        <CouponInput cartTotal={totalPrice} />
                     </div>
                     
                     <div style={styles.priceDetails}>
@@ -478,10 +708,29 @@ const styles = {
         fontSize: '1rem',
         transition: 'border-color 0.3s',
     },
+
+    inputError: {
+    borderColor: '#dc3545',
+    backgroundColor: '#fff8f8',
+},
+    errorText: {
+        color: '#dc3545',
+        fontSize: '0.75rem',
+        marginTop: '5px',
+        display: 'block',
+    },
+    hintText: {
+        color: '#6c757d',
+        fontSize: '0.7rem',
+        marginTop: '5px',
+        display: 'block',
+    },
+
     radioGroup: {
         display: 'flex',
         gap: '20px',
         marginBottom: '15px',
+        flexWrap: 'wrap',
     },
     radioLabel: {
         display: 'flex',
@@ -513,6 +762,7 @@ const styles = {
         border: '2px solid #e5e7eb',
         borderRadius: '0.5rem',
         transition: 'all 0.3s',
+        backgroundColor: '#fff',
     },
     placeOrderBtn: {
         display: 'flex',
@@ -570,6 +820,10 @@ const styles = {
         fontWeight: '500',
         marginBottom: '4px',
     },
+    itemSize: {
+        fontSize: '0.75rem',
+        color: '#666',
+    },
     itemQty: {
         fontSize: '0.75rem',
         color: '#666',
@@ -614,6 +868,48 @@ const styles = {
         color: '#28a745',
         fontSize: '1.3rem',
     },
+    paymentContainer: {
+        maxWidth: '600px',
+        margin: '0 auto',
+    },
+    paymentForm: {
+        backgroundColor: '#fff',
+        borderRadius: '1rem',
+        padding: '1.5rem',
+        marginTop: '20px',
+        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
+    },
+    formGroup: {
+        marginBottom: '15px',
+    },
+    label: {
+        display: 'block',
+        marginBottom: '5px',
+        fontWeight: '500',
+        color: '#555',
+    },
+    confirmPaymentBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '10px',
+        padding: '14px',
+        backgroundColor: '#10b981',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '0.5rem',
+        fontSize: '1rem',
+        fontWeight: '600',
+        cursor: 'pointer',
+        width: '100%',
+        marginTop: '10px',
+    },
+    orderInfo: {
+        textAlign: 'center',
+        marginBottom: '20px',
+        fontSize: '0.9rem',
+        color: '#666',
+    },
     spinner: {
         animation: 'spin 1s linear infinite',
         fontSize: '2rem',
@@ -645,9 +941,18 @@ const styles = {
         cursor: 'pointer',
         marginTop: '20px',
     },
+    viewOrdersBtn: {
+        padding: '10px 30px',
+        backgroundColor: '#6366f1',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '0.5rem',
+        cursor: 'pointer',
+        marginTop: '20px',
+    },
 };
 
-// Add keyframes for spinner animation
+// Add keyframes for spinner
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
     @keyframes spin {
@@ -658,12 +963,13 @@ styleSheet.textContent = `
     input:focus, select:focus {
         outline: none;
         border-color: #6366f1;
-        box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.1);
+        box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
     }
     
     .payment-label:hover .payment-card {
         border-color: #6366f1;
         background-color: #f8fafc;
+        transform: translateY(-2px);
     }
     
     input[type="radio"]:checked + .payment-card {
