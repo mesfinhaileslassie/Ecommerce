@@ -435,6 +435,124 @@ const admin = async (req, res, next) => {
     }
 };
 
+
+
+
+
+// ============================================
+// TELEBIRR PAYMENT ROUTES
+// ============================================
+
+const telebirrService = require('./services/telebirrService');
+
+// Initiate Telebirr payment
+app.post('/api/telebirr/initiate', protect, async (req, res) => {
+    try {
+        const { orderId, amount, subject } = req.body;
+
+        if (!telebirrService.isAvailable()) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Telebirr service not configured. Please check credentials.' 
+            });
+        }
+
+        const result = await telebirrService.initiatePayment(
+            orderId,
+            amount,
+            subject,
+            `${process.env.TELEBIRR_RETURN_URL}`,
+            `${process.env.TELEBIRR_NOTIFY_URL}`
+        );
+
+        // Update order with outTradeNo
+        await Order.findByIdAndUpdate(orderId, {
+            'paymentDetails.outTradeNo': result.outTradeNo
+        });
+
+        res.json({
+            success: true,
+            toPayUrl: result.toPayUrl,
+            outTradeNo: result.outTradeNo,
+            message: 'Payment initiated successfully'
+        });
+    } catch (error) {
+        console.error('Telebirr initiation error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Telebirr payment notification webhook
+app.post('/api/telebirr/notify', async (req, res) => {
+    try {
+        const notification = req.body;
+        console.log('Telebirr notification received:', notification);
+
+        // Verify signature here (implement based on Telebirr docs)
+        
+        if (notification.resultCode === '0' || notification.code === '0') {
+            const { outTradeNo, tradeNo } = notification;
+            
+            await Order.findOneAndUpdate(
+                { 'paymentDetails.outTradeNo': outTradeNo },
+                { 
+                    paymentStatus: 'paid',
+                    isPaid: true,
+                    paidAt: new Date(),
+                    transactionId: tradeNo,
+                    'paymentDetails.referenceNumber': tradeNo
+                }
+            );
+            
+            console.log(`✅ Payment confirmed for order: ${outTradeNo}`);
+        }
+
+        res.json({ code: 0, message: 'success' });
+    } catch (error) {
+        console.error('Telebirr notification error:', error);
+        res.status(500).json({ code: 1, message: error.message });
+    }
+});
+
+// Telebirr return URL (after payment)
+app.get('/api/telebirr/return', async (req, res) => {
+    const { outTradeNo, tradeNo, resultCode } = req.query;
+    
+    console.log('Telebirr return:', { outTradeNo, tradeNo, resultCode });
+    
+    if (resultCode === '0') {
+        await Order.findOneAndUpdate(
+            { 'paymentDetails.outTradeNo': outTradeNo },
+            { 
+                paymentStatus: 'paid',
+                isPaid: true,
+                paidAt: new Date(),
+                transactionId: tradeNo
+            }
+        );
+    }
+    
+    // Redirect to frontend orders page
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/orders?payment=${resultCode === '0' ? 'success' : 'failed'}`);
+});
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 // ============================================
 // IMAGE UPLOAD ROUTE
 // ============================================

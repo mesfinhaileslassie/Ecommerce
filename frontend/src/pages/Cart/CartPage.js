@@ -1,15 +1,18 @@
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { updateCartItem, removeFromCart, clearCart, fetchCart } from '../../redux/slices/cartSlice';
-import { FaTrash, FaPlus, FaMinus } from 'react-icons/fa';
+import { FaTrash, FaPlus, FaMinus, FaCheckSquare, FaSquare, FaMoneyBillWave } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const CartPage = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();  // Add this line
     const { items, totalPrice, itemCount, loading } = useSelector((state) => state.cart);
     const { user, token } = useSelector((state) => state.auth);
     const [updating, setUpdating] = React.useState(false);
+    const [selectedItems, setSelectedItems] = React.useState({});
+    const [selectAll, setSelectAll] = React.useState(true);
 
     useEffect(() => {
         if (token && user) {
@@ -17,14 +20,73 @@ const CartPage = () => {
         }
     }, [dispatch, token, user]);
 
+    useEffect(() => {
+        // Initialize selected items when cart loads
+        if (items.length > 0) {
+            const initialSelected = {};
+            items.forEach(item => {
+                const itemId = item.product?._id || item.product;
+                initialSelected[itemId] = selectAll;
+            });
+            setSelectedItems(initialSelected);
+        }
+    }, [items]);
+
     const loadCart = async () => {
         try {
-            console.log('🔄 Loading cart...');
-            const result = await dispatch(fetchCart());
-            console.log('📦 Cart loaded:', result);
+            await dispatch(fetchCart());
         } catch (error) {
             console.error('Failed to load cart:', error);
         }
+    };
+
+    const handleSelectItem = (productId) => {
+        setSelectedItems(prev => ({
+            ...prev,
+            [productId]: !prev[productId]
+        }));
+        setSelectAll(false);
+    };
+
+    const handleSelectAll = () => {
+        const newSelectAll = !selectAll;
+        setSelectAll(newSelectAll);
+        const newSelected = {};
+        items.forEach(item => {
+            const itemId = item.product?._id || item.product;
+            newSelected[itemId] = newSelectAll;
+        });
+        setSelectedItems(newSelected);
+    };
+
+    const getSelectedTotal = () => {
+        let total = 0;
+        let selectedCount = 0;
+        items.forEach(item => {
+            const itemId = item.product?._id || item.product;
+            if (selectedItems[itemId]) {
+                total += item.price * item.quantity;
+                selectedCount++;
+            }
+        });
+        return { total, count: selectedCount };
+    };
+
+    const handleCheckout = () => {
+        const selected = getSelectedTotal();
+        if (selected.count === 0) {
+            toast.error('Please select at least one item to checkout');
+            return;
+        }
+        
+        // Store selected items in sessionStorage for checkout
+        const selectedProducts = items.filter(item => {
+            const itemId = item.product?._id || item.product;
+            return selectedItems[itemId];
+        });
+        
+        sessionStorage.setItem('checkoutItems', JSON.stringify(selectedProducts));
+        navigate('/checkout', { state: { selectedItems: selectedProducts } });
     };
 
     const handleUpdateQuantity = async (productId, quantity) => {
@@ -35,19 +97,14 @@ const CartPage = () => {
         
         setUpdating(true);
         try {
-            console.log('✏️ Updating quantity:', { productId, quantity });
             const result = await dispatch(updateCartItem(productId, quantity));
-            console.log('📦 Update result:', result);
-            
             if (result.error) {
                 toast.error(result.error.message || 'Update failed');
             } else {
                 toast.success('Cart updated');
-                // Force reload cart
                 await loadCart();
             }
         } catch (error) {
-            console.error('Update error:', error);
             toast.error(error.message || 'Update failed');
         } finally {
             setUpdating(false);
@@ -56,13 +113,18 @@ const CartPage = () => {
 
     const handleRemoveItem = async (productId) => {
         try {
-            console.log('🗑️ Removing item:', productId);
             const result = await dispatch(removeFromCart(productId));
             if (result.error) {
                 toast.error(result.error.message || 'Remove failed');
             } else {
                 toast.success('Item removed');
                 await loadCart();
+                // Remove from selected items
+                setSelectedItems(prev => {
+                    const newSelected = { ...prev };
+                    delete newSelected[productId];
+                    return newSelected;
+                });
             }
         } catch (error) {
             toast.error('Remove failed');
@@ -78,12 +140,16 @@ const CartPage = () => {
                 } else {
                     toast.success('Cart cleared');
                     await loadCart();
+                    setSelectedItems({});
+                    setSelectAll(true);
                 }
             } catch (error) {
                 toast.error('Clear failed');
             }
         }
     };
+
+    const { total: selectedTotal, count: selectedCount } = getSelectedTotal();
 
     if (!user) {
         return (
@@ -115,67 +181,109 @@ const CartPage = () => {
     return (
         <div style={styles.container}>
             <h1 style={styles.title}>Shopping Cart</h1>
+            
             <div style={styles.cartContainer}>
                 <div style={styles.itemsSection}>
-                    {items.map((item) => (
-                        <div key={item.product?._id || item.product} style={styles.cartItem}>
-                            <img 
-                                src={item.imageUrl || 'https://via.placeholder.com/100'} 
-                                alt={item.name}
-                                style={styles.itemImage}
-                            />
-                            <div style={styles.itemDetails}>
-                                <h3>{item.name}</h3>
-                                <p style={styles.itemPrice}>${item.price.toFixed(2)}</p>
-                            </div>
-                            <div style={styles.quantityControls}>
+                    {/* Select All Header */}
+                    <div style={styles.selectAllRow}>
+                        <button onClick={handleSelectAll} style={styles.selectAllBtn}>
+                            {selectAll ? <FaCheckSquare color="#6366f1" /> : <FaSquare color="#999" />}
+                            <span>Select All Items</span>
+                        </button>
+                        <span style={styles.selectAllInfo}>{selectedCount} of {items.length} items selected</span>
+                    </div>
+                    
+                    {items.map((item) => {
+                        const itemId = item.product?._id || item.product;
+                        return (
+                            <div key={itemId} style={styles.cartItem}>
                                 <button 
-                                    onClick={() => handleUpdateQuantity(item.product?._id || item.product, item.quantity - 1)}
-                                    disabled={updating}
-                                    style={styles.qtyBtn}
+                                    onClick={() => handleSelectItem(itemId)}
+                                    style={styles.selectCheckbox}
                                 >
-                                    <FaMinus />
+                                    {selectedItems[itemId] ? <FaCheckSquare color="#6366f1" size={20} /> : <FaSquare color="#999" size={20} />}
                                 </button>
-                                <span style={styles.quantity}>{item.quantity}</span>
+                                
+                                <img 
+                                    src={item.imageUrl || 'https://via.placeholder.com/100'} 
+                                    alt={item.name}
+                                    style={styles.itemImage}
+                                />
+                                
+                                <div style={styles.itemDetails}>
+                                    <h3>{item.name}</h3>
+                                    {item.size && <p style={styles.itemSize}>Size: {item.size}</p>}
+                                    <p style={styles.itemPrice}>${item.price.toFixed(2)}</p>
+                                </div>
+                                
+                                <div style={styles.quantityControls}>
+                                    <button 
+                                        onClick={() => handleUpdateQuantity(itemId, item.quantity - 1)}
+                                        disabled={updating}
+                                        style={styles.qtyBtn}
+                                    >
+                                        <FaMinus />
+                                    </button>
+                                    <span style={styles.quantity}>{item.quantity}</span>
+                                    <button 
+                                        onClick={() => handleUpdateQuantity(itemId, item.quantity + 1)}
+                                        disabled={updating}
+                                        style={styles.qtyBtn}
+                                    >
+                                        <FaPlus />
+                                    </button>
+                                </div>
+                                
+                                <div style={styles.itemTotal}>
+                                    <strong>${(item.price * item.quantity).toFixed(2)}</strong>
+                                </div>
+                                
                                 <button 
-                                    onClick={() => handleUpdateQuantity(item.product?._id || item.product, item.quantity + 1)}
-                                    disabled={updating}
-                                    style={styles.qtyBtn}
+                                    onClick={() => handleRemoveItem(itemId)}
+                                    style={styles.removeBtn}
                                 >
-                                    <FaPlus />
+                                    <FaTrash />
                                 </button>
                             </div>
-                            <div style={styles.itemTotal}>
-                                <strong>${(item.price * item.quantity).toFixed(2)}</strong>
-                            </div>
-                            <button 
-                                onClick={() => handleRemoveItem(item.product?._id || item.product)}
-                                style={styles.removeBtn}
-                            >
-                                <FaTrash />
-                            </button>
-                        </div>
-                    ))}
+                        );
+                    })}
                 </div>
                 
                 <div style={styles.summarySection}>
                     <h2>Order Summary</h2>
+                    
                     <div style={styles.summaryRow}>
-                        <span>Items ({itemCount}):</span>
+                        <span>Selected Items ({selectedCount}):</span>
+                        <span>${selectedTotal.toFixed(2)}</span>
+                    </div>
+                    
+                    <div style={styles.summaryRow}>
+                        <span>Total Items in Cart ({itemCount}):</span>
                         <span>${totalPrice.toFixed(2)}</span>
                     </div>
+                    
                     <div style={styles.summaryRow}>
                         <span>Shipping:</span>
                         <span>Free</span>
                     </div>
+                    
                     <hr style={styles.divider} />
+                    
                     <div style={styles.summaryTotal}>
-                        <strong>Total:</strong>
-                        <strong>${totalPrice.toFixed(2)}</strong>
+                        <strong>Selected Total:</strong>
+                        <strong>${selectedTotal.toFixed(2)}</strong>
                     </div>
-                    <Link to="/checkout" style={styles.checkoutBtn}>
-                        Proceed to Checkout
-                    </Link>
+                    
+                    {selectedCount === 0 ? (
+                        <button style={styles.disabledCheckoutBtn} disabled>
+                            Select Items to Checkout
+                        </button>
+                    ) : (
+                        <button onClick={handleCheckout} style={styles.checkoutBtn}>
+                            <FaMoneyBillWave /> Checkout Selected ({selectedCount})
+                        </button>
+                    )}
+                    
                     <button onClick={handleClearCart} style={styles.clearBtn}>
                         Clear Cart
                     </button>
@@ -205,12 +313,41 @@ const styles = {
         borderRadius: '8px',
         padding: '20px',
     },
+    selectAllRow: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        padding: '10px 0',
+        borderBottom: '2px solid #eee',
+        marginBottom: '15px',
+    },
+    selectAllBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        fontSize: '14px',
+        fontWeight: '500',
+        color: '#333',
+    },
+    selectAllInfo: {
+        fontSize: '13px',
+        color: '#666',
+    },
     cartItem: {
         display: 'flex',
         alignItems: 'center',
         padding: '15px',
         borderBottom: '1px solid #eee',
         gap: '15px',
+    },
+    selectCheckbox: {
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: '5px',
     },
     itemImage: {
         width: '80px',
@@ -221,9 +358,15 @@ const styles = {
     itemDetails: {
         flex: 1,
     },
+    itemSize: {
+        fontSize: '12px',
+        color: '#666',
+        marginTop: '4px',
+    },
     itemPrice: {
         color: '#007bff',
         fontWeight: 'bold',
+        marginTop: '4px',
     },
     quantityControls: {
         display: 'flex',
@@ -281,7 +424,10 @@ const styles = {
         borderTop: '1px solid #eee',
     },
     checkoutBtn: {
-        display: 'block',
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
         width: '100%',
         padding: '12px',
         backgroundColor: '#28a745',
@@ -292,6 +438,21 @@ const styles = {
         marginTop: '20px',
         border: 'none',
         cursor: 'pointer',
+    },
+    disabledCheckoutBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        width: '100%',
+        padding: '12px',
+        backgroundColor: '#ccc',
+        color: '#666',
+        textAlign: 'center',
+        borderRadius: '5px',
+        marginTop: '20px',
+        border: 'none',
+        cursor: 'not-allowed',
     },
     clearBtn: {
         width: '100%',

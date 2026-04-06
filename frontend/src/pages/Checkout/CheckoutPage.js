@@ -1,23 +1,26 @@
 import React, { useState, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, useLocation } from 'react-router-dom';
 import { createOrder } from '../../redux/slices/orderSlice';
-import { fetchCart, clearCart } from '../../redux/slices/cartSlice';
+import { fetchCart, clearCart, removeFromCart } from '../../redux/slices/cartSlice';
 import { validateCoupon, clearCoupon } from '../../redux/slices/couponSlice';
 import CouponInput from '../../components/Checkout/CouponInput';
 import PaymentInstructions from '../../components/Checkout/PaymentInstructions';
-import { FaSpinner, FaArrowLeft, FaCheckCircle, FaMobile, FaUniversity, FaMoneyBillWave } from 'react-icons/fa';
+import { FaSpinner, FaArrowLeft, FaCheckCircle, FaMobile, FaUniversity, FaMoneyBillWave, FaShieldAlt, FaTrash } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
 
 const CheckoutPage = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
+    const location = useLocation();
     const { items, totalPrice, loading: cartLoading } = useSelector((state) => state.cart);
     const { user, token } = useSelector((state) => state.auth);
     const { appliedCoupon, discountAmount } = useSelector((state) => state.coupons);
     const { loading: orderLoading } = useSelector((state) => state.orders);
     
+    const [checkoutItems, setCheckoutItems] = useState([]);
+    const [checkoutTotal, setCheckoutTotal] = useState(0);
     const [shippingAddress, setShippingAddress] = useState({
         fullName: user?.name || '',
         address: '',
@@ -34,15 +37,36 @@ const CheckoutPage = () => {
     const [orderCreated, setOrderCreated] = useState(false);
     const [createdOrder, setCreatedOrder] = useState(null);
     const [paymentConfirmed, setPaymentConfirmed] = useState(false);
-    const [phoneNumber, setPhoneNumber] = useState('');
-    const [referenceNumber, setReferenceNumber] = useState('');
     const [showPaymentDetails, setShowPaymentDetails] = useState(false);
     const [accountNumber, setAccountNumber] = useState('');
+    const [phoneNumber, setPhoneNumber] = useState('');
+    const [referenceNumber, setReferenceNumber] = useState('');
     const [phoneNumberError, setPhoneNumberError] = useState('');
     const [accountNumberError, setAccountNumberError] = useState('');
+    const [isProcessingTelebirr, setIsProcessingTelebirr] = useState(false);
+
+    // Load selected items from cart page
+    useEffect(() => {
+        const selectedItemsFromCart = location.state?.selectedItems || 
+                                       JSON.parse(sessionStorage.getItem('checkoutItems') || '[]');
+        
+        if (selectedItemsFromCart.length > 0) {
+            setCheckoutItems(selectedItemsFromCart);
+            // Clear session storage after use
+            sessionStorage.removeItem('checkoutItems');
+        } else {
+            setCheckoutItems(items);
+        }
+    }, [location, items]);
+
+    // Calculate checkout total
+    useEffect(() => {
+        const total = checkoutItems.reduce((sum, item) => sum + (item.price * item.quantity), 0);
+        setCheckoutTotal(total);
+    }, [checkoutItems]);
+
     useEffect(() => {
         if (token && user) {
-            dispatch(fetchCart());
             fetchSavedAddresses();
         }
     }, [dispatch, token, user]);
@@ -71,29 +95,6 @@ const CheckoutPage = () => {
         }
     };
 
-
-    const validateCBEAccount = (number) => {
-    const pattern = /^1000\d{9}$/;
-    return pattern.test(number);
-    };
-
-    // Validate phone number (must start with +2519 followed by 8 digits)
-    const validatePhoneNumber = (number) => {
-        const pattern = /^\+2519\d{8}$/;
-        return pattern.test(number);
-    };
-
-
-    const handlePaymentMethodChange = (method) => {
-        setPaymentMethod(method);
-        setShowPaymentDetails(method === 'CBE Birr' || method === 'Telebirr');
-        setAccountNumber('');
-        setPhoneNumber('');
-        setAccountNumberError('');
-        setPhoneNumberError('');
-    };
-
-
     const handleAddressSelect = async (addressId) => {
         setSelectedAddressId(addressId);
         const selected = savedAddresses.find(addr => addr._id === addressId);
@@ -116,112 +117,175 @@ const CheckoutPage = () => {
         });
     };
 
-    const calculateFinalTotal = () => {
-        return totalPrice - discountAmount;
+    const handleRemoveItem = async (productId) => {
+        // Remove from checkout items
+        setCheckoutItems(prev => prev.filter(item => (item.product?._id || item.product) !== productId));
+        // Also remove from cart if it exists in cart
+        await dispatch(removeFromCart(productId));
+        toast.success('Item removed from order');
     };
 
+    const calculateFinalTotal = () => {
+        return checkoutTotal - discountAmount;
+    };
 
+    // Validation functions
+    const validateCBEAccount = (number) => {
+        const pattern = /^1000\d{9}$/;
+        return pattern.test(number);
+    };
 
+    const validatePhoneNumber = (number) => {
+        const pattern = /^\+2519\d{8}$/;
+        return pattern.test(number);
+    };
 
+    const handlePaymentMethodChange = (method) => {
+        setPaymentMethod(method);
+        setShowPaymentDetails(method === 'CBE Birr' || method === 'Telebirr');
+        setAccountNumber('');
+        setPhoneNumber('');
+        setAccountNumberError('');
+        setPhoneNumberError('');
+    };
 
     const handleCreateOrder = async () => {
-    // Validate shipping address
-    if (!shippingAddress.fullName || !shippingAddress.address || !shippingAddress.city || 
-        !shippingAddress.postalCode || !shippingAddress.country || !shippingAddress.phone) {
-        toast.error('Please fill in all shipping address fields');
-        return;
-    }
+        // Validate shipping address
+        if (!shippingAddress.fullName || !shippingAddress.address || !shippingAddress.city || 
+            !shippingAddress.postalCode || !shippingAddress.country || !shippingAddress.phone) {
+            toast.error('Please fill in all shipping address fields');
+            return;
+        }
 
-    // Validate payment details for mobile payments
-    if (paymentMethod === 'CBE Birr') {
-        if (!accountNumber) {
-            toast.error('Please enter your CBE Birr account number');
+        // Validate checkout items
+        if (checkoutItems.length === 0) {
+            toast.error('No items selected for checkout');
             return;
         }
-        if (!validateCBEAccount(accountNumber)) {
-            toast.error('Invalid CBE Birr account number. Must start with 1000 followed by 9 digits');
-            return;
-        }
-        if (!phoneNumber) {
-            toast.error('Please enter your phone number');
-            return;
-        }
-        if (!validatePhoneNumber(phoneNumber)) {
-            toast.error('Invalid phone number format. Use +2519XXXXXXXX');
-            return;
-        }
-    }
 
-    if (paymentMethod === 'Telebirr') {
-        if (!phoneNumber) {
-            toast.error('Please enter your phone number');
-            return;
-        }
-        if (!validatePhoneNumber(phoneNumber)) {
-            toast.error('Invalid phone number format. Use +2519XXXXXXXX');
-            return;
-        }
-    }
-
-    if (items.length === 0) {
-        toast.error('Your cart is empty');
-        return;
-    }
-
-    setSubmitting(true);
-
-    try {
-        const orderData = {
-            shippingAddress: {
-                fullName: shippingAddress.fullName,
-                address: shippingAddress.address,
-                city: shippingAddress.city,
-                postalCode: shippingAddress.postalCode,
-                country: shippingAddress.country,
-                phone: shippingAddress.phone
-            },
-            paymentMethod: paymentMethod,
-            totalAmount: calculateFinalTotal(),
-            discountAmount: discountAmount,
-            couponCode: appliedCoupon?.code || null,
-            paymentStatus: 'pending',
-            paymentDetails: {
-                accountNumber: paymentMethod === 'CBE Birr' ? accountNumber : null,
-                phoneNumber: phoneNumber,
-                referenceNumber: referenceNumber
+        // Validate payment details for mobile payments
+        if (paymentMethod === 'CBE Birr') {
+            if (!accountNumber) {
+                toast.error('Please enter your CBE Birr account number');
+                return;
             }
-        };
+            if (!validateCBEAccount(accountNumber)) {
+                toast.error('Invalid CBE Birr account number. Must start with 1000 followed by 9 digits');
+                return;
+            }
+            if (!phoneNumber) {
+                toast.error('Please enter your phone number');
+                return;
+            }
+            if (!validatePhoneNumber(phoneNumber)) {
+                toast.error('Invalid phone number format. Use +2519XXXXXXXX');
+                return;
+            }
+        }
 
-        const result = await dispatch(createOrder(orderData));
-        
-        if (result.error) {
-            toast.error(result.error.message || 'Order creation failed');
-        } else {
-            setOrderCreated(true);
-            setCreatedOrder(result.order);
-            toast.success('Order created! Please complete payment.');
+        if (paymentMethod === 'Telebirr') {
+            if (!phoneNumber) {
+                toast.error('Please enter your phone number');
+                return;
+            }
+            if (!validatePhoneNumber(phoneNumber)) {
+                toast.error('Invalid phone number format. Use +2519XXXXXXXX');
+                return;
+            }
+        }
+
+        setSubmitting(true);
+
+        try {
+            const orderData = {
+                shippingAddress: {
+                    fullName: shippingAddress.fullName,
+                    address: shippingAddress.address,
+                    city: shippingAddress.city,
+                    postalCode: shippingAddress.postalCode,
+                    country: shippingAddress.country,
+                    phone: shippingAddress.phone
+                },
+                paymentMethod: paymentMethod,
+                totalPrice: calculateFinalTotal(),
+                discountAmount: discountAmount,
+                couponCode: appliedCoupon?.code || null,
+                paymentStatus: 'pending',
+                items: checkoutItems.map(item => ({
+                    product: item.product?._id || item.product,
+                    name: item.name,
+                    price: item.price,
+                    quantity: item.quantity,
+                    imageUrl: item.imageUrl,
+                    size: item.size || null
+                })),
+                paymentDetails: {
+                    accountNumber: paymentMethod === 'CBE Birr' ? accountNumber : null,
+                    phoneNumber: phoneNumber,
+                    referenceNumber: referenceNumber
+                }
+            };
+
+            const result = await dispatch(createOrder(orderData));
             
-            if (paymentMethod !== 'Cash on Delivery') {
-                // Show payment instructions
-            } else {
-                dispatch(clearCart());
-                setTimeout(() => {
-                    navigate('/orders');
-                }, 2000);
+            if (result.error) {
+                toast.error(result.error.message || 'Order creation failed');
+                setSubmitting(false);
+                return;
             }
+            
+            const createdOrderData = result.order;
+            setCreatedOrder(createdOrderData);
+
+            // Remove checked out items from cart
+            for (const item of checkoutItems) {
+                const productId = item.product?._id || item.product;
+                await dispatch(removeFromCart(productId));
+            }
+
+            // Handle different payment methods
+            if (paymentMethod === 'Telebirr') {
+                setIsProcessingTelebirr(true);
+                try {
+                    const telebirrResponse = await api.post('/telebirr/initiate', {
+                        orderId: createdOrderData._id,
+                        amount: calculateFinalTotal().toFixed(2),
+                        subject: `Payment for Order #${createdOrderData._id.slice(-8)}`
+                    });
+                    
+                    if (telebirrResponse.data.success && telebirrResponse.data.toPayUrl) {
+                        window.location.href = telebirrResponse.data.toPayUrl;
+                    } else {
+                        toast.error('Failed to initiate Telebirr payment. Please try again.');
+                        setSubmitting(false);
+                        setIsProcessingTelebirr(false);
+                    }
+                } catch (telebirrError) {
+                    console.error('Telebirr error:', telebirrError);
+                    toast.error(telebirrError.response?.data?.message || 'Failed to connect to Telebirr. Please try again.');
+                    setSubmitting(false);
+                    setIsProcessingTelebirr(false);
+                }
+            } else {
+                setOrderCreated(true);
+                toast.success('Order created! Please complete payment.');
+                
+                if (paymentMethod === 'Cash on Delivery') {
+                    setTimeout(() => {
+                        navigate('/orders');
+                    }, 3000);
+                }
+                setSubmitting(false);
+            }
+        } catch (error) {
+            console.error('Order error:', error);
+            toast.error(error.response?.data?.message || 'Failed to create order');
+            setSubmitting(false);
         }
-    } catch (error) {
-        console.error('Order error:', error);
-        toast.error(error.response?.data?.message || 'Failed to create order');
-    } finally {
-        setSubmitting(false);
-    }
-};
-
-
+    };
 
     const handleConfirmPayment = async () => {
-        if (paymentMethod === 'CBE Birr' || paymentMethod === 'Telebirr') {
+        if (paymentMethod === 'CBE Birr') {
             if (!phoneNumber) {
                 toast.error('Please enter your phone number');
                 return;
@@ -235,10 +299,10 @@ const CheckoutPage = () => {
         setSubmitting(true);
         
         try {
-            // Update order with payment confirmation
             const updateData = {
                 paymentStatus: 'paid',
                 paymentDetails: {
+                    accountNumber: accountNumber,
                     phoneNumber: phoneNumber,
                     referenceNumber: referenceNumber,
                     paidAt: new Date()
@@ -250,10 +314,6 @@ const CheckoutPage = () => {
             setPaymentConfirmed(true);
             toast.success('Payment confirmed! Order completed.');
             
-            // Clear cart after payment confirmation
-            dispatch(clearCart());
-            
-            // Redirect to orders page after 2 seconds
             setTimeout(() => {
                 navigate('/orders');
             }, 2000);
@@ -284,17 +344,18 @@ const CheckoutPage = () => {
         return (
             <div style={styles.center}>
                 <FaSpinner style={styles.spinner} />
-                <p>Loading cart...</p>
+                <p>Loading checkout...</p>
             </div>
         );
     }
 
-    if (items.length === 0 && !orderCreated) {
+    if (checkoutItems.length === 0 && !orderCreated) {
         return (
             <div style={styles.center}>
-                <h2>Your cart is empty</h2>
-                <button onClick={() => navigate('/products')} style={styles.shopBtn}>
-                    Continue Shopping
+                <h2>No items selected for checkout</h2>
+                <p>Please go back to cart and select items to checkout</p>
+                <button onClick={() => navigate('/cart')} style={styles.shopBtn}>
+                    Go to Cart
                 </button>
             </div>
         );
@@ -302,8 +363,8 @@ const CheckoutPage = () => {
 
     const finalTotal = calculateFinalTotal();
 
-    // Show payment instructions after order is created
-    if (orderCreated && !paymentConfirmed && isMobilePayment()) {
+    // Show payment instructions after order is created (for CBE Birr)
+    if (orderCreated && !paymentConfirmed && isMobilePayment() && paymentMethod !== 'Telebirr') {
         return (
             <div style={styles.container}>
                 <button onClick={() => setOrderCreated(false)} style={styles.backBtn}>
@@ -359,6 +420,17 @@ const CheckoutPage = () => {
         );
     }
 
+    // Show Telebirr processing state
+    if (isProcessingTelebirr) {
+        return (
+            <div style={styles.center}>
+                <FaSpinner style={styles.spinner} />
+                <h2>Redirecting to Telebirr...</h2>
+                <p>Please wait while we redirect you to the Telebirr payment page.</p>
+            </div>
+        );
+    }
+
     // Show success message after payment
     if (paymentConfirmed) {
         return (
@@ -382,7 +454,7 @@ const CheckoutPage = () => {
             <h1 style={styles.title}>Checkout</h1>
             
             <div style={styles.checkoutContainer}>
-                <form onSubmit={(e) => { e.preventDefault(); handleCreateOrder(); }} style={styles.form}>
+                <div style={styles.form}>
                     {/* Saved Addresses */}
                     {savedAddresses.length > 0 && (
                         <div style={styles.section}>
@@ -499,119 +571,150 @@ const CheckoutPage = () => {
                     </div>
                     
                     {/* Payment Method */}
-<div style={styles.section}>
-    <h2>Payment Method</h2>
-    
-    <div style={styles.paymentOptions}>
-        <label style={styles.paymentLabel}>
-            <input
-                type="radio"
-                value="Cash on Delivery"
-                checked={paymentMethod === 'Cash on Delivery'}
-                onChange={(e) => handlePaymentMethodChange(e.target.value)}
-            />
-            <div style={styles.paymentCard}>
-                <FaMoneyBillWave size={20} />
-                <span>Cash on Delivery</span>
-            </div>
-        </label>
-        
-        <label style={styles.paymentLabel}>
-            <input
-                type="radio"
-                value="CBE Birr"
-                checked={paymentMethod === 'CBE Birr'}
-                onChange={(e) => handlePaymentMethodChange(e.target.value)}
-            />
-            <div style={styles.paymentCard}>
-                <FaUniversity size={20} />
-                <span>CBE Birr</span>
-            </div>
-        </label>
-        
-        <label style={styles.paymentLabel}>
-            <input
-                type="radio"
-                value="Telebirr"
-                checked={paymentMethod === 'Telebirr'}
-                onChange={(e) => handlePaymentMethodChange(e.target.value)}
-            />
-            <div style={styles.paymentCard}>
-                <FaMobile size={20} />
-                <span>Telebirr</span>
-            </div>
-        </label>
-    </div>
-</div>
+                    <div style={styles.section}>
+                        <h2>Payment Method</h2>
+                        
+                        <div style={styles.paymentOptions}>
+                            <label style={styles.paymentLabel}>
+                                <input
+                                    type="radio"
+                                    value="Cash on Delivery"
+                                    checked={paymentMethod === 'Cash on Delivery'}
+                                    onChange={(e) => handlePaymentMethodChange(e.target.value)}
+                                />
+                                <div style={styles.paymentCard}>
+                                    <FaMoneyBillWave size={20} />
+                                    <span>Cash on Delivery</span>
+                                </div>
+                            </label>
+                            
+                            <label style={styles.paymentLabel}>
+                                <input
+                                    type="radio"
+                                    value="CBE Birr"
+                                    checked={paymentMethod === 'CBE Birr'}
+                                    onChange={(e) => handlePaymentMethodChange(e.target.value)}
+                                />
+                                <div style={styles.paymentCard}>
+                                    <FaUniversity size={20} />
+                                    <span>CBE Birr</span>
+                                </div>
+                            </label>
+                            
+                            <label style={styles.paymentLabel}>
+                                <input
+                                    type="radio"
+                                    value="Telebirr"
+                                    checked={paymentMethod === 'Telebirr'}
+                                    onChange={(e) => handlePaymentMethodChange(e.target.value)}
+                                />
+                                <div style={styles.paymentCard}>
+                                    <FaMobile size={20} />
+                                    <span>Telebirr</span>
+                                    <span style={styles.paymentBadge}>Auto-Pay</span>
+                                </div>
+                            </label>
+                        </div>
+                    </div>
 
-{/* Payment Details for CBE Birr / Telebirr */}
-{showPaymentDetails && (
-    <div style={styles.section}>
-        <h2>Payment Details</h2>
-        
-        {paymentMethod === 'CBE Birr' && (
-            <div style={styles.formGroup}>
-                <label style={styles.label}>CBE Birr Account Number</label>
-                <input
-                    type="text"
-                    value={accountNumber}
-                    onChange={(e) => {
-                        setAccountNumber(e.target.value);
-                        if (validateCBEAccount(e.target.value)) {
-                            setAccountNumberError('');
-                        } else {
-                            setAccountNumberError('Account number must start with 1000 followed by 9 digits (e.g., 1000123456789)');
-                        }
-                    }}
-                    placeholder="1000123456789"
-                    style={{...styles.input, ...(accountNumberError && styles.inputError)}}
-                />
-                {accountNumberError && <span style={styles.errorText}>{accountNumberError}</span>}
-                <small style={styles.hintText}>Account number must start with 1000 followed by 9 digits (total 13 digits)</small>
-            </div>
-        )}
-        
-        <div style={styles.formGroup}>
-            <label style={styles.label}>Phone Number</label>
-            <input
-                type="tel"
-                value={phoneNumber}
-                onChange={(e) => {
-                    setPhoneNumber(e.target.value);
-                    if (validatePhoneNumber(e.target.value)) {
-                        setPhoneNumberError('');
-                    } else {
-                        setPhoneNumberError('Phone number must start with +2519 followed by 8 digits (e.g., +251912345678)');
-                    }
-                }}
-                placeholder="+251912345678"
-                style={{...styles.input, ...(phoneNumberError && styles.inputError)}}
-            />
-            {phoneNumberError && <span style={styles.errorText}>{phoneNumberError}</span>}
-            <small style={styles.hintText}>Enter your phone number in international format (+2519XXXXXXXX)</small>
-        </div>
-    </div>
-)}
+                    {/* Payment Details for CBE Birr */}
+                    {showPaymentDetails && paymentMethod === 'CBE Birr' && (
+                        <div style={styles.section}>
+                            <h2>Payment Details</h2>
+                            
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>CBE Birr Account Number</label>
+                                <input
+                                    type="text"
+                                    value={accountNumber}
+                                    onChange={(e) => {
+                                        setAccountNumber(e.target.value);
+                                        if (validateCBEAccount(e.target.value)) {
+                                            setAccountNumberError('');
+                                        } else {
+                                            setAccountNumberError('Account number must start with 1000 followed by 9 digits (e.g., 1000123456789)');
+                                        }
+                                    }}
+                                    placeholder="1000123456789"
+                                    style={{...styles.input, ...(accountNumberError && styles.inputError)}}
+                                />
+                                {accountNumberError && <span style={styles.errorText}>{accountNumberError}</span>}
+                                <small style={styles.hintText}>Account number must start with 1000 followed by 9 digits (total 13 digits)</small>
+                            </div>
+                            
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Phone Number</label>
+                                <input
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => {
+                                        setPhoneNumber(e.target.value);
+                                        if (validatePhoneNumber(e.target.value)) {
+                                            setPhoneNumberError('');
+                                        } else {
+                                            setPhoneNumberError('Phone number must start with +2519 followed by 8 digits (e.g., +251912345678)');
+                                        }
+                                    }}
+                                    placeholder="+251912345678"
+                                    style={{...styles.input, ...(phoneNumberError && styles.inputError)}}
+                                />
+                                {phoneNumberError && <span style={styles.errorText}>{phoneNumberError}</span>}
+                                <small style={styles.hintText}>Enter your phone number in international format (+2519XXXXXXXX)</small>
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Phone Number for Telebirr */}
+                    {showPaymentDetails && paymentMethod === 'Telebirr' && (
+                        <div style={styles.section}>
+                            <h2>Telebirr Payment</h2>
+                            <div style={styles.telebirrInfo}>
+                                <FaShieldAlt size={24} color="#10b981" />
+                                <p>You will be redirected to Telebirr secure payment page after order creation.</p>
+                            </div>
+                            
+                            <div style={styles.formGroup}>
+                                <label style={styles.label}>Phone Number</label>
+                                <input
+                                    type="tel"
+                                    value={phoneNumber}
+                                    onChange={(e) => {
+                                        setPhoneNumber(e.target.value);
+                                        if (validatePhoneNumber(e.target.value)) {
+                                            setPhoneNumberError('');
+                                        } else {
+                                            setPhoneNumberError('Phone number must start with +2519 followed by 8 digits (e.g., +251912345678)');
+                                        }
+                                    }}
+                                    placeholder="+251912345678"
+                                    style={{...styles.input, ...(phoneNumberError && styles.inputError)}}
+                                    required
+                                />
+                                {phoneNumberError && <span style={styles.errorText}>{phoneNumberError}</span>}
+                                <small style={styles.hintText}>Enter the phone number registered with Telebirr</small>
+                            </div>
+                        </div>
+                    )}
                     
                     <button 
-                        type="submit"
+                        onClick={handleCreateOrder}
                         style={styles.placeOrderBtn}
-                        disabled={submitting || orderLoading}
+                        disabled={submitting || orderLoading || checkoutItems.length === 0}
                     >
                         {submitting || orderLoading ? (
                             <><FaSpinner style={styles.spinnerIcon} /> Creating Order...</>
                         ) : (
-                            <><FaCheckCircle /> Proceed to Payment</>
+                            <><FaCheckCircle /> Place Order (${finalTotal.toFixed(2)})</>
                         )}
                     </button>
-                </form>
+                </div>
                 
                 {/* Order Summary */}
                 <div style={styles.summary}>
                     <h2 style={styles.summaryTitle}>Order Summary</h2>
                     
                     <div style={styles.orderItems}>
-                        {items.map((item, index) => (
+                        {checkoutItems.map((item, index) => (
                             <div key={index} style={styles.orderItem}>
                                 <img 
                                     src={item.imageUrl || 'https://via.placeholder.com/60'} 
@@ -626,18 +729,25 @@ const CheckoutPage = () => {
                                 <div style={styles.itemPrice}>
                                     ${(item.price * item.quantity).toFixed(2)}
                                 </div>
+                                <button 
+                                    onClick={() => handleRemoveItem(item.product?._id || item.product)}
+                                    style={styles.removeItemBtn}
+                                    title="Remove item"
+                                >
+                                    <FaTrash />
+                                </button>
                             </div>
                         ))}
                     </div>
                     
                     <div style={styles.couponSection}>
-                        <CouponInput cartTotal={totalPrice} />
+                        <CouponInput cartTotal={checkoutTotal} />
                     </div>
                     
                     <div style={styles.priceDetails}>
                         <div style={styles.priceRow}>
-                            <span>Subtotal:</span>
-                            <span>${totalPrice.toFixed(2)}</span>
+                            <span>Subtotal ({checkoutItems.length} items):</span>
+                            <span>${checkoutTotal.toFixed(2)}</span>
                         </div>
                         <div style={styles.priceRow}>
                             <span>Shipping:</span>
@@ -708,11 +818,10 @@ const styles = {
         fontSize: '1rem',
         transition: 'border-color 0.3s',
     },
-
     inputError: {
-    borderColor: '#dc3545',
-    backgroundColor: '#fff8f8',
-},
+        borderColor: '#dc3545',
+        backgroundColor: '#fff8f8',
+    },
     errorText: {
         color: '#dc3545',
         fontSize: '0.75rem',
@@ -725,7 +834,6 @@ const styles = {
         marginTop: '5px',
         display: 'block',
     },
-
     radioGroup: {
         display: 'flex',
         gap: '20px',
@@ -748,7 +856,7 @@ const styles = {
     },
     paymentOptions: {
         display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
         gap: '15px',
     },
     paymentLabel: {
@@ -763,6 +871,36 @@ const styles = {
         borderRadius: '0.5rem',
         transition: 'all 0.3s',
         backgroundColor: '#fff',
+        position: 'relative',
+    },
+    paymentBadge: {
+        position: 'absolute',
+        top: '-8px',
+        right: '-8px',
+        backgroundColor: '#10b981',
+        color: '#fff',
+        fontSize: '10px',
+        padding: '2px 6px',
+        borderRadius: '20px',
+    },
+    telebirrInfo: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '10px',
+        backgroundColor: '#f0fdf4',
+        padding: '12px',
+        borderRadius: '0.5rem',
+        marginBottom: '15px',
+        border: '1px solid #bbf7d0',
+    },
+    formGroup: {
+        marginBottom: '15px',
+    },
+    label: {
+        display: 'block',
+        marginBottom: '5px',
+        fontWeight: '500',
+        color: '#555',
     },
     placeOrderBtn: {
         display: 'flex',
@@ -778,6 +916,7 @@ const styles = {
         fontWeight: '600',
         cursor: 'pointer',
         transition: 'background-color 0.3s',
+        width: '100%',
     },
     summary: {
         backgroundColor: '#fff',
@@ -795,7 +934,7 @@ const styles = {
         borderBottom: '2px solid #f0f0f0',
     },
     orderItems: {
-        maxHeight: '300px',
+        maxHeight: '400px',
         overflowY: 'auto',
         marginBottom: '1rem',
     },
@@ -831,6 +970,13 @@ const styles = {
     itemPrice: {
         fontWeight: '600',
         color: '#6366f1',
+    },
+    removeItemBtn: {
+        background: 'none',
+        border: 'none',
+        color: '#dc3545',
+        cursor: 'pointer',
+        padding: '5px',
     },
     couponSection: {
         margin: '1rem 0',
@@ -878,15 +1024,6 @@ const styles = {
         padding: '1.5rem',
         marginTop: '20px',
         boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    },
-    formGroup: {
-        marginBottom: '15px',
-    },
-    label: {
-        display: 'block',
-        marginBottom: '5px',
-        fontWeight: '500',
-        color: '#555',
     },
     confirmPaymentBtn: {
         display: 'flex',
