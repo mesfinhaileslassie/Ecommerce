@@ -3,6 +3,8 @@ import { useDispatch, useSelector } from 'react-redux';
 import { Link } from 'react-router-dom';
 import { fetchProducts } from '../../redux/slices/productSlice';
 import ProductCard from '../../components/Products/ProductCard';
+import ProductRecommendations from '../../components/Products/ProductRecommendations';
+import HelmetSEO from '../../components/SEO/HelmetSEO';
 
 const HomePage = () => {
     const dispatch = useDispatch();
@@ -24,75 +26,107 @@ const HomePage = () => {
     }
 
     return (
-        <div>
-            {/* Full Width Hero Section */}
-            <div className="home-hero-fullwidth">
-                <div className="home-hero-fullwidth-overlay"></div>
-                <div className="home-hero-fullwidth-content">
-                    <h1 className="home-hero-fullwidth-title">Welcome to E-Shop</h1>
-                    <p className="home-hero-fullwidth-subtitle">Discover amazing products at unbeatable prices</p>
-                    <Link to="/products" className="home-hero-fullwidth-btn">
-                        Shop Now →
-                    </Link>
+        <>
+            <HelmetSEO 
+                title="E-Shop - Best Online Shopping Store in Ethiopia"
+                description="Shop the latest electronics, fashion, books, home goods and more at E-Shop. ✓ Free shipping on orders over $50 ✓ Secure payment ✓ Best prices ✓ Fast delivery in Ethiopia"
+                keywords="online shopping Ethiopia, buy online, electronics, clothing, books, home goods, best deals, Ethiopian e-commerce"
+                type="website"
+            />
+            
+            <div>
+                {/* Full Width Hero Section */}
+                <div className="home-hero-fullwidth">
+                    <div className="home-hero-fullwidth-overlay"></div>
+                    <div className="home-hero-fullwidth-content">
+                        <h1 className="home-hero-fullwidth-title">Welcome to E-Shop</h1>
+                        <p className="home-hero-fullwidth-subtitle">Discover amazing products at unbeatable prices</p>
+                        <Link to="/products" className="home-hero-fullwidth-btn">
+                            Shop Now →
+                        </Link>
+                    </div>
                 </div>
-            </div>
 
-            {/* Features Section */}
-            <div className="features">
-                <div className="container">
-                    <div className="features-grid">
-                        <div className="feature-card">
-                            <div className="feature-icon">🚚</div>
-                            <h3 className="feature-title">Free Shipping</h3>
-                            <p className="feature-desc">On orders over $50</p>
-                        </div>
-                        <div className="feature-card">
-                            <div className="feature-icon">⚡</div>
-                            <h3 className="feature-title">Fast Delivery</h3>
-                            <p className="feature-desc">Within 3-5 days</p>
-                        </div>
-                        <div className="feature-card">
-                            <div className="feature-icon">🔒</div>
-                            <h3 className="feature-title">Secure Payment</h3>
-                            <p className="feature-desc">100% secure transactions</p>
-                        </div>
-                        <div className="feature-card">
-                            <div className="feature-icon">💬</div>
-                            <h3 className="feature-title">24/7 Support</h3>
-                            <p className="feature-desc">Dedicated customer service</p>
+                {/* Features Section */}
+                <div className="features">
+                    <div className="container">
+                        <div className="features-grid">
+                            <div className="feature-card">
+                                <div className="feature-icon">🚚</div>
+                                <h3 className="feature-title">Free Shipping</h3>
+                                <p className="feature-desc">On orders over $50</p>
+                            </div>
+                            <div className="feature-card">
+                                <div className="feature-icon">⚡</div>
+                                <h3 className="feature-title">Fast Delivery</h3>
+                                <p className="feature-desc">Within 3-5 days</p>
+                            </div>
+                            <div className="feature-card">
+                                <div className="feature-icon">🔒</div>
+                                <h3 className="feature-title">Secure Payment</h3>
+                                <p className="feature-desc">100% secure transactions</p>
+                            </div>
+                            <div className="feature-card">
+                                <div className="feature-icon">💬</div>
+                                <h3 className="feature-title">24/7 Support</h3>
+                                <p className="feature-desc">Dedicated customer service</p>
+                            </div>
                         </div>
                     </div>
                 </div>
-            </div>
 
-            {/* Featured Products */}
-            {featuredProducts.length > 0 && (
+                {/* Best Sellers Section */}
+                <ProductRecommendations 
+                    type="best-sellers" 
+                    title="Best Sellers" 
+                    limit={4} 
+                />
+
+                {/* Featured Products */}
+                {featuredProducts.length > 0 && (
+                    <div className="section">
+                        <div className="container">
+                            <h2 className="section-title">Featured Products</h2>
+                            <p className="section-subtitle">Our handpicked selection just for you</p>
+                            <div className="products-grid">
+                                {featuredProducts.map(product => (
+                                    <ProductCard key={product._id} product={product} />
+                                ))}
+                            </div>
+                        </div>
+                    </div>
+                )}
+
+                {/* Top Rated Products */}
+                <ProductRecommendations 
+                    type="top-rated" 
+                    title="Top Rated Products" 
+                    limit={4} 
+                />
+
+                {/* Recently Viewed Products (only for logged in users) */}
+                {user && (
+                    <ProductRecommendations 
+                        type="recently-viewed" 
+                        title="Recently Viewed" 
+                        limit={4} 
+                    />
+                )}
+
+                {/* All Products */}
                 <div className="section">
                     <div className="container">
-                        <h2 className="section-title">Featured Products</h2>
-                        <p className="section-subtitle">Our handpicked selection just for you</p>
+                        <h2 className="section-title">All Products</h2>
+                        <p className="section-subtitle">Browse our complete collection</p>
                         <div className="products-grid">
-                            {featuredProducts.map(product => (
+                            {products.map(product => (
                                 <ProductCard key={product._id} product={product} />
                             ))}
                         </div>
                     </div>
                 </div>
-            )}
-
-            {/* All Products */}
-            <div className="section">
-                <div className="container">
-                    <h2 className="section-title">All Products</h2>
-                    <p className="section-subtitle">Browse our complete collection</p>
-                    <div className="products-grid">
-                        {products.map(product => (
-                            <ProductCard key={product._id} product={product} />
-                        ))}
-                    </div>
-                </div>
             </div>
-        </div>
+        </>
     );
 };
 
@@ -292,6 +326,10 @@ styleSheet.textContent = `
         
         .section-title {
             font-size: 1.5rem;
+        }
+        
+        .products-grid {
+            gap: 1rem;
         }
     }
     

@@ -3,6 +3,7 @@ import { useDispatch, useSelector } from 'react-redux';
 import { fetchProducts } from '../../redux/slices/productSlice';
 import ProductCard from '../../components/Products/ProductCard';
 import ProductFilters from '../../components/Products/ProductFilters';
+import HelmetSEO from '../../components/SEO/HelmetSEO';
 import { FaFilter, FaTh, FaThLarge, FaSearch } from 'react-icons/fa';
 
 const ProductsPage = () => {
@@ -11,7 +12,6 @@ const ProductsPage = () => {
     const [showFilters, setShowFilters] = useState(false);
     const [viewMode, setViewMode] = useState('grid');
     const [searchTerm, setSearchTerm] = useState('');
-    const [debouncedSearchTerm, setDebouncedSearchTerm] = useState('');
     const [activeCategory, setActiveCategory] = useState('All');
     const [filters, setFilters] = useState({
         keyword: '',
@@ -26,14 +26,9 @@ const ProductsPage = () => {
     // Category options
     const categories = ['All', 'Electronics', 'Clothing', 'Books', 'Home', 'Sports', 'Other'];
 
-    // Debounce search term for real-time searching
+    // Real-time search - NO DELAY
     useEffect(() => {
-        const timer = setTimeout(() => {
-            setDebouncedSearchTerm(searchTerm);
-            setFilters(prev => ({ ...prev, keyword: searchTerm }));
-        }, 500);
-
-        return () => clearTimeout(timer);
+        setFilters(prev => ({ ...prev, keyword: searchTerm }));
     }, [searchTerm]);
 
     useEffect(() => {
@@ -70,17 +65,15 @@ const ProductsPage = () => {
 
     const handleClearSearch = () => {
         setSearchTerm('');
-        setDebouncedSearchTerm('');
         setFilters(prev => ({ ...prev, keyword: '' }));
     };
 
-    // FIXED: Only show badge for non-category filters
+    // FIXED: Only count price and rating filters, NOT search
     const getActiveFiltersCount = () => {
         let count = 0;
-        if (filters.keyword) count++;
         if (filters.minPrice || filters.maxPrice) count++;
         if (filters.rating) count++;
-        // Category filter doesn't add to badge count
+        // Search is NOT counted in filter badge
         return count;
     };
 
@@ -98,168 +91,178 @@ const ProductsPage = () => {
     }
 
     return (
-        <div style={styles.container}>
-            <div style={styles.header}>
-                <h1 style={styles.title}>Our Products</h1>
-                <div style={styles.headerActions}>
-                    <div style={styles.viewToggle}>
-                        <button
-                            onClick={() => setViewMode('grid')}
-                            style={{
-                                ...styles.viewBtn,
-                                ...(viewMode === 'grid' && styles.viewBtnActive)
-                            }}
-                        >
-                            <FaTh />
-                        </button>
-                        <button
-                            onClick={() => setViewMode('list')}
-                            style={{
-                                ...styles.viewBtn,
-                                ...(viewMode === 'list' && styles.viewBtnActive)
-                            }}
-                        >
-                            <FaThLarge />
-                        </button>
-                    </div>
-                    <button
-                        onClick={() => setShowFilters(!showFilters)}
-                        style={styles.filterBtn}
-                    >
-                        <FaFilter />
-                        Filters
-                        {getActiveFiltersCount() > 0 && (
-                            <span style={styles.filterBadge}>{getActiveFiltersCount()}</span>
-                        )}
-                    </button>
-                </div>
-            </div>
-
-            {/* Real-Time Search Bar */}
-            <div style={styles.searchSection}>
-                <div style={styles.searchContainer}>
-                    <FaSearch style={styles.searchIcon} />
-                    <input
-                        type="text"
-                        placeholder="Search products in real-time..."
-                        value={searchTerm}
-                        onChange={handleSearchChange}
-                        style={styles.searchInput}
-                    />
-                    {searchTerm && (
-                        <button onClick={handleClearSearch} style={styles.clearSearchBtn}>
-                            ×
-                        </button>
-                    )}
-                </div>
-                {searchTerm && (
-                    <div style={styles.searchingIndicator}>
-                        Searching for: <strong>"{searchTerm}"</strong>
-                    </div>
-                )}
-            </div>
-
-            {/* Category Tabs */}
-            <div style={styles.categoryTabs}>
-                {categories.map((category) => (
-                    <button
-                        key={category}
-                        onClick={() => handleCategoryClick(category)}
-                        style={{
-                            ...styles.categoryTab,
-                            ...(activeCategory === category && styles.categoryTabActive)
-                        }}
-                    >
-                        {category}
-                        {category !== 'All' && (
-                            <span style={styles.categoryCount}>
-                                {products.filter(p => p.category === category).length}
-                            </span>
-                        )}
-                    </button>
-                ))}
-            </div>
-
-            <div style={styles.content}>
-                {/* Filters Sidebar - Desktop */}
-                <div style={{
-                    ...styles.filtersDesktop,
-                    display: showFilters ? 'block' : 'none'
-                }}>
-                    <ProductFilters
-                        filters={filters}
-                        onFilterChange={handleFilterChange}
-                    />
-                </div>
-
-                {/* Mobile Filters Modal */}
-                {showFilters && (
-                    <div style={styles.modal}>
-                        <div style={styles.modalContent}>
-                            <ProductFilters
-                                filters={filters}
-                                onFilterChange={handleFilterChange}
-                                onClose={() => setShowFilters(false)}
-                                isMobile={true}
-                            />
-                        </div>
-                    </div>
-                )}
-
-                {/* Products Grid */}
-                <div style={{
-                    ...styles.productsSection,
-                    ...(showFilters && styles.productsSectionWithFilters)
-                }}>
-                    <div style={styles.resultsInfo}>
-                        <p>{products.length} products found</p>
-                        {activeCategory !== 'All' && (
-                            <span style={styles.activeFilter}>
-                                Category: {activeCategory}
-                                <button onClick={() => handleCategoryClick('All')} style={styles.removeFilter}>×</button>
-                            </span>
-                        )}
-                        {filters.minPrice || filters.maxPrice ? (
-                            <span style={styles.activeFilter}>
-                                Price: ${filters.minPrice || 0} - ${filters.maxPrice || '∞'}
-                                <button onClick={() => handleFilterChange({ ...filters, minPrice: '', maxPrice: '' })} style={styles.removeFilter}>×</button>
-                            </span>
-                        ) : null}
-                        {filters.rating && (
-                            <span style={styles.activeFilter}>
-                                Rating: {filters.rating}★ & above
-                                <button onClick={() => handleFilterChange({ ...filters, rating: '' })} style={styles.removeFilter}>×</button>
-                            </span>
-                        )}
-                        {filters.keyword && (
-                            <span style={styles.activeFilter}>
-                                Search: "{filters.keyword}"
-                                <button onClick={() => handleFilterChange({ ...filters, keyword: '' })} style={styles.removeFilter}>×</button>
-                            </span>
-                        )}
-                    </div>
-
-                    <div style={{
-                        ...styles.productsGrid,
-                        ...(viewMode === 'list' && styles.productsList)
-                    }}>
-                        {products.map((product) => (
-                            <ProductCard key={product._id} product={product} viewMode={viewMode} />
-                        ))}
-                    </div>
-
-                    {products.length === 0 && (
-                        <div style={styles.noResults}>
-                            <h3>No products found</h3>
-                            <p>Try adjusting your search or filters</p>
-                            <button onClick={handleClearSearch} style={styles.resetBtn}>
-                                Clear Search
+        <>
+            <HelmetSEO 
+                title="Shop All Products - Best Deals Online"
+                description="Browse our wide selection of quality products at affordable prices. Shop electronics, clothing, books, home goods and more. Fast shipping across Ethiopia."
+                keywords="shop online, buy products, best deals, online shopping Ethiopia, electronics, clothing, books"
+                type="website"
+            />
+            
+            <div style={styles.container}>
+                <div style={styles.header}>
+                    <h1 style={styles.title}>Our Products</h1>
+                    <div style={styles.headerActions}>
+                        <div style={styles.viewToggle}>
+                            <button
+                                onClick={() => setViewMode('grid')}
+                                style={{
+                                    ...styles.viewBtn,
+                                    ...(viewMode === 'grid' && styles.viewBtnActive)
+                                }}
+                            >
+                                <FaTh />
+                            </button>
+                            <button
+                                onClick={() => setViewMode('list')}
+                                style={{
+                                    ...styles.viewBtn,
+                                    ...(viewMode === 'list' && styles.viewBtnActive)
+                                }}
+                            >
+                                <FaThLarge />
                             </button>
                         </div>
+                        <button
+                            onClick={() => setShowFilters(!showFilters)}
+                            style={styles.filterBtn}
+                        >
+                            <FaFilter />
+                            Filters
+                            {getActiveFiltersCount() > 0 && (
+                                <span style={styles.filterBadge}>{getActiveFiltersCount()}</span>
+                            )}
+                        </button>
+                    </div>
+                </div>
+
+                {/* Real-Time Search Bar - Instant response */}
+                <div style={styles.searchSection}>
+                    <div style={styles.searchContainer}>
+                        <FaSearch style={styles.searchIcon} />
+                        <input
+                            type="text"
+                            placeholder="Search products instantly..."
+                            value={searchTerm}
+                            onChange={handleSearchChange}
+                            style={styles.searchInput}
+                            autoFocus
+                        />
+                        {searchTerm && (
+                            <button onClick={handleClearSearch} style={styles.clearSearchBtn}>
+                                ×
+                            </button>
+                        )}
+                    </div>
+                    {searchTerm && (
+                        <div style={styles.searchingIndicator}>
+                            Searching for: <strong>"{searchTerm}"</strong> — {products.length} results found
+                        </div>
                     )}
                 </div>
+
+                {/* Category Tabs */}
+                <div style={styles.categoryTabs}>
+                    {categories.map((category) => (
+                        <button
+                            key={category}
+                            onClick={() => handleCategoryClick(category)}
+                            style={{
+                                ...styles.categoryTab,
+                                ...(activeCategory === category && styles.categoryTabActive)
+                            }}
+                        >
+                            {category}
+                            {category !== 'All' && (
+                                <span style={styles.categoryCount}>
+                                    {products.filter(p => p.category === category).length}
+                                </span>
+                            )}
+                        </button>
+                    ))}
+                </div>
+
+                <div style={styles.content}>
+                    {/* Filters Sidebar - Desktop */}
+                    <div style={{
+                        ...styles.filtersDesktop,
+                        display: showFilters ? 'block' : 'none'
+                    }}>
+                        <ProductFilters
+                            filters={filters}
+                            onFilterChange={handleFilterChange}
+                        />
+                    </div>
+
+                    {/* Mobile Filters Modal */}
+                    {showFilters && (
+                        <div style={styles.modal}>
+                            <div style={styles.modalContent}>
+                                <ProductFilters
+                                    filters={filters}
+                                    onFilterChange={handleFilterChange}
+                                    onClose={() => setShowFilters(false)}
+                                    isMobile={true}
+                                />
+                            </div>
+                        </div>
+                    )}
+
+                    {/* Products Grid */}
+                    <div style={{
+                        ...styles.productsSection,
+                        ...(showFilters && styles.productsSectionWithFilters)
+                    }}>
+                        <div style={styles.resultsInfo}>
+                            <p>{products.length} products found</p>
+                            {activeCategory !== 'All' && (
+                                <span style={styles.activeFilter}>
+                                    Category: {activeCategory}
+                                    <button onClick={() => handleCategoryClick('All')} style={styles.removeFilter}>×</button>
+                                </span>
+                            )}
+                            {filters.minPrice || filters.maxPrice ? (
+                                <span style={styles.activeFilter}>
+                                    Price: ${filters.minPrice || 0} - ${filters.maxPrice || '∞'}
+                                    <button onClick={() => handleFilterChange({ ...filters, minPrice: '', maxPrice: '' })} style={styles.removeFilter}>×</button>
+                                </span>
+                            ) : null}
+                            {filters.rating && (
+                                <span style={styles.activeFilter}>
+                                    Rating: {filters.rating}★ & above
+                                    <button onClick={() => handleFilterChange({ ...filters, rating: '' })} style={styles.removeFilter}>×</button>
+                                </span>
+                            )}
+                            {searchTerm && (
+                                <span style={styles.activeFilter}>
+                                    Search: "{searchTerm}"
+                                    <button onClick={handleClearSearch} style={styles.removeFilter}>×</button>
+                                </span>
+                            )}
+                        </div>
+
+                        <div style={{
+                            ...styles.productsGrid,
+                            ...(viewMode === 'list' && styles.productsList)
+                        }}>
+                            {products.map((product) => (
+                                <ProductCard key={product._id} product={product} viewMode={viewMode} />
+                            ))}
+                        </div>
+
+                        {products.length === 0 && (
+                            <div style={styles.noResults}>
+                                <h3>No products found</h3>
+                                <p>Try adjusting your search or filters</p>
+                                <button onClick={handleClearSearch} style={styles.resetBtn}>
+                                    Clear Search
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
             </div>
-        </div>
+        </>
     );
 };
 
@@ -332,7 +335,6 @@ const styles = {
         alignItems: 'center',
         justifyContent: 'center',
     },
-    // Real-Time Search Styles
     searchSection: {
         marginBottom: '20px',
     },
@@ -376,7 +378,6 @@ const styles = {
         color: '#666',
         paddingLeft: '5px',
     },
-    // Category Tabs Styles
     categoryTabs: {
         display: 'flex',
         flexWrap: 'wrap',

@@ -1,0 +1,21 @@
+{
+    "name": "E-Shop - Online Shopping Store",
+    "short_name": "E-Shop",
+    "description": "Your one-stop online shopping destination in Ethiopia",
+    "start_url": "/",
+    "display": "standalone",
+    "theme_color": "#6366f1",
+    "background_color": "#ffffff",
+    "icons": [
+        {
+            "src": "/icon-192.png",
+            "sizes": "192x192",
+            "type": "image/png"
+        },
+        {
+            "src": "/icon-512.png",
+            "sizes": "512x512",
+            "type": "image/png"
+        }
+    ]
+}

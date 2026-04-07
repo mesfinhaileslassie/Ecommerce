@@ -4,6 +4,8 @@ import { Provider, useDispatch, useSelector } from 'react-redux';
 import { Toaster } from 'react-hot-toast';
 import { store } from './redux/store';
 import { fetchWishlist } from './redux/slices/wishlistSlice';
+import { HelmetProvider } from 'react-helmet-async';
+import { ThemeProvider } from './context/ThemeContext';  // Add this import
 
 import Navbar from './components/Layout/Navbar';
 import Footer from './components/Layout/Footer';
@@ -21,11 +23,10 @@ import WishlistPage from './pages/Wishlist/WishlistPage';
 import AdminDashboardPage from './pages/Admin/AdminDashboardPage';
 import AdminProductsPage from './pages/Admin/AdminProductsPage';
 import AdminOrdersPage from './pages/Admin/AdminOrdersPage';
-import AdminRoute from './components/Admin/AdminRoute';
 import AdminCouponsPage from './pages/Admin/AdminCouponsPage';
+import AdminRoute from './components/Admin/AdminRoute';
 
 import './styles/index.css';
-import './styles/App.css';
 
 const AppContent = () => {
     const dispatch = useDispatch();
@@ -80,14 +81,6 @@ const AppContent = () => {
                             <AdminDashboardPage />
                         </AdminRoute>
                     } />
-
-
-                    <Route path="/admin/coupons" element={
-                    <AdminRoute>
-                        <AdminCouponsPage />
-                    </AdminRoute>
-                         } />
-
                     <Route path="/admin/products" element={
                         <AdminRoute>
                             <AdminProductsPage />
@@ -96,6 +89,11 @@ const AppContent = () => {
                     <Route path="/admin/orders" element={
                         <AdminRoute>
                             <AdminOrdersPage />
+                        </AdminRoute>
+                    } />
+                    <Route path="/admin/coupons" element={
+                        <AdminRoute>
+                            <AdminCouponsPage />
                         </AdminRoute>
                     } />
                 </Routes>
@@ -108,7 +106,11 @@ const AppContent = () => {
 function App() {
     return (
         <Provider store={store}>
-            <AppContent />
+            <HelmetProvider>
+                <ThemeProvider>
+                    <AppContent />
+                </ThemeProvider>
+            </HelmetProvider>
         </Provider>
     );
 }

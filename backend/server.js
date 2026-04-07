@@ -251,10 +251,6 @@ const Cart = mongoose.model('Cart', cartSchema);
 
 
 
-
-
-
-
 // ============================================
 // ORDER MODEL
 // ============================================
@@ -378,6 +374,39 @@ const wishlistSchema = new mongoose.Schema({
 });
 
 const Wishlist = mongoose.model('Wishlist', wishlistSchema);
+
+
+
+// ============================================
+// SITEMAP GENERATION
+// ============================================
+
+const sitemapService = require('./services/sitemapService');
+
+app.get('/api/generate-sitemap', async (req, res) => {
+    try {
+        const products = await Product.find({});
+        const categories = await Product.distinct('category');
+        const sitemap = sitemapService.generateSitemap(products, categories);
+        
+        res.json({
+            success: true,
+            message: 'Sitemap generated successfully',
+            sitemapUrl: '/sitemap.xml'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+
+
+
+
+
 
 // ============================================
 // ADDRESS MODEL

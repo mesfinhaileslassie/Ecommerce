@@ -7,6 +7,7 @@ import { fetchCart } from '../../redux/slices/cartSlice';
 import Reviews from '../../components/Products/Reviews';
 import SizeSelector from '../../components/Products/SizeSelector';
 import ProductRecommendations from '../../components/Products/ProductRecommendations';
+import HelmetSEO from '../../components/SEO/HelmetSEO';
 import toast from 'react-hot-toast';
 import { FaStar, FaShoppingCart, FaSpinner, FaArrowLeft } from 'react-icons/fa';
 import api from '../../services/api';
@@ -30,10 +31,6 @@ const ProductDetailsPage = () => {
     // Reset selected size when product changes
     useEffect(() => {
         if (product) {
-            console.log('Product data:', product);
-            console.log('Has sizes:', product.hasSizes);
-            console.log('Sizes array:', product.sizes);
-            
             if (product.hasSizes && product.sizes && product.sizes.length > 0) {
                 const availableSize = product.sizes.find(s => s.countInStock > 0);
                 setSelectedSize(availableSize || product.sizes[0]);
@@ -99,30 +96,10 @@ const ProductDetailsPage = () => {
         
         setAdding(true);
         try {
-            const cartItem = {
-                productId: product._id,
-                quantity: quantity,
-                size: selectedSize?.size || null,
-                price: getCurrentPrice()
-            };
-            
-            console.log('Adding to cart:', cartItem);
-            
-            const result = await dispatch(addToCart(
-                product._id, 
-                quantity, 
-                selectedSize?.size || null,
-                getCurrentPrice()
-            ));
-            
-            if (result.error) {
-                toast.error(result.error.message || 'Failed to add to cart');
-            } else {
-                await dispatch(fetchCart());
-                toast.success(`${product.name}${selectedSize ? ` (${selectedSize.size})` : ''} added to cart!`);
-            }
+            await dispatch(addToCart(product._id, quantity, selectedSize?.size || null, getCurrentPrice()));
+            await dispatch(fetchCart());
+            toast.success(`${product.name}${selectedSize ? ` (${selectedSize.size})` : ''} added to cart!`);
         } catch (error) {
-            console.error('Add to cart error:', error);
             toast.error('Failed to add to cart');
         } finally {
             setAdding(false);
@@ -144,114 +121,128 @@ const ProductDetailsPage = () => {
 
     const currentPrice = getCurrentPrice();
     const currentStock = getCurrentStock();
-    const galleryImages = [getProductImage()];
 
     return (
-        <div style={styles.container}>
-            <Link to="/products" style={styles.backLink}>
-                <FaArrowLeft /> Back to Products
-            </Link>
+        <>
+            <HelmetSEO 
+                title={product.name}
+                description={product.description?.substring(0, 160) || `Buy ${product.name} online at best price. Shop now for quality ${product.category} products with fast delivery.`}
+                keywords={`${product.name}, buy ${product.name}, ${product.category}, online shopping, best price ${product.name}`}
+                image={product.imageUrl}
+                type="product"
+                price={currentPrice}
+                currency="USD"
+                availability={currentStock > 0 ? 'in_stock' : 'out_of_stock'}
+                tags={[product.category, product.name]}
+                url={`https://yourshop.com/products/${product._id}`}
+            />
             
-            <div style={styles.productContainer}>
-                {/* Image Gallery */}
-                <div style={styles.imageSection}>
-                    <img 
-                        src={galleryImages[selectedImage]} 
-                        alt={product.name}
-                        style={styles.mainImage}
-                    />
+            <div style={styles.container}>
+                <Link to="/products" style={styles.backLink}>
+                    <FaArrowLeft /> Back to Products
+                </Link>
+                
+                <div style={styles.productContainer}>
+                    {/* Image Gallery */}
+                    <div style={styles.imageSection}>
+                        <img 
+                            src={getProductImage()} 
+                            alt={product.name}
+                            style={styles.mainImage}
+                        />
+                    </div>
+                    
+                    {/* Product Info */}
+                    <div style={styles.infoSection}>
+                        <h1 style={styles.name}>{product.name}</h1>
+                        <div style={styles.rating}>
+                            {[...Array(5)].map((_, i) => (
+                                <FaStar
+                                    key={i}
+                                    style={styles.star}
+                                    color={i < Math.floor(product.rating) ? '#fbbf24' : '#e5e7eb'}
+                                />
+                            ))}
+                            <span style={styles.reviewCount}>({product.numReviews} reviews)</span>
+                        </div>
+                        <p style={styles.category}>Category: {product.category}</p>
+                        
+                        {/* Size Selector */}
+                        {product.hasSizes && product.sizes && product.sizes.length > 0 && (
+                            <SizeSelector
+                                sizes={product.sizes}
+                                selectedSize={selectedSize}
+                                onSizeChange={setSelectedSize}
+                            />
+                        )}
+                        
+                        <p style={styles.description}>{product.description}</p>
+                        
+                        <div style={styles.priceSection}>
+                            <div style={styles.priceContainer}>
+                                <label style={styles.priceLabel}>Price:</label>
+                                <p style={styles.price}>${currentPrice.toFixed(2)}</p>
+                            </div>
+                            {product.hasSizes && (
+                                <p style={styles.priceNote}>* Price varies by size</p>
+                            )}
+                        </div>
+                        
+                        <div style={styles.stockSection}>
+                            <p style={currentStock > 0 ? styles.inStock : styles.outOfStock}>
+                                {currentStock > 0 ? `✅ In Stock: ${currentStock} units` : '❌ Out of Stock'}
+                            </p>
+                        </div>
+                        
+                        {currentStock > 0 && (
+                            <div style={styles.quantitySection}>
+                                <label style={styles.label}>Quantity:</label>
+                                <select 
+                                    value={quantity} 
+                                    onChange={(e) => setQuantity(Number(e.target.value))}
+                                    style={styles.select}
+                                >
+                                    {[...Array(Math.min(10, currentStock))].map((_, i) => (
+                                        <option key={i + 1} value={i + 1}>{i + 1}</option>
+                                    ))}
+                                </select>
+                            </div>
+                        )}
+                        
+                        <div style={styles.buttonGroup}>
+                            <button 
+                                onClick={handleAddToCart}
+                                disabled={currentStock === 0 || adding}
+                                style={{
+                                    ...styles.addBtn,
+                                    ...(currentStock === 0 && styles.disabledBtn)
+                                }}
+                            >
+                                <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
+                            </button>
+                        </div>
+                    </div>
                 </div>
                 
-                {/* Product Info */}
-                <div style={styles.infoSection}>
-                    <h1 style={styles.name}>{product.name}</h1>
-                    <div style={styles.rating}>
-                        {[...Array(5)].map((_, i) => (
-                            <FaStar
-                                key={i}
-                                style={styles.star}
-                                color={i < Math.floor(product.rating) ? '#fbbf24' : '#e5e7eb'}
-                            />
-                        ))}
-                        <span style={styles.reviewCount}>({product.numReviews} reviews)</span>
-                    </div>
-                    <p style={styles.category}>Category: {product.category}</p>
-                    
-                    {/* Size Selector */}
-                    {product.hasSizes && product.sizes && product.sizes.length > 0 && (
-                        <SizeSelector
-                            sizes={product.sizes}
-                            selectedSize={selectedSize}
-                            onSizeChange={setSelectedSize}
-                        />
-                    )}
-                    
-                    <p style={styles.description}>{product.description}</p>
-                    
-                    <div style={styles.priceSection}>
-                        <div style={styles.priceContainer}>
-                            <label style={styles.priceLabel}>Price:</label>
-                            <p style={styles.price}>${currentPrice.toFixed(2)}</p>
-                        </div>
-                        {product.hasSizes && (
-                            <p style={styles.priceNote}>* Price varies by size</p>
-                        )}
-                    </div>
-                    
-                    <div style={styles.stockSection}>
-                        <p style={currentStock > 0 ? styles.inStock : styles.outOfStock}>
-                            {currentStock > 0 ? `✅ In Stock: ${currentStock} units` : '❌ Out of Stock'}
-                        </p>
-                    </div>
-                    
-                    {currentStock > 0 && (
-                        <div style={styles.quantitySection}>
-                            <label style={styles.label}>Quantity:</label>
-                            <select 
-                                value={quantity} 
-                                onChange={(e) => setQuantity(Number(e.target.value))}
-                                style={styles.select}
-                            >
-                                {[...Array(Math.min(10, currentStock))].map((_, i) => (
-                                    <option key={i + 1} value={i + 1}>{i + 1}</option>
-                                ))}
-                            </select>
-                        </div>
-                    )}
-                    
-                    <div style={styles.buttonGroup}>
-                        <button 
-                            onClick={handleAddToCart}
-                            disabled={currentStock === 0 || adding}
-                            style={{
-                                ...styles.addBtn,
-                                ...(currentStock === 0 && styles.disabledBtn)
-                            }}
-                        >
-                            <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
-                        </button>
-                    </div>
-                </div>
+                {/* Reviews Section */}
+                <Reviews productId={product._id} />
+                
+                {/* Product Recommendations */}
+                <ProductRecommendations 
+                    type="similar" 
+                    productId={product._id} 
+                    title="You Might Also Like" 
+                    limit={4} 
+                />
+                
+                <ProductRecommendations 
+                    type="bought-together" 
+                    productId={product._id} 
+                    title="Frequently Bought Together" 
+                    limit={4} 
+                />
             </div>
-            
-            {/* Reviews Section */}
-            <Reviews productId={product._id} />
-            
-            {/* Product Recommendations */}
-            <ProductRecommendations 
-                type="similar" 
-                productId={product._id} 
-                title="You Might Also Like" 
-                limit={4} 
-            />
-            
-            <ProductRecommendations 
-                type="bought-together" 
-                productId={product._id} 
-                title="Frequently Bought Together" 
-                limit={4} 
-            />
-        </div>
+        </>
     );
 };
 
