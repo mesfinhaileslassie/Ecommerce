@@ -266,6 +266,7 @@ const orderItemSchema = new mongoose.Schema({
     imageUrl: String
 });
 
+
 const orderSchema = new mongoose.Schema({
     user: {
         type: mongoose.Schema.Types.ObjectId,
@@ -292,11 +293,21 @@ const orderSchema = new mongoose.Schema({
         enum: ['Credit Card', 'PayPal', 'Cash on Delivery', 'CBE Birr', 'Telebirr', 'Mobile Banking'],
         default: 'Cash on Delivery'
     },
-    paymentResult: {
-        id: String,
-        status: String,
-        updateTime: String,
-        emailAddress: String
+    paymentStatus: {
+        type: String,
+        enum: ['pending', 'paid', 'failed', 'refunded'],
+        default: 'pending'
+    },
+    transactionId: {
+        type: String,
+        default: null
+    },
+    paymentDetails: {
+        accountNumber: { type: String, default: null },
+        phoneNumber: { type: String, default: null },
+        referenceNumber: { type: String, default: null },
+        outTradeNo: { type: String, default: null },
+        paidAt: { type: Date, default: null }
     },
     isPaid: {
         type: Boolean,
@@ -313,27 +324,17 @@ const orderSchema = new mongoose.Schema({
         enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
         default: 'Pending'
     },
-    // Add payment tracking fields
-    paymentStatus: {
-        type: String,
-        enum: ['pending', 'paid', 'failed', 'refunded'],
-        default: 'pending'
-    },
-    transactionId: {
-        type: String,
-        default: null
-    },
-    paymentDetails: {
-        accountNumber: { type: String, default: null },
-        phoneNumber: { type: String, default: null },
-        referenceNumber: { type: String, default: null },
-        paidAt: { type: Date, default: null }
+    isArchived: {  // ADD THIS FIELD
+        type: Boolean,
+        default: false
     },
     createdAt: {
         type: Date,
         default: Date.now
     }
 });
+
+
 
 const Order = mongoose.model('Order', orderSchema);
 
@@ -374,6 +375,10 @@ const wishlistSchema = new mongoose.Schema({
 });
 
 const Wishlist = mongoose.model('Wishlist', wishlistSchema);
+
+
+
+
 
 
 
@@ -480,6 +485,82 @@ const admin = async (req, res, next) => {
         res.status(401).json({ success: false, message: 'Not authorized' });
     }
 };
+
+
+
+
+
+// ============================================
+// ORDER ARCHIVE ROUTES
+// ============================================
+
+// Archive/unarchive an order
+app.put('/api/orders/:id/archive', protect, async (req, res) => {
+    try {
+        const { archive } = req.body; // true = archive, false = unarchive
+        const order = await Order.findById(req.params.id);
+        
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        
+        // Check if user owns the order
+        if (order.user.toString() !== req.userId) {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        
+        order.isArchived = archive;
+        await order.save();
+        
+        res.json({
+            success: true,
+            message: archive ? 'Order archived' : 'Order restored',
+            isArchived: order.isArchived
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get user's orders (excluding archived if filter is active)
+app.get('/api/orders/myorders', protect, async (req, res) => {
+    try {
+        const { showArchived = 'false' } = req.query;
+        let query = { user: req.userId };
+        
+        // Only show archived orders if requested
+        if (showArchived === 'false') {
+            query.isArchived = false;
+        }
+        
+        const orders = await Order.find(query).sort({ createdAt: -1 });
+        res.json({ success: true, count: orders.length, orders });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Archive all delivered/cancelled orders (batch archive)
+app.post('/api/orders/archive-all', protect, async (req, res) => {
+    try {
+        const result = await Order.updateMany(
+            { 
+                user: req.userId,
+                status: { $in: ['Delivered', 'Cancelled'] },
+                isArchived: false
+            },
+            { $set: { isArchived: true } }
+        );
+        
+        res.json({
+            success: true,
+            message: `${result.modifiedCount} orders archived`,
+            archivedCount: result.modifiedCount
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
 
 
 
