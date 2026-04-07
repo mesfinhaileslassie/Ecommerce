@@ -8,6 +8,10 @@ const { OAuth2Client } = require('google-auth-library');
 const multer = require('multer');
 const path = require('path');
 const fs = require('fs');
+const { sendEmail } = require('./config/email');
+const getWelcomeEmail = require('./templates/welcomeEmail');
+const getOrderConfirmationEmail = require('./templates/orderConfirmationEmail');
+const getOrderStatusUpdateEmail = require('./templates/orderStatusUpdateEmail');
 
 dotenv.config();
 
@@ -29,13 +33,7 @@ app.use((req, res, next) => {
     next();
 });
 
-
-
-
-
-
-
-//Create uploads directory if it doesn't exist
+// Create uploads directory if it doesn't exist
 const uploadDir = path.join(__dirname, 'uploads');
 if (!fs.existsSync(uploadDir)) {
     fs.mkdirSync(uploadDir, { recursive: true });
@@ -67,16 +65,12 @@ const fileFilter = (req, file, cb) => {
 
 const upload = multer({
     storage: storage,
-    limits: { fileSize: 5 * 1024 * 1024 }, // 5MB limit
+    limits: { fileSize: 5 * 1024 * 1024 },
     fileFilter: fileFilter
 });
 
 // Serve uploaded images statically
 app.use('/uploads', express.static(path.join(__dirname, 'uploads')));
-
-
-
-
 
 // ============================================
 // USER MODEL
@@ -108,7 +102,7 @@ const generateToken = (id) => {
 };
 
 // ============================================
-// SIZE VARIANT SCHEMA - Define BEFORE product
+// SIZE VARIANT SCHEMA
 // ============================================
 const sizeVariantSchema = new mongoose.Schema({
     size: {
@@ -117,12 +111,8 @@ const sizeVariantSchema = new mongoose.Schema({
         enum: ['XS', 'S', 'M', 'L', 'XL', 'XXL', 'XXXL', 
                '28', '30', '32', '34', '36', '38', '40', '42', '44', '46',
                '6', '7', '8', '9', '10', '11', '12', '13', '14',
-               'One Size', 'Free Size',
-               'Small', 'Medium', 'Large', 'Extra Large',
-               'X', 'XL', 'XXL', 'XXXL',  // Add these
-               'S/M', 'M/L', 'L/XL',      // Add these
-               'OS', 'ONESIZE'            // Add these
-        ]
+               'One Size', 'Free Size', 'Small', 'Medium', 'Large', 'Extra Large',
+               'X', 'XL', 'XXL', 'XXXL', 'S/M', 'M/L', 'L/XL', 'OS', 'ONESIZE']
     },
     price: {
         type: Number,
@@ -193,10 +183,8 @@ const productSchema = new mongoose.Schema({
 
 const Product = mongoose.model('Product', productSchema);
 
-
-
 // ============================================
-// CART ITEM SCHEMA - Define FIRST
+// CART ITEM SCHEMA
 // ============================================
 const cartItemSchema = new mongoose.Schema({
     product: {
@@ -217,7 +205,7 @@ const cartItemSchema = new mongoose.Schema({
 });
 
 // ============================================
-// CART MODEL - Define AFTER cartItemSchema
+// CART MODEL
 // ============================================
 const expirationDays = parseInt(process.env.CART_EXPIRATION_DAYS) || 3;
 
@@ -228,7 +216,7 @@ const cartSchema = new mongoose.Schema({
         required: true,
         unique: true
     },
-    items: [cartItemSchema],  // Now cartItemSchema is defined
+    items: [cartItemSchema],
     totalPrice: {
         type: Number,
         default: 0
@@ -249,8 +237,6 @@ const cartSchema = new mongoose.Schema({
 
 const Cart = mongoose.model('Cart', cartSchema);
 
-
-
 // ============================================
 // ORDER MODEL
 // ============================================
@@ -265,7 +251,6 @@ const orderItemSchema = new mongoose.Schema({
     quantity: Number,
     imageUrl: String
 });
-
 
 const orderSchema = new mongoose.Schema({
     user: {
@@ -324,7 +309,7 @@ const orderSchema = new mongoose.Schema({
         enum: ['Pending', 'Processing', 'Shipped', 'Delivered', 'Cancelled'],
         default: 'Pending'
     },
-    isArchived: {  // ADD THIS FIELD
+    isArchived: {
         type: Boolean,
         default: false
     },
@@ -333,8 +318,6 @@ const orderSchema = new mongoose.Schema({
         default: Date.now
     }
 });
-
-
 
 const Order = mongoose.model('Order', orderSchema);
 
@@ -375,43 +358,6 @@ const wishlistSchema = new mongoose.Schema({
 });
 
 const Wishlist = mongoose.model('Wishlist', wishlistSchema);
-
-
-
-
-
-
-
-// ============================================
-// SITEMAP GENERATION
-// ============================================
-
-const sitemapService = require('./services/sitemapService');
-
-app.get('/api/generate-sitemap', async (req, res) => {
-    try {
-        const products = await Product.find({});
-        const categories = await Product.distinct('category');
-        const sitemap = sitemapService.generateSitemap(products, categories);
-        
-        res.json({
-            success: true,
-            message: 'Sitemap generated successfully',
-            sitemapUrl: '/sitemap.xml'
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-
-
-
-
-
-
-
-
 
 // ============================================
 // ADDRESS MODEL
@@ -486,325 +432,6 @@ const admin = async (req, res, next) => {
     }
 };
 
-
-
-
-
-// ============================================
-// ORDER ARCHIVE ROUTES
-// ============================================
-
-// Archive/unarchive an order
-app.put('/api/orders/:id/archive', protect, async (req, res) => {
-    try {
-        const { archive } = req.body; // true = archive, false = unarchive
-        const order = await Order.findById(req.params.id);
-        
-        if (!order) {
-            return res.status(404).json({ success: false, message: 'Order not found' });
-        }
-        
-        // Check if user owns the order
-        if (order.user.toString() !== req.userId) {
-            return res.status(403).json({ success: false, message: 'Not authorized' });
-        }
-        
-        order.isArchived = archive;
-        await order.save();
-        
-        res.json({
-            success: true,
-            message: archive ? 'Order archived' : 'Order restored',
-            isArchived: order.isArchived
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Get user's orders (excluding archived if filter is active)
-app.get('/api/orders/myorders', protect, async (req, res) => {
-    try {
-        const { showArchived = 'false' } = req.query;
-        let query = { user: req.userId };
-        
-        // Only show archived orders if requested
-        if (showArchived === 'false') {
-            query.isArchived = false;
-        }
-        
-        const orders = await Order.find(query).sort({ createdAt: -1 });
-        res.json({ success: true, count: orders.length, orders });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Archive all delivered/cancelled orders (batch archive)
-app.post('/api/orders/archive-all', protect, async (req, res) => {
-    try {
-        const result = await Order.updateMany(
-            { 
-                user: req.userId,
-                status: { $in: ['Delivered', 'Cancelled'] },
-                isArchived: false
-            },
-            { $set: { isArchived: true } }
-        );
-        
-        res.json({
-            success: true,
-            message: `${result.modifiedCount} orders archived`,
-            archivedCount: result.modifiedCount
-        });
-    } catch (error) {
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-
-
-
-
-// ============================================
-// TELEBIRR PAYMENT ROUTES
-// ============================================
-
-const telebirrService = require('./services/telebirrService');
-
-// Initiate Telebirr payment
-app.post('/api/telebirr/initiate', protect, async (req, res) => {
-    try {
-        const { orderId, amount, subject } = req.body;
-
-        if (!telebirrService.isAvailable()) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Telebirr service not configured. Please check credentials.' 
-            });
-        }
-
-        const result = await telebirrService.initiatePayment(
-            orderId,
-            amount,
-            subject,
-            `${process.env.TELEBIRR_RETURN_URL}`,
-            `${process.env.TELEBIRR_NOTIFY_URL}`
-        );
-
-        // Update order with outTradeNo
-        await Order.findByIdAndUpdate(orderId, {
-            'paymentDetails.outTradeNo': result.outTradeNo
-        });
-
-        res.json({
-            success: true,
-            toPayUrl: result.toPayUrl,
-            outTradeNo: result.outTradeNo,
-            message: 'Payment initiated successfully'
-        });
-    } catch (error) {
-        console.error('Telebirr initiation error:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Telebirr payment notification webhook
-app.post('/api/telebirr/notify', async (req, res) => {
-    try {
-        const notification = req.body;
-        console.log('Telebirr notification received:', notification);
-
-        // Verify signature here (implement based on Telebirr docs)
-        
-        if (notification.resultCode === '0' || notification.code === '0') {
-            const { outTradeNo, tradeNo } = notification;
-            
-            await Order.findOneAndUpdate(
-                { 'paymentDetails.outTradeNo': outTradeNo },
-                { 
-                    paymentStatus: 'paid',
-                    isPaid: true,
-                    paidAt: new Date(),
-                    transactionId: tradeNo,
-                    'paymentDetails.referenceNumber': tradeNo
-                }
-            );
-            
-            console.log(`✅ Payment confirmed for order: ${outTradeNo}`);
-        }
-
-        res.json({ code: 0, message: 'success' });
-    } catch (error) {
-        console.error('Telebirr notification error:', error);
-        res.status(500).json({ code: 1, message: error.message });
-    }
-});
-
-// Telebirr return URL (after payment)
-app.get('/api/telebirr/return', async (req, res) => {
-    const { outTradeNo, tradeNo, resultCode } = req.query;
-    
-    console.log('Telebirr return:', { outTradeNo, tradeNo, resultCode });
-    
-    if (resultCode === '0') {
-        await Order.findOneAndUpdate(
-            { 'paymentDetails.outTradeNo': outTradeNo },
-            { 
-                paymentStatus: 'paid',
-                isPaid: true,
-                paidAt: new Date(),
-                transactionId: tradeNo
-            }
-        );
-    }
-    
-    // Redirect to frontend orders page
-    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/orders?payment=${resultCode === '0' ? 'success' : 'failed'}`);
-});
-
-
-
-// ============================================
-// IMAGE UPLOAD ROUTE
-// ============================================
-
-// Upload single image
-app.post('/api/upload', protect, admin, upload.single('image'), async (req, res) => {
-    try {
-        if (!req.file) {
-            return res.status(400).json({ success: false, message: 'No file uploaded' });
-        }
-        
-        const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
-        
-        res.json({
-            success: true,
-            message: 'Image uploaded successfully',
-            imageUrl: imageUrl
-        });
-    } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-// Upload multiple images (for future use)
-app.post('/api/upload-multiple', protect, admin, upload.array('images', 5), async (req, res) => {
-    try {
-        if (!req.files || req.files.length === 0) {
-            return res.status(400).json({ success: false, message: 'No files uploaded' });
-        }
-        
-        const imageUrls = req.files.map(file => {
-            return `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
-        });
-        
-        res.json({
-            success: true,
-            message: 'Images uploaded successfully',
-            imageUrls: imageUrls
-        });
-    } catch (error) {
-        console.error('Upload error:', error);
-        res.status(500).json({ success: false, message: error.message });
-    }
-});
-
-
-
-
-const cron = require('node-cron');
-
-// Run cleanup every day at midnight
-cron.schedule('0 0 * * *', async () => {
-    console.log('Running cart cleanup...');
-    const result = await Cart.deleteMany({
-        expiresAt: { $lt: new Date() }
-    });
-    console.log(`Cleaned up ${result.deletedCount} expired carts`);
-});
-
-
-
-// ============================================
-// GOOGLE AUTH ROUTE
-// ============================================
-const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
-
-app.post('/api/auth/google', async (req, res) => {
-    const { token } = req.body;
-
-    if (!token) {
-        return res.status(400).json({ success: false, message: 'No token provided' });
-    }
-
-    try {
-        const ticket = await googleClient.verifyIdToken({
-            idToken: token,
-            audience: process.env.GOOGLE_CLIENT_ID,
-        });
-
-        const payload = ticket.getPayload();
-        const { email, name, picture, sub: googleId } = payload;
-
-        if (!email) {
-            return res.status(400).json({ success: false, message: 'Email not provided by Google' });
-        }
-
-        console.log(`🔐 Google login attempt for: ${email}`);
-
-        let user = await User.findOne({ email });
-
-        if (!user) {
-            const randomPassword = Math.random().toString(36).slice(-8);
-            const hashedPassword = await hashPassword(randomPassword);
-
-            user = new User({
-                name: name || email.split('@')[0],
-                email: email,
-                password: hashedPassword,
-                avatar: picture || '',
-                googleId: googleId,
-                isAdmin: false,
-            });
-            await user.save();
-            console.log(`✅ New user created via Google: ${email}`);
-        } else {
-            if (!user.googleId) {
-                user.googleId = googleId;
-                await user.save();
-            }
-            if (picture && !user.avatar) {
-                user.avatar = picture;
-                await user.save();
-            }
-            console.log(`✅ Existing user logged in via Google: ${email}`);
-        }
-
-        const appToken = generateToken(user._id);
-
-        res.json({
-            success: true,
-            message: 'Google login successful',
-            token: appToken,
-            user: {
-                _id: user._id,
-                name: user.name,
-                email: user.email,
-                isAdmin: user.isAdmin,
-                avatar: user.avatar,
-                googleId: user.googleId,
-                createdAt: user.createdAt,
-            },
-        });
-
-    } catch (error) {
-        console.error('❌ Google token verification failed:', error);
-        res.status(401).json({ success: false, message: 'Google authentication failed' });
-    }
-});
-
 // ============================================
 // TEST ROUTES
 // ============================================
@@ -826,38 +453,35 @@ app.post('/api/auth/register', async (req, res) => {
         const { name, email, password } = req.body;
         
         if (!name || !email || !password) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Please provide name, email and password' 
-            });
+            return res.status(400).json({ success: false, message: 'Please provide name, email and password' });
         }
         
         const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
         if (!emailRegex.test(email)) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Please provide a valid email address' 
-            });
+            return res.status(400).json({ success: false, message: 'Please provide a valid email address' });
         }
         
         const existingUser = await User.findOne({ email });
         if (existingUser) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'An account with this email already exists. Please login instead.' 
-            });
+            return res.status(400).json({ success: false, message: 'An account with this email already exists. Please login instead.' });
         }
         
         if (password.length < 6) {
-            return res.status(400).json({ 
-                success: false, 
-                message: 'Password must be at least 6 characters long' 
-            });
+            return res.status(400).json({ success: false, message: 'Password must be at least 6 characters long' });
         }
         
         const hashedPassword = await hashPassword(password);
         const user = new User({ name, email, password: hashedPassword });
         await user.save();
+        
+        // Send welcome email
+        try {
+            const welcomeHtml = getWelcomeEmail(name);
+            await sendEmail(email, 'Welcome to E-Shop! 🎉', welcomeHtml);
+            console.log(`Welcome email sent to ${email}`);
+        } catch (emailError) {
+            console.error('Failed to send welcome email:', emailError);
+        }
         
         const token = generateToken(user._id);
         
@@ -876,10 +500,7 @@ app.post('/api/auth/register', async (req, res) => {
         });
     } catch (error) {
         console.error('Registration error:', error);
-        res.status(500).json({ 
-            success: false, 
-            message: 'Server error. Please try again later.' 
-        });
+        res.status(500).json({ success: false, message: 'Server error. Please try again later.' });
     }
 });
 
@@ -1023,6 +644,84 @@ app.post('/api/auth/avatar', protect, async (req, res) => {
 });
 
 // ============================================
+// GOOGLE AUTH ROUTE
+// ============================================
+const googleClient = new OAuth2Client(process.env.GOOGLE_CLIENT_ID);
+
+app.post('/api/auth/google', async (req, res) => {
+    const { token } = req.body;
+
+    if (!token) {
+        return res.status(400).json({ success: false, message: 'No token provided' });
+    }
+
+    try {
+        const ticket = await googleClient.verifyIdToken({
+            idToken: token,
+            audience: process.env.GOOGLE_CLIENT_ID,
+        });
+
+        const payload = ticket.getPayload();
+        const { email, name, picture, sub: googleId } = payload;
+
+        if (!email) {
+            return res.status(400).json({ success: false, message: 'Email not provided by Google' });
+        }
+
+        console.log(`🔐 Google login attempt for: ${email}`);
+
+        let user = await User.findOne({ email });
+
+        if (!user) {
+            const randomPassword = Math.random().toString(36).slice(-8);
+            const hashedPassword = await hashPassword(randomPassword);
+
+            user = new User({
+                name: name || email.split('@')[0],
+                email: email,
+                password: hashedPassword,
+                avatar: picture || '',
+                googleId: googleId,
+                isAdmin: false,
+            });
+            await user.save();
+            console.log(`✅ New user created via Google: ${email}`);
+        } else {
+            if (!user.googleId) {
+                user.googleId = googleId;
+                await user.save();
+            }
+            if (picture && !user.avatar) {
+                user.avatar = picture;
+                await user.save();
+            }
+            console.log(`✅ Existing user logged in via Google: ${email}`);
+        }
+
+        const appToken = generateToken(user._id);
+
+        res.json({
+            success: true,
+            message: 'Google login successful',
+            token: appToken,
+            user: {
+                _id: user._id,
+                name: user.name,
+                email: user.email,
+                isAdmin: user.isAdmin,
+                avatar: user.avatar,
+                googleId: user.googleId,
+                createdAt: user.createdAt,
+            },
+        });
+
+    } catch (error) {
+        console.error('❌ Google token verification failed:', error);
+        res.status(401).json({ success: false, message: 'Google authentication failed' });
+    }
+});
+
+// ============================================
 // PRODUCT ROUTES
 // ============================================
 
@@ -1134,31 +833,25 @@ app.get('/api/products/:id', async (req, res) => {
     }
 });
 
-
-
-// Create product (Admin only) - Updated validation
+// Create product (Admin only)
 app.post('/api/products', protect, admin, async (req, res) => {
     try {
         const { name, description, price, category, countInStock, imageUrl, isFeatured, hasSizes, sizes } = req.body;
         
-        // Basic validation - name, description, category are always required
         if (!name || !description || !category) {
             return res.status(400).json({ success: false, message: 'Missing required fields: name, description, category' });
         }
         
-        // If product does NOT have sizes, price is required
         if (!hasSizes && (!price || price === 0)) {
             return res.status(400).json({ success: false, message: 'Price is required for products without sizes' });
         }
         
-        // If product has sizes, at least one size is required
         if (hasSizes && (!sizes || sizes.length === 0)) {
             return res.status(400).json({ success: false, message: 'At least one size variant is required' });
         }
         
         const slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         
-        // Build product data
         const productData = {
             name,
             slug,
@@ -1170,10 +863,9 @@ app.post('/api/products', protect, admin, async (req, res) => {
             sizes: sizes || []
         };
         
-        // Set price and stock based on whether product has sizes
         if (hasSizes) {
-            productData.price = 0; // Will be overridden by size prices
-            productData.countInStock = 0; // Will be managed per size
+            productData.price = 0;
+            productData.countInStock = 0;
         } else {
             productData.price = price;
             productData.countInStock = countInStock || 0;
@@ -1189,8 +881,7 @@ app.post('/api/products', protect, admin, async (req, res) => {
     }
 });
 
-
-// Update product (Admin only) - Updated validation
+// Update product (Admin only)
 app.put('/api/products/:id', protect, admin, async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
@@ -1200,7 +891,6 @@ app.put('/api/products/:id', protect, admin, async (req, res) => {
         
         const { name, hasSizes, sizes, price, countInStock } = req.body;
         
-        // Validate based on hasSizes
         if (hasSizes && (!sizes || sizes.length === 0)) {
             return res.status(400).json({ success: false, message: 'At least one size variant is required' });
         }
@@ -1213,7 +903,6 @@ app.put('/api/products/:id', protect, admin, async (req, res) => {
             req.body.slug = name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
         }
         
-        // If hasSizes is true, reset main price and stock
         if (hasSizes) {
             req.body.price = 0;
             req.body.countInStock = 0;
@@ -1231,7 +920,6 @@ app.put('/api/products/:id', protect, admin, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
 
 // Delete product (Admin only)
 app.delete('/api/products/:id', protect, admin, async (req, res) => {
@@ -1270,14 +958,11 @@ app.put('/api/products/:id/featured', protect, admin, async (req, res) => {
     }
 });
 
-
-
-
 // ============================================
 // PRODUCT RECOMMENDATIONS
 // ============================================
 
-// Get similar products (based on category)
+// Get similar products
 app.get('/api/products/similar/:id', async (req, res) => {
     try {
         const product = await Product.findById(req.params.id);
@@ -1285,7 +970,6 @@ app.get('/api/products/similar/:id', async (req, res) => {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
         
-        // Find products in same category, exclude current product
         const similarProducts = await Product.find({
             category: product.category,
             _id: { $ne: product._id }
@@ -1301,67 +985,7 @@ app.get('/api/products/similar/:id', async (req, res) => {
     }
 });
 
-// Get frequently bought together (based on order history)
-app.get('/api/products/bought-together/:productId', protect, async (req, res) => {
-    try {
-        const { productId } = req.params;
-        
-        // Find orders that contain this product
-        const orders = await Order.find({
-            'items.product': productId,
-            user: req.userId
-        }).populate('items.product');
-        
-        // Count frequency of other products bought with this one
-        const productFrequency = {};
-        
-        orders.forEach(order => {
-            order.items.forEach(item => {
-                if (item.product._id.toString() !== productId) {
-                    const id = item.product._id.toString();
-                    productFrequency[id] = (productFrequency[id] || 0) + item.quantity;
-                }
-            });
-        });
-        
-        // Sort by frequency and get top products
-        const topProductIds = Object.entries(productFrequency)
-            .sort((a, b) => b[1] - a[1])
-            .slice(0, 4)
-            .map(([id]) => id);
-        
-        const recommendations = await Product.find({
-            _id: { $in: topProductIds }
-        });
-        
-        res.json({
-            success: true,
-            products: recommendations,
-            count: recommendations.length
-        });
-    } catch (error) {
-        // If no orders found, return similar products instead
-        try {
-            const product = await Product.findById(productId);
-            const similarProducts = await Product.find({
-                category: product.category,
-                _id: { $ne: productId }
-            }).limit(4);
-            
-            res.json({
-                success: true,
-                products: similarProducts,
-                count: similarProducts.length,
-                fallback: true
-            });
-        } catch (fallbackError) {
-            res.status(500).json({ success: false, message: error.message });
-        }
-    }
-});
-
 // Get top rated products
-
 app.get('/api/products/top-rated', async (req, res) => {
     try {
         const topRated = await Product.find({ rating: { $gt: 0 } })
@@ -1375,118 +999,20 @@ app.get('/api/products/top-rated', async (req, res) => {
         });
     } catch (error) {
         console.error('Top rated error:', error);
-        // Return empty array instead of error
-        res.json({
-            success: true,
-            products: [],
-            count: 0
-        });
-    }
-});app.get('/api/products/top-rated', async (req, res) => {
-    try {
-        const topRated = await Product.find({ rating: { $gt: 0 } })
-            .sort({ rating: -1, numReviews: -1 })
-            .limit(8);
-        
-        res.json({
-            success: true,
-            products: topRated,
-            count: topRated.length
-        });
-    } catch (error) {
-        console.error('Top rated error:', error);
-        // Return empty array instead of error
-        res.json({
-            success: true,
-            products: [],
-            count: 0
-        });
-    }
-});app.get('/api/products/top-rated', async (req, res) => {
-    try {
-        const topRated = await Product.find({ rating: { $gt: 0 } })
-            .sort({ rating: -1, numReviews: -1 })
-            .limit(8);
-        
-        res.json({
-            success: true,
-            products: topRated,
-            count: topRated.length
-        });
-    } catch (error) {
-        console.error('Top rated error:', error);
-        // Return empty array instead of error
-        res.json({
-            success: true,
-            products: [],
-            count: 0
-        });
-    }
-});app.get('/api/products/top-rated', async (req, res) => {
-    try {
-        const topRated = await Product.find({ rating: { $gt: 0 } })
-            .sort({ rating: -1, numReviews: -1 })
-            .limit(8);
-        
-        res.json({
-            success: true,
-            products: topRated,
-            count: topRated.length
-        });
-    } catch (error) {
-        console.error('Top rated error:', error);
-        // Return empty array instead of error
-        res.json({
-            success: true,
-            products: [],
-            count: 0
-        });
-    }
-});app.get('/api/products/top-rated', async (req, res) => {
-    try {
-        const topRated = await Product.find({ rating: { $gt: 0 } })
-            .sort({ rating: -1, numReviews: -1 })
-            .limit(8);
-        
-        res.json({
-            success: true,
-            products: topRated,
-            count: topRated.length
-        });
-    } catch (error) {
-        console.error('Top rated error:', error);
-        // Return empty array instead of error
-        res.json({
-            success: true,
-            products: [],
-            count: 0
-        });
+        res.json({ success: true, products: [], count: 0 });
     }
 });
-
 
 // Get best selling products
 app.get('/api/products/best-sellers', async (req, res) => {
     try {
-        // Simpler approach - just return featured products if no sales data
         const bestSellers = await Product.find({ isFeatured: true }).limit(8);
-        
-        res.json({
-            success: true,
-            products: bestSellers,
-            count: bestSellers.length
-        });
+        res.json({ success: true, products: bestSellers, count: bestSellers.length });
     } catch (error) {
         console.error('Best sellers error:', error);
-        res.json({
-            success: true,
-            products: [],
-            count: 0
-        });
+        res.json({ success: true, products: [], count: 0 });
     }
 });
-
-
 
 // Track recently viewed products
 app.post('/api/products/recently-viewed', protect, async (req, res) => {
@@ -1495,14 +1021,8 @@ app.post('/api/products/recently-viewed', protect, async (req, res) => {
         const user = await User.findById(req.userId);
         
         let recentlyViewed = user.recentlyViewed || [];
-        
-        // Remove if already exists
         recentlyViewed = recentlyViewed.filter(id => id.toString() !== productId);
-        
-        // Add to beginning
         recentlyViewed.unshift(productId);
-        
-        // Keep only last 10
         recentlyViewed = recentlyViewed.slice(0, 10);
         
         user.recentlyViewed = recentlyViewed;
@@ -1514,45 +1034,27 @@ app.post('/api/products/recently-viewed', protect, async (req, res) => {
     }
 });
 
-// Get recently viewed products - FIXED
+// Get recently viewed products
 app.get('/api/products/recently-viewed', protect, async (req, res) => {
     try {
         const user = await User.findById(req.userId);
         const recentlyViewedIds = user.recentlyViewed || [];
         
         if (recentlyViewedIds.length === 0) {
-            return res.json({
-                success: true,
-                products: [],
-                count: 0
-            });
+            return res.json({ success: true, products: [], count: 0 });
         }
         
-        const products = await Product.find({
-            _id: { $in: recentlyViewedIds }
-        });
-        
-        // Preserve order
+        const products = await Product.find({ _id: { $in: recentlyViewedIds } });
         const orderedProducts = recentlyViewedIds.map(id => 
             products.find(p => p._id.toString() === id.toString())
         ).filter(p => p);
         
-        res.json({
-            success: true,
-            products: orderedProducts,
-            count: orderedProducts.length
-        });
+        res.json({ success: true, products: orderedProducts, count: orderedProducts.length });
     } catch (error) {
         console.error('Recently viewed error:', error);
-        res.json({
-            success: true,
-            products: [],
-            count: 0
-        });
+        res.json({ success: true, products: [], count: 0 });
     }
 });
-
-
 
 // ============================================
 // REVIEW ROUTES
@@ -1619,13 +1121,13 @@ app.get('/api/cart', protect, async (req, res) => {
     try {
         let cart = await Cart.findOne({ user: req.userId }).populate('items.product');
         
-        // When creating a new cart
         if (!cart) {
             cart = new Cart({ 
                 user: req.userId, 
                 items: [],
-                expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000) // 3 days
+                expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
             });
+            await cart.save();
         }
         
         res.json({
@@ -1642,18 +1144,10 @@ app.get('/api/cart', protect, async (req, res) => {
     }
 });
 
-
-
-
-
-
-
-// Add item to cart - Updated to handle size
+// Add item to cart
 app.post('/api/cart/add', protect, async (req, res) => {
     try {
         const { productId, quantity = 1, size = null } = req.body;
-        
-        console.log('Add to cart request:', { productId, quantity, size });
         
         if (!productId) {
             return res.status(400).json({ success: false, message: 'Product ID required' });
@@ -1664,7 +1158,6 @@ app.post('/api/cart/add', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Product not found' });
         }
         
-        // Determine price and stock based on size
         let finalPrice = product.price;
         let currentStock = product.countInStock;
         
@@ -1686,7 +1179,6 @@ app.post('/api/cart/add', protect, async (req, res) => {
             cart = new Cart({ user: req.userId, items: [] });
         }
         
-        // Check if product with same size already exists in cart
         const existingItemIndex = cart.items.findIndex(
             item => item.product.toString() === productId && item.size === size
         );
@@ -1704,7 +1196,6 @@ app.post('/api/cart/add', protect, async (req, res) => {
             });
         }
         
-        // Update cart total
         let total = 0;
         for (const item of cart.items) {
             total += item.price * item.quantity;
@@ -1728,9 +1219,6 @@ app.post('/api/cart/add', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
-
-
 
 // Update cart item quantity
 app.put('/api/cart/update/:productId', protect, async (req, res) => {
@@ -1843,26 +1331,12 @@ app.delete('/api/cart/clear', protect, async (req, res) => {
     }
 });
 
-
-
-// ============================================
-// CART CLEANUP ROUTE
-// ============================================
-
-// Clean up expired carts (can be called by a cron job)
+// Cart cleanup route
 app.delete('/api/cart/cleanup', async (req, res) => {
     try {
-        const result = await Cart.deleteMany({
-            expiresAt: { $lt: new Date() }
-        });
-        
+        const result = await Cart.deleteMany({ expiresAt: { $lt: new Date() } });
         console.log(`🧹 Cleaned up ${result.deletedCount} expired carts`);
-        
-        res.json({
-            success: true,
-            message: `Cleaned up ${result.deletedCount} expired carts`,
-            deletedCount: result.deletedCount
-        });
+        res.json({ success: true, message: `Cleaned up ${result.deletedCount} expired carts`, deletedCount: result.deletedCount });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -1874,11 +1348,7 @@ app.get('/api/cart/expiration', protect, async (req, res) => {
         const cart = await Cart.findOne({ user: req.userId });
         
         if (!cart) {
-            return res.json({
-                success: true,
-                hasCart: false,
-                expiresAt: null
-            });
+            return res.json({ success: true, hasCart: false, expiresAt: null });
         }
         
         const now = new Date();
@@ -1898,9 +1368,6 @@ app.get('/api/cart/expiration', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
-
-
-
 
 // ============================================
 // ORDER ROUTES
@@ -1957,12 +1424,28 @@ app.post('/api/orders', protect, async (req, res) => {
         cart.updatedAt = Date.now();
         await cart.save();
         
+        // Send order confirmation email
+        try {
+            const user = await User.findById(req.userId);
+            if (user && user.email) {
+                // Convert ObjectId to string safely
+                const orderIdString = order._id.toString();
+                const orderIdShort = orderIdString.slice(-8);
+                const orderHtml = getOrderConfirmationEmail(order, user);
+                await sendEmail(user.email, `Order Confirmation #${orderIdShort} 🛍️`, orderHtml);
+                console.log(`Order confirmation email sent to ${user.email}`);
+            }
+        } catch (emailError) {
+            console.error('Failed to send order confirmation:', emailError.message);
+        }
+        
         res.status(201).json({
             success: true,
             message: 'Order created successfully',
             order
         });
     } catch (error) {
+        console.error('Order creation error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -2003,13 +1486,15 @@ app.get('/api/orders/:id', protect, async (req, res) => {
 app.put('/api/orders/:id/status', protect, admin, async (req, res) => {
     try {
         const { status } = req.body;
-        
         const order = await Order.findById(req.params.id);
+        
         if (!order) {
             return res.status(404).json({ success: false, message: 'Order not found' });
         }
         
+        const oldStatus = order.status;
         order.status = status;
+        
         if (status === 'Delivered') {
             order.isDelivered = true;
             order.deliveredAt = Date.now();
@@ -2017,8 +1502,21 @@ app.put('/api/orders/:id/status', protect, admin, async (req, res) => {
         
         await order.save();
         
+        // Send status update email
+        try {
+            const user = await User.findById(order.user);
+            if (user && user.email) {
+                const statusHtml = getOrderStatusUpdateEmail(order, user, oldStatus, status);
+                await sendEmail(user.email, `Order Status Update - ${status} 📦`, statusHtml);
+                console.log(`Status update email sent to ${user.email}`);
+            }
+        } catch (emailError) {
+            console.error('Failed to send status update:', emailError.message);
+        }
+        
         res.json({ success: true, message: 'Order status updated', order });
     } catch (error) {
+        console.error('Update order status error:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
@@ -2028,6 +1526,76 @@ app.get('/api/orders', protect, admin, async (req, res) => {
     try {
         const orders = await Order.find({}).populate('user', 'name email').sort({ createdAt: -1 });
         res.json({ success: true, count: orders.length, orders });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// ORDER ARCHIVE ROUTES
+// ============================================
+
+// Archive/unarchive an order
+app.put('/api/orders/:id/archive', protect, async (req, res) => {
+    try {
+        const { archive } = req.body;
+        const order = await Order.findById(req.params.id);
+        
+        if (!order) {
+            return res.status(404).json({ success: false, message: 'Order not found' });
+        }
+        
+        if (order.user.toString() !== req.userId) {
+            return res.status(403).json({ success: false, message: 'Not authorized' });
+        }
+        
+        order.isArchived = archive;
+        await order.save();
+        
+        res.json({
+            success: true,
+            message: archive ? 'Order archived' : 'Order restored',
+            isArchived: order.isArchived
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Get user's orders with archive filter
+app.get('/api/orders/myorders', protect, async (req, res) => {
+    try {
+        const { showArchived = 'false' } = req.query;
+        let query = { user: req.userId };
+        
+        if (showArchived === 'false') {
+            query.isArchived = false;
+        }
+        
+        const orders = await Order.find(query).sort({ createdAt: -1 });
+        res.json({ success: true, count: orders.length, orders });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Archive all completed orders
+app.post('/api/orders/archive-all', protect, async (req, res) => {
+    try {
+        const result = await Order.updateMany(
+            { 
+                user: req.userId,
+                status: { $in: ['Delivered', 'Cancelled'] },
+                isArchived: false
+            },
+            { $set: { isArchived: true } }
+        );
+        
+        res.json({
+            success: true,
+            message: `${result.modifiedCount} orders archived`,
+            archivedCount: result.modifiedCount
+        });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
@@ -2078,9 +1646,7 @@ app.post('/api/wishlist/add', protect, async (req, res) => {
             wishlist = new Wishlist({ user: req.userId, items: [] });
         }
         
-        const exists = wishlist.items.find(
-            item => item.product.toString() === productId
-        );
+        const exists = wishlist.items.find(item => item.product.toString() === productId);
         
         if (exists) {
             return res.status(400).json({ success: false, message: 'Product already in wishlist' });
@@ -2119,10 +1685,7 @@ app.delete('/api/wishlist/remove/:productId', protect, async (req, res) => {
             return res.status(404).json({ success: false, message: 'Wishlist not found' });
         }
         
-        wishlist.items = wishlist.items.filter(
-            item => item.product.toString() !== productId
-        );
-        
+        wishlist.items = wishlist.items.filter(item => item.product.toString() !== productId);
         wishlist.updatedAt = Date.now();
         await wishlist.save();
         
@@ -2163,10 +1726,7 @@ app.post('/api/addresses', protect, async (req, res) => {
         }
         
         if (isDefault) {
-            await Address.updateMany(
-                { user: req.userId },
-                { $set: { isDefault: false } }
-            );
+            await Address.updateMany({ user: req.userId }, { $set: { isDefault: false } });
         }
         
         const newAddress = new Address({
@@ -2246,17 +1806,8 @@ app.delete('/api/addresses/:id', protect, async (req, res) => {
 // Set default address
 app.put('/api/addresses/:id/default', protect, async (req, res) => {
     try {
-        await Address.updateMany(
-            { user: req.userId },
-            { $set: { isDefault: false } }
-        );
-        
-        const address = await Address.findByIdAndUpdate(
-            req.params.id,
-            { isDefault: true },
-            { new: true }
-        );
-        
+        await Address.updateMany({ user: req.userId }, { $set: { isDefault: false } });
+        const address = await Address.findByIdAndUpdate(req.params.id, { isDefault: true }, { new: true });
         res.json({ success: true, message: 'Default address set', address });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
@@ -2436,6 +1987,167 @@ app.delete('/api/coupons/:id', protect, admin, async (req, res) => {
 });
 
 // ============================================
+// TELEBIRR PAYMENT ROUTES
+// ============================================
+
+const telebirrService = require('./services/telebirrService');
+
+// Initiate Telebirr payment
+app.post('/api/telebirr/initiate', protect, async (req, res) => {
+    try {
+        const { orderId, amount, subject } = req.body;
+
+        if (!telebirrService.isAvailable()) {
+            return res.status(400).json({ 
+                success: false, 
+                message: 'Telebirr service not configured. Please check credentials.' 
+            });
+        }
+
+        const result = await telebirrService.initiatePayment(
+            orderId,
+            amount,
+            subject,
+            `${process.env.TELEBIRR_RETURN_URL}`,
+            `${process.env.TELEBIRR_NOTIFY_URL}`
+        );
+
+        await Order.findByIdAndUpdate(orderId, {
+            'paymentDetails.outTradeNo': result.outTradeNo
+        });
+
+        res.json({
+            success: true,
+            toPayUrl: result.toPayUrl,
+            outTradeNo: result.outTradeNo,
+            message: 'Payment initiated successfully'
+        });
+    } catch (error) {
+        console.error('Telebirr initiation error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Telebirr payment notification webhook
+app.post('/api/telebirr/notify', async (req, res) => {
+    try {
+        const notification = req.body;
+        console.log('Telebirr notification received:', notification);
+        
+        if (notification.resultCode === '0' || notification.code === '0') {
+            const { outTradeNo, tradeNo } = notification;
+            
+            await Order.findOneAndUpdate(
+                { 'paymentDetails.outTradeNo': outTradeNo },
+                { 
+                    paymentStatus: 'paid',
+                    isPaid: true,
+                    paidAt: new Date(),
+                    transactionId: tradeNo,
+                    'paymentDetails.referenceNumber': tradeNo
+                }
+            );
+            
+            console.log(`✅ Payment confirmed for order: ${outTradeNo}`);
+        }
+
+        res.json({ code: 0, message: 'success' });
+    } catch (error) {
+        console.error('Telebirr notification error:', error);
+        res.status(500).json({ code: 1, message: error.message });
+    }
+});
+
+// Telebirr return URL (after payment)
+app.get('/api/telebirr/return', async (req, res) => {
+    const { outTradeNo, tradeNo, resultCode } = req.query;
+    
+    console.log('Telebirr return:', { outTradeNo, tradeNo, resultCode });
+    
+    if (resultCode === '0') {
+        await Order.findOneAndUpdate(
+            { 'paymentDetails.outTradeNo': outTradeNo },
+            { 
+                paymentStatus: 'paid',
+                isPaid: true,
+                paidAt: new Date(),
+                transactionId: tradeNo
+            }
+        );
+    }
+    
+    res.redirect(`${process.env.FRONTEND_URL || 'http://localhost:3000'}/orders?payment=${resultCode === '0' ? 'success' : 'failed'}`);
+});
+
+// ============================================
+// IMAGE UPLOAD ROUTES
+// ============================================
+
+// Upload single image
+app.post('/api/upload', protect, admin, upload.single('image'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+        
+        const imageUrl = `${req.protocol}://${req.get('host')}/uploads/${req.file.filename}`;
+        
+        res.json({
+            success: true,
+            message: 'Image uploaded successfully',
+            imageUrl: imageUrl
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Upload multiple images
+app.post('/api/upload-multiple', protect, admin, upload.array('images', 5), async (req, res) => {
+    try {
+        if (!req.files || req.files.length === 0) {
+            return res.status(400).json({ success: false, message: 'No files uploaded' });
+        }
+        
+        const imageUrls = req.files.map(file => {
+            return `${req.protocol}://${req.get('host')}/uploads/${file.filename}`;
+        });
+        
+        res.json({
+            success: true,
+            message: 'Images uploaded successfully',
+            imageUrls: imageUrls
+        });
+    } catch (error) {
+        console.error('Upload error:', error);
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
+// SITEMAP GENERATION
+// ============================================
+
+const sitemapService = require('./services/sitemapService');
+
+app.get('/api/generate-sitemap', async (req, res) => {
+    try {
+        const products = await Product.find({});
+        const categories = await Product.distinct('category');
+        const sitemap = sitemapService.generateSitemap(products, categories);
+        
+        res.json({
+            success: true,
+            message: 'Sitemap generated successfully',
+            sitemapUrl: '/sitemap.xml'
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// ============================================
 // DASHBOARD STATS (Admin only)
 // ============================================
 app.get('/api/admin/stats', protect, admin, async (req, res) => {
@@ -2465,6 +2177,17 @@ app.get('/api/admin/stats', protect, admin, async (req, res) => {
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
+});
+
+// ============================================
+// CRON JOB FOR CART CLEANUP
+// ============================================
+const cron = require('node-cron');
+
+cron.schedule('0 0 * * *', async () => {
+    console.log('Running cart cleanup...');
+    const result = await Cart.deleteMany({ expiresAt: { $lt: new Date() } });
+    console.log(`Cleaned up ${result.deletedCount} expired carts`);
 });
 
 // ============================================
@@ -2523,5 +2246,9 @@ app.listen(PORT, () => {
     console.log(`   PUT  /api/addresses/:id/default`);
     console.log(`\n📊 ADMIN:`);
     console.log(`   GET  /api/admin/stats`);
+    console.log(`\n📧 EMAIL NOTIFICATIONS:`);
+    console.log(`   ✅ Welcome emails on registration`);
+    console.log(`   ✅ Order confirmation emails`);
+    console.log(`   ✅ Order status update emails`);
     console.log(`=================================\n`);
 });
