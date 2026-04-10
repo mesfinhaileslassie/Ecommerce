@@ -1,0 +1,3 @@
+name,description,price,category,countInStock,imageUrl,rating,isFeatured,hasSizes
+Test Product 1,Description for test product 1,29.99,Electronics,5,https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=600&h=600&fit=crop,4.5,No,No
+Test Product 2,Description for test product 2,39.99,Clothing,10,https://images.unsplash.com/photo-1523381210434-271e8be1f52b?w=600&h=600&fit=crop,4.0,Yes,Yes

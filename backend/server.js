@@ -725,7 +725,7 @@ app.post('/api/auth/google', async (req, res) => {
 // PRODUCT ROUTES
 // ============================================
 
-// Get all products with search, filter, and sort
+// Get all products with search, filter, and sort - NO LIMIT
 app.get('/api/products', async (req, res) => {
     try {
         const { 
@@ -735,9 +735,7 @@ app.get('/api/products', async (req, res) => {
             maxPrice, 
             rating,
             sortBy = 'createdAt',
-            order = 'desc',
-            page = 1,
-            limit = 12
+            order = 'desc'
         } = req.query;
         
         let query = {};
@@ -778,27 +776,25 @@ app.get('/api/products', async (req, res) => {
                 sortObject.createdAt = -1;
         }
         
-        const skip = (parseInt(page) - 1) * parseInt(limit);
-        
-        const products = await Product.find(query)
-            .sort(sortObject)
-            .skip(skip)
-            .limit(parseInt(limit));
-        
+        // REMOVE pagination - get ALL products
+        const products = await Product.find(query).sort(sortObject);
         const total = await Product.countDocuments(query);
         
         res.json({
             success: true,
             products,
             total,
-            page: parseInt(page),
-            pages: Math.ceil(total / parseInt(limit)),
             filters: { keyword, category, minPrice, maxPrice, rating, sortBy, order }
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+
+
+
 
 // Get categories
 app.get('/api/categories', async (req, res) => {
@@ -1082,37 +1078,57 @@ app.get('/api/admin/export-products', protect, admin, async (req, res) => {
     }
 });
 
+
+
+
 // Import products from CSV
 app.post('/api/admin/import-products', protect, admin, uploadCSV.single('file'), async (req, res) => {
     try {
+        console.log('=== IMPORT STARTED ===');
+        console.log('File received:', req.file ? 'Yes' : 'No');
+        
         if (!req.file) {
+            console.log('No file uploaded');
             return res.status(400).json({ success: false, message: 'No file uploaded' });
         }
         
+        console.log('File name:', req.file.originalname);
+        console.log('File size:', req.file.size);
+        
         const csvContent = req.file.buffer.toString();
+        console.log('CSV content preview:', csvContent.substring(0, 500));
+        
         const products = await CSVService.parseProductsCSV(csvContent);
+        console.log('Parsed products count:', products.length);
         
         let imported = 0;
         let updated = 0;
         let errors = [];
         
         for (const productData of products) {
+            console.log('Processing product:', productData.name);
             try {
                 const existingProduct = await Product.findOne({ name: productData.name });
                 
                 if (existingProduct) {
                     await Product.findByIdAndUpdate(existingProduct._id, productData);
                     updated++;
+                    console.log(`Updated: ${productData.name}`);
                 } else {
                     const slug = productData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
                     const newProduct = new Product({ ...productData, slug });
                     await newProduct.save();
                     imported++;
+                    console.log(`Imported: ${productData.name}`);
                 }
             } catch (error) {
+                console.error(`Error with product ${productData.name}:`, error.message);
                 errors.push({ name: productData.name, error: error.message });
             }
         }
+        
+        console.log('=== IMPORT COMPLETE ===');
+        console.log(`Imported: ${imported}, Updated: ${updated}, Failed: ${errors.length}`);
         
         res.json({
             success: true,
@@ -1122,9 +1138,12 @@ app.post('/api/admin/import-products', protect, admin, uploadCSV.single('file'),
             errors
         });
     } catch (error) {
+        console.error('IMPORT ERROR:', error);
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
 
 // Export orders to CSV
 app.get('/api/admin/export-orders', protect, admin, async (req, res) => {

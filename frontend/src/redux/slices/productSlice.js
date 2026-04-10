@@ -65,10 +65,13 @@ export const fetchProducts = (queryString = '') => async (dispatch) => {
     try {
         dispatch(fetchProductsStart());
         const url = queryString ? `/products?${queryString}` : '/products';
+        console.log('Fetching products from:', url);
         const { data } = await api.get(url);
-        dispatch(fetchProductsSuccess(data.products));
+        console.log('Products received:', data.products?.length);
+        dispatch(fetchProductsSuccess(data.products || []));
         return data;
     } catch (error) {
+        console.error('Fetch products error:', error);
         dispatch(fetchProductsFailure(error.response?.data?.message || 'Failed to fetch products'));
     }
 };
