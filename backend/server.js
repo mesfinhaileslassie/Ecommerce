@@ -1531,6 +1531,78 @@ app.get('/api/orders', protect, admin, async (req, res) => {
     }
 });
 
+
+
+// Get all orders with pagination (Admin only)
+app.get('/api/orders/admin', protect, admin, async (req, res) => {
+    try {
+        const page = parseInt(req.query.page) || 1;
+        const limit = parseInt(req.query.limit) || 20;
+        const skip = (page - 1) * limit;
+        const status = req.query.status;
+        const search = req.query.search;
+        const startDate = req.query.startDate;
+        const endDate = req.query.endDate;
+        const quickFilter = req.query.quickFilter;
+        
+        let query = {};
+        
+        if (status && status !== 'All') {
+            query.status = status;
+        }
+        
+        if (search) {
+            query.$or = [
+                { _id: { $regex: search, $options: 'i' } },
+                { 'user.name': { $regex: search, $options: 'i' } },
+                { 'user.email': { $regex: search, $options: 'i' } }
+            ];
+        }
+        
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate);
+        }
+        
+        if (quickFilter === 'today') {
+            const today = new Date();
+            today.setHours(0, 0, 0, 0);
+            query.createdAt = { $gte: today };
+        } else if (quickFilter === 'week') {
+            const weekAgo = new Date();
+            weekAgo.setDate(weekAgo.getDate() - 7);
+            query.createdAt = { $gte: weekAgo };
+        } else if (quickFilter === 'month') {
+            const monthAgo = new Date();
+            monthAgo.setMonth(monthAgo.getMonth() - 1);
+            query.createdAt = { $gte: monthAgo };
+        } else if (quickFilter === 'pending') {
+            query.status = 'Pending';
+        }
+        
+        const orders = await Order.find(query)
+            .populate('user', 'name email')
+            .sort({ createdAt: -1 })
+            .skip(skip)
+            .limit(limit);
+        
+        const total = await Order.countDocuments(query);
+        
+        res.json({
+            success: true,
+            orders,
+            total,
+            page,
+            pages: Math.ceil(total / limit)
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
 // ============================================
 // ORDER ARCHIVE ROUTES
 // ============================================
