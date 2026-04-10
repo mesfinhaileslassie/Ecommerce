@@ -4,6 +4,8 @@ import { fetchProducts, deleteProduct } from '../../redux/slices/productSlice';
 import { FaEdit, FaTrash, FaPlus, FaStar, FaRegStar, FaImage, FaBoxes, FaTimes, FaUpload, FaSpinner } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 import api from '../../services/api';
+import BulkOperations from '../../components/Admin/BulkOperations';
+
 
 // Predefined size options
 const SIZE_OPTIONS = [
@@ -264,6 +266,8 @@ const AdminProductsPage = () => {
                     <FaPlus /> Add Product
                 </button>
             </div>
+
+                <BulkOperations onComplete={() => dispatch(fetchProducts())} />
 
             <div style={styles.tableContainer}>
                 <table style={styles.table}>

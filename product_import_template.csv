@@ -1,0 +1,3 @@
+name,description,price,category,countInStock,imageUrl,rating,isFeatured,hasSizes,sizes
+iPhone 15 Pro,Latest iPhone with A17 Pro chip,999.99,Electronics,10,,0,Yes,No,
+Nike Air Max,Comfortable running shoes,129.99,Clothing,25,,0,Yes,Yes,"[{""size"":""M"",""price"":129.99,""countInStock"":10},{""size"":""L"",""price"":129.99,""countInStock"":15}]"

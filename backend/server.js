@@ -1056,6 +1056,135 @@ app.get('/api/products/recently-viewed', protect, async (req, res) => {
     }
 });
 
+
+
+
+
+// ============================================
+// CSV IMPORT/EXPORT ROUTES
+// ============================================
+
+const CSVService = require('./services/csvService');
+// multer is already required at the top - no need to require again
+const uploadCSV = multer({ storage: multer.memoryStorage() });
+
+// Export products to CSV
+app.get('/api/admin/export-products', protect, admin, async (req, res) => {
+    try {
+        const products = await Product.find({});
+        const csv = CSVService.exportProductsToCSV(products);
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=products_${Date.now()}.csv`);
+        res.send(csv);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Import products from CSV
+app.post('/api/admin/import-products', protect, admin, uploadCSV.single('file'), async (req, res) => {
+    try {
+        if (!req.file) {
+            return res.status(400).json({ success: false, message: 'No file uploaded' });
+        }
+        
+        const csvContent = req.file.buffer.toString();
+        const products = await CSVService.parseProductsCSV(csvContent);
+        
+        let imported = 0;
+        let updated = 0;
+        let errors = [];
+        
+        for (const productData of products) {
+            try {
+                const existingProduct = await Product.findOne({ name: productData.name });
+                
+                if (existingProduct) {
+                    await Product.findByIdAndUpdate(existingProduct._id, productData);
+                    updated++;
+                } else {
+                    const slug = productData.name.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+                    const newProduct = new Product({ ...productData, slug });
+                    await newProduct.save();
+                    imported++;
+                }
+            } catch (error) {
+                errors.push({ name: productData.name, error: error.message });
+            }
+        }
+        
+        res.json({
+            success: true,
+            message: `Import complete: ${imported} new, ${updated} updated, ${errors.length} failed`,
+            imported,
+            updated,
+            errors
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Export orders to CSV
+app.get('/api/admin/export-orders', protect, admin, async (req, res) => {
+    try {
+        const { startDate, endDate, status } = req.query;
+        let query = {};
+        
+        if (startDate || endDate) {
+            query.createdAt = {};
+            if (startDate) query.createdAt.$gte = new Date(startDate);
+            if (endDate) query.createdAt.$lte = new Date(endDate);
+        }
+        
+        if (status && status !== 'All') {
+            query.status = status;
+        }
+        
+        const orders = await Order.find(query).populate('user', 'name email');
+        const csv = CSVService.exportOrdersToCSV(orders);
+        
+        res.setHeader('Content-Type', 'text/csv');
+        res.setHeader('Content-Disposition', `attachment; filename=orders_${Date.now()}.csv`);
+        res.send(csv);
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+// Bulk update inventory
+app.post('/api/admin/bulk-inventory', protect, admin, async (req, res) => {
+    try {
+        const { updates } = req.body;
+        
+        let updated = 0;
+        let errors = [];
+        
+        for (const update of updates) {
+            try {
+                await Product.findByIdAndUpdate(update.productId, { countInStock: update.countInStock });
+                updated++;
+            } catch (error) {
+                errors.push({ productId: update.productId, error: error.message });
+            }
+        }
+        
+        res.json({
+            success: true,
+            message: `Updated ${updated} products, ${errors.length} failed`,
+            updated,
+            errors
+        });
+    } catch (error) {
+        res.status(500).json({ success: false, message: error.message });
+    }
+});
+
+
+
+
+
 // ============================================
 // REVIEW ROUTES
 // ============================================
@@ -1111,6 +1240,11 @@ app.get('/api/products/:id/reviews', async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
+
+
+
 
 // ============================================
 // CART ROUTES

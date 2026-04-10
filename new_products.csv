@@ -1,0 +1,16 @@
+name,description,price,category,countInStock,imageUrl,rating,isFeatured,hasSizes
+DJI Mini 4 Pro Drone,Ultra-lightweight foldable drone with 4K HDR video and 48MP camera,759.99,Electronics,15,https://images.unsplash.com/photo-1507582020474-9a35b7d455d9?w=600&h=600&fit=crop,4.8,Yes,No
+Kindle Paperwhite,Waterproof e-reader with 6.8" glare-free display and weeks of battery life,139.99,Electronics,50,https://images.unsplash.com/photo-1544716278-ca5e3f4abd8c?w=600&h=600&fit=crop,4.7,Yes,No
+Logitech MX Master 3S,Advanced wireless mouse with 8K DPI tracking and silent clicks,99.99,Electronics,40,https://images.unsplash.com/photo-1615663245857-ac93bb7c39e7?w=600&h=600&fit=crop,4.6,No,No
+Columbia Winter Jacket,Water-resistant insulated winter jacket with thermal reflective lining,159.99,Clothing,30,https://images.unsplash.com/photo-1539533113208-f6df8cc8b543?w=600&h=600&fit=crop,4.5,Yes,Yes
+Crocs Classic Clogs,Lightweight and comfortable foam clogs for casual wear,49.99,Clothing,100,https://images.unsplash.com/photo-1600185365926-3a2ce3cdb9eb?w=600&h=600&fit=crop,4.3,No,Yes
+Levi's Denim Shorts,Classic denim shorts with rolled hem and five-pocket styling,59.99,Clothing,60,https://images.unsplash.com/photo-1591195853828-11db59d44d6b?w=600&h=600&fit=crop,4.4,No,Yes
+Air Fryer 5.8Qt,Healthy oil-free cooking with 8 preset functions and rapid air circulation,119.99,Home,35,https://images.unsplash.com/photo-1603808033192-082d6919d3e1?w=600&h=600&fit=crop,4.7,Yes,No
+Robot Vacuum Cleaner,Smart mapping laser navigation with 3000Pa suction and app control,299.99,Home,20,https://images.unsplash.com/photo-1604334821341-1f5071a0b07a?w=600&h=600&fit=crop,4.6,Yes,No
+Cast Iron Skillet 12",Pre-seasoned cast iron skillet with even heat distribution,39.99,Home,45,https://images.unsplash.com/photo-1584990347449-b135f8f34f68?w=600&h=600&fit=crop,4.8,No,No
+Electric Toothbrush,Sonic cleaning with 5 modes and 4-week battery life,79.99,Other,55,https://images.unsplash.com/photo-1607613009820-a29f7bb81c04?w=600&h=600&fit=crop,4.5,Yes,No
+Hair Dryer Professional,Ionic technology with 1800W and 3 heat settings for fast drying,89.99,Other,40,https://images.unsplash.com/photo-1522338140262-f46f5913618a?w=600&h=600&fit=crop,4.4,No,No
+Beard Trimmer Kit,20-length adjustable trimmer with stainless steel blades and 120min runtime,49.99,Other,70,https://images.unsplash.com/photo-1621605815971-fbc98d665033?w=600&h=600&fit=crop,4.3,No,No
+Resistance Bands Set,5-piece resistance band set with door anchor and handles,29.99,Sports,80,https://images.unsplash.com/photo-1598289431512-b97b0917affc?w=600&h=600&fit=crop,4.6,No,No
+Jump Rope Adjustable,Speeds jump rope with ball bearings and foam handles for smooth rotation,14.99,Sports,120,https://images.unsplash.com/photo-1574680178050-55c6a6a96e0a?w=600&h=600&fit=crop,4.5,No,No
+Gym Bag 45L,Water-resistant duffel bag with shoe compartment and wet pocket,39.99,Sports,50,https://images.unsplash.com/photo-1553062407-98eeb64c6a62?w=600&h=600&fit=crop,4.4,No,No
