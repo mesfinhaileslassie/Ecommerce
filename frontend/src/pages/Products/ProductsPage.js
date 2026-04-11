@@ -288,10 +288,10 @@ const ProductsPage = () => {
                                 <button 
                                     onClick={handleLoadMore}
                                     disabled={isLoadingMore}
-                                    style={styles.loadMoreBtn}
+                                    style={styles.viewMoreBtn}
                                 >
                                     {isLoadingMore ? <FaSpinner style={styles.spinnerIcon} /> : null}
-                                    {isLoadingMore ? 'Loading...' : `Load More (${products.length - displayLimit} remaining)`}
+                                    {isLoadingMore ? 'Loading...' : 'View More'}
                                 </button>
                             </div>
                         )}
@@ -513,7 +513,7 @@ const styles = {
         justifyContent: 'center',
         marginTop: '40px',
     },
-    loadMoreBtn: {
+    viewMoreBtn: {
         display: 'flex',
         alignItems: 'center',
         justifyContent: 'center',

@@ -5,12 +5,20 @@ import { fetchProducts } from '../../redux/slices/productSlice';
 import ProductCard from '../../components/Products/ProductCard';
 import ProductRecommendations from '../../components/Products/ProductRecommendations';
 import HelmetSEO from '../../components/SEO/HelmetSEO';
+import { FaArrowRight } from 'react-icons/fa';
 
 const HomePage = () => {
     const dispatch = useDispatch();
     const { products, loading } = useSelector((state) => state.products);
     const { user } = useSelector((state) => state.auth);
+    
+    // Get different product categories
     const featuredProducts = products.filter(p => p.isFeatured).slice(0, 4);
+    const electronicsProducts = products.filter(p => p.category === 'Electronics').slice(0, 4);
+    const clothingProducts = products.filter(p => p.category === 'Clothing').slice(0, 4);
+    const homeProducts = products.filter(p => p.category === 'Home').slice(0, 4);
+    const booksProducts = products.filter(p => p.category === 'Books').slice(0, 4);
+    const sportsProducts = products.filter(p => p.category === 'Sports').slice(0, 4);
 
     useEffect(() => {
         dispatch(fetchProducts());
@@ -25,11 +33,39 @@ const HomePage = () => {
         );
     }
 
+    // Section Component for reusability
+    const ProductSection = ({ title, products, viewAllLink, bgColor = '#fff' }) => {
+    if (products.length === 0) return null;
+    
+    return (
+        <div className="section" style={{ backgroundColor: bgColor }}>
+            <div className="container">
+                <div style={styles.sectionHeader}>
+                    <div>
+                        <h2 className="section-title" style={{ textAlign: 'left', marginBottom: '0' }}>{title}</h2>
+                        <p className="section-subtitle" style={{ textAlign: 'left', marginTop: '5px' }}>Discover our best selection</p>
+                    </div>
+                    {viewAllLink && (
+                        <Link to={viewAllLink} style={styles.viewAllBtn}>
+                            View More <FaArrowRight style={{ marginLeft: '5px' }} />
+                        </Link>
+                    )}
+                </div>
+                <div className="products-grid">
+                    {products.map(product => (
+                        <ProductCard key={product._id} product={product} />
+                    ))}
+                </div>
+            </div>
+        </div>
+    );
+};
+
     return (
         <>
             <HelmetSEO 
-                title="E-Shop - Best Online Shopping Store in Ethiopia"
-                description="Shop the latest electronics, fashion, books, home goods and more at E-Shop. ✓ Free shipping on orders over $50 ✓ Secure payment ✓ Best prices ✓ Fast delivery in Ethiopia"
+                title="Habesha Gebeya - Best Online Shopping Store in Ethiopia"
+                description="Shop the latest electronics, fashion, books, home goods and more at Habesha Gebeya. ✓ Free shipping on orders over $50 ✓ Secure payment ✓ Best prices ✓ Fast delivery in Ethiopia"
                 keywords="online shopping Ethiopia, buy online, electronics, clothing, books, home goods, best deals, Ethiopian e-commerce"
                 type="website"
             />
@@ -38,7 +74,8 @@ const HomePage = () => {
                 {/* Full Width Hero Section */}
                 <div className="home-hero-fullwidth">
                     <div className="home-hero-fullwidth-overlay"></div>
-                    <div className="home-hero-fullwidth-content"><h1 className="home-hero-fullwidth-title">እንኳን ወደ Habesha Gebeya በደህና መጡ!</h1><h1 className="home-hero-fullwidth-title">Welcome to Habesha Market</h1>
+                    <div className="home-hero-fullwidth-content">
+                        <h1 className="home-hero-fullwidth-title">Welcome to Habesha Gebeya</h1>
                         <p className="home-hero-fullwidth-subtitle">Discover amazing products at unbeatable prices</p>
                         <Link to="/products" className="home-hero-fullwidth-btn">
                             Shop Now →
@@ -81,22 +118,64 @@ const HomePage = () => {
                     limit={4} 
                 />
 
-                {/* Featured Products */}
+                {/* Featured Products Section */}
                 {featuredProducts.length > 0 && (
-                    <div className="section">
-                        <div className="container">
-                            <h2 className="section-title">Featured Products</h2>
-                            <p className="section-subtitle">Our handpicked selection just for you</p>
-                            <div className="products-grid">
-                                {featuredProducts.map(product => (
-                                    <ProductCard key={product._id} product={product} />
-                                ))}
-                            </div>
-                        </div>
-                    </div>
+                    <ProductSection 
+                        title="Featured Products" 
+                        products={featuredProducts} 
+                        viewAllLink="/products?category=All"
+                    />
                 )}
 
-                {/* Top Rated Products */}
+                {/* Electronics Section */}
+                {electronicsProducts.length > 0 && (
+                    <ProductSection 
+                        title="Electronics" 
+                        products={electronicsProducts} 
+                        viewAllLink="/products?category=Electronics"
+                        bgColor="#f8fafc"
+                    />
+                )}
+
+                {/* Clothing Section */}
+                {clothingProducts.length > 0 && (
+                    <ProductSection 
+                        title="Clothing & Fashion" 
+                        products={clothingProducts} 
+                        viewAllLink="/products?category=Clothing"
+                    />
+                )}
+
+                {/* Home & Living Section */}
+                {homeProducts.length > 0 && (
+                    <ProductSection 
+                        title="Home & Living" 
+                        products={homeProducts} 
+                        viewAllLink="/products?category=Home"
+                        bgColor="#f8fafc"
+                    />
+                )}
+
+                {/* Books Section */}
+                {booksProducts.length > 0 && (
+                    <ProductSection 
+                        title="Books" 
+                        products={booksProducts} 
+                        viewAllLink="/products?category=Books"
+                    />
+                )}
+
+                {/* Sports Section */}
+                {sportsProducts.length > 0 && (
+                    <ProductSection 
+                        title="Sports & Outdoors" 
+                        products={sportsProducts} 
+                        viewAllLink="/products?category=Sports"
+                        bgColor="#f8fafc"
+                    />
+                )}
+
+                {/* Top Rated Products Section */}
                 <ProductRecommendations 
                     type="top-rated" 
                     title="Top Rated Products" 
@@ -111,22 +190,32 @@ const HomePage = () => {
                         limit={4} 
                     />
                 )}
-
-                {/* All Products */}
-                <div className="section">
-                    <div className="container">
-                        <h2 className="section-title">All Products</h2>
-                        <p className="section-subtitle">Browse our complete collection</p>
-                        <div className="products-grid">
-                            {products.map(product => (
-                                <ProductCard key={product._id} product={product} />
-                            ))}
-                        </div>
-                    </div>
-                </div>
             </div>
         </>
     );
+};
+
+const styles = {
+    sectionHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '30px',
+        flexWrap: 'wrap',
+        gap: '15px',
+    },
+    viewMoreBtn: {
+    display: 'inline-flex',
+    alignItems: 'center',
+    padding: '10px 20px',
+    backgroundColor: '#6366f1',
+    color: '#fff',
+    textDecoration: 'none',
+    borderRadius: '8px',
+    fontSize: '14px',
+    fontWeight: '500',
+    transition: 'all 0.3s',
+},
 };
 
 // Inject CSS Styles for Full Width Hero
@@ -281,6 +370,12 @@ styleSheet.textContent = `
         gap: 2rem;
     }
     
+    /* View All Button Hover */
+    .view-all-btn:hover {
+        background-color: #4f46e5;
+        transform: translateY(-2px);
+    }
+    
     /* Spinner */
     .spinner {
         width: 40px;
@@ -329,6 +424,11 @@ styleSheet.textContent = `
         
         .products-grid {
             gap: 1rem;
+        }
+        
+        .section-header {
+            flex-direction: column;
+            text-align: center;
         }
     }
     
