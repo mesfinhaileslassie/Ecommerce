@@ -8,27 +8,25 @@ const ThemeToggle = () => {
     return (
         <button
             onClick={toggleDarkMode}
-            style={styles.button}
+            style={{
+                background: darkMode ? '#374151' : '#e5e7eb',
+                border: 'none',
+                cursor: 'pointer',
+                color: darkMode ? '#fbbf24' : '#4f46e5',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                padding: '8px',
+                borderRadius: '50%',
+                transition: 'all 0.3s',
+                width: '36px',
+                height: '36px',
+            }}
             aria-label="Toggle dark mode"
         >
             {darkMode ? <FaSun size={18} /> : <FaMoon size={18} />}
         </button>
     );
-};
-
-const styles = {
-    button: {
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        color: '#fff',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        padding: '8px',
-        borderRadius: '50%',
-        transition: 'background-color 0.3s',
-    },
 };
 
 export default ThemeToggle;
