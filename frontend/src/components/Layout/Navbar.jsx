@@ -32,8 +32,7 @@ const Navbar = () => {
             <div style={styles.container}>
                 <Link to="/" style={styles.logo} onClick={closeMenu}>
                     <span style={styles.logoIcon}>🛍️</span>
-                   <span style={styles.logoText}>Habesha Market</span>
-                </Link>
+                   <span style={styles.logoText}>Habesha Gebeya</span>                </Link>
 
                 <button 
                     onClick={() => setIsMenuOpen(!isMenuOpen)} 

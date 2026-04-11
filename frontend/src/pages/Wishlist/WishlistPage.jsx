@@ -75,7 +75,7 @@ const WishlistPage = () => {
 
     const shareOnTelegram = () => {
     const url = getShareableLink();
-    const text = `Check out my wishlist on Habesha Market! I have ${items.length} items saved.`;
+    const text = `Check out my wishlist on Habesha Gebeya! I have ${items.length} items saved.`;
     const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
     window.open(shareUrl, '_blank', 'width=600,height=400');
     };
