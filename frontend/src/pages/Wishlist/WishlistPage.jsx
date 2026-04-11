@@ -4,13 +4,15 @@ import { Link } from 'react-router-dom';
 import { fetchWishlist, removeFromWishlist } from '../../redux/slices/wishlistSlice';
 import { addToCart } from '../../redux/slices/cartSlice';
 import { fetchCart } from '../../redux/slices/cartSlice';
-import { FaHeart, FaShoppingCart, FaTrash, FaSpinner } from 'react-icons/fa';
+import { FaHeart, FaShoppingCart, FaTrash, FaSpinner, FaShare, FaFacebook, FaTwitter, FaWhatsapp, FaTelegram, FaEnvelope, FaCopy } from 'react-icons/fa';
 import toast from 'react-hot-toast';
 
 const WishlistPage = () => {
     const dispatch = useDispatch();
     const { items, itemCount, loading } = useSelector((state) => state.wishlist);
     const { user } = useSelector((state) => state.auth);
+    const [showShareModal, setShowShareModal] = React.useState(false);
+    const [copied, setCopied] = React.useState(false);
 
     useEffect(() => {
         if (user) {
@@ -34,7 +36,6 @@ const WishlistPage = () => {
         }
         
         try {
-            // Check if product has sizes
             if (product.hasSizes && product.sizes && product.sizes.length > 0) {
                 toast.error('Please select a size from product page');
                 return;
@@ -46,6 +47,71 @@ const WishlistPage = () => {
         } catch (error) {
             toast.error('Failed to add to cart');
         }
+    };
+
+    // Share Wishlist Functionality
+    const getShareableLink = () => {
+        const wishlistData = {
+            items: items.map(item => ({
+                name: item.product?.name,
+                price: item.product?.price,
+                category: item.product?.category
+            })),
+            user: user?.name,
+            totalItems: items.length
+        };
+        
+        // Encode the wishlist data to base64
+        const encodedData = btoa(JSON.stringify(wishlistData));
+        return `${window.location.origin}/shared-wishlist?data=${encodedData}`;
+    };
+
+    const shareOnFacebook = () => {
+        const url = getShareableLink();
+        const shareUrl = `https://www.facebook.com/sharer/sharer.php?u=${encodeURIComponent(url)}`;
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+    };
+
+
+    const shareOnTelegram = () => {
+    const url = getShareableLink();
+    const text = `Check out my wishlist on Habesha Market! I have ${items.length} items saved.`;
+    const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(url)}&text=${encodeURIComponent(text)}`;
+    window.open(shareUrl, '_blank', 'width=600,height=400');
+    };
+    
+
+
+
+
+
+    const shareOnTwitter = () => {
+        const url = getShareableLink();
+        const text = `Check out my wishlist on Habesha Market! I have ${items.length} items saved.`;
+        const shareUrl = `https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`;
+        window.open(shareUrl, '_blank', 'width=600,height=400');
+    };
+
+    const shareOnWhatsApp = () => {
+        const url = getShareableLink();
+        const text = `Check out my wishlist on Habesha Market! I have ${items.length} items saved. ${url}`;
+        const shareUrl = `https://wa.me/?text=${encodeURIComponent(text)}`;
+        window.open(shareUrl, '_blank');
+    };
+
+    const shareViaEmail = () => {
+        const url = getShareableLink();
+        const subject = `My Wishlist on Habesha Market`;
+        const body = `Check out my wishlist! I have ${items.length} items saved.\n\nView my wishlist here: ${url}`;
+        window.location.href = `mailto:?subject=${encodeURIComponent(subject)}&body=${encodeURIComponent(body)}`;
+    };
+
+    const copyToClipboard = async () => {
+        const url = getShareableLink();
+        await navigator.clipboard.writeText(url);
+        setCopied(true);
+        toast.success('Wishlist link copied to clipboard!');
+        setTimeout(() => setCopied(false), 2000);
     };
 
     if (!user) {
@@ -67,7 +133,6 @@ const WishlistPage = () => {
         );
     }
 
-    // Filter out any null or undefined items
     const validItems = items?.filter(item => item && item.product) || [];
 
     if (validItems.length === 0) {
@@ -83,7 +148,14 @@ const WishlistPage = () => {
 
     return (
         <div style={styles.container}>
-            <h1 style={styles.title}>My Wishlist</h1>
+            <div style={styles.header}>
+                <h1 style={styles.title}>My Wishlist</h1>
+                <div style={styles.headerActions}>
+                    <button onClick={() => setShowShareModal(true)} style={styles.shareBtn}>
+                        <FaShare /> Share Wishlist
+                    </button>
+                </div>
+            </div>
             <p style={styles.subtitle}>{validItems.length} item{validItems.length !== 1 ? 's' : ''} saved</p>
             
             <div style={styles.wishlistGrid}>
@@ -129,6 +201,54 @@ const WishlistPage = () => {
                     );
                 })}
             </div>
+
+            {/* Share Modal */}
+            {showShareModal && (
+                <div style={styles.modal}>
+                    <div style={styles.modalContent}>
+                        <div style={styles.modalHeader}>
+                            <h2>Share Your Wishlist</h2>
+                            <button onClick={() => setShowShareModal(false)} style={styles.closeBtn}>×</button>
+                        </div>
+                        
+                        <div style={styles.shareOptions}>
+                            <button onClick={shareOnFacebook} style={styles.facebookBtn}>
+                                <FaFacebook /> Facebook
+                            </button>
+                            <button onClick={shareOnTwitter} style={styles.twitterBtn}>
+                                <FaTwitter /> Twitter
+                            </button>
+                            <button onClick={shareOnWhatsApp} style={styles.whatsappBtn}>
+                                <FaWhatsapp /> WhatsApp
+                            </button>
+                            <button onClick={shareViaEmail} style={styles.emailBtn}>
+                                <FaEnvelope /> Email
+                            </button>
+
+                            <button onClick={shareOnTelegram} style={styles.telegramBtn}>
+                                <FaTelegram /> Telegram
+                            </button>
+
+                            <button onClick={copyToClipboard} style={styles.copyBtn}>
+                                <FaCopy /> {copied ? 'Copied!' : 'Copy Link'}
+                            </button>
+                        </div>
+                        
+                        <div style={styles.shareLinkContainer}>
+                            <input 
+                                type="text" 
+                                value={getShareableLink()} 
+                                readOnly 
+                                style={styles.shareLinkInput}
+                            />
+                        </div>
+                        
+                        <p style={styles.shareNote}>
+                            Share this link with friends and family to show them your favorite items!
+                        </p>
+                    </div>
+                </div>
+            )}
         </div>
     );
 };
@@ -139,10 +259,33 @@ const styles = {
         margin: '0 auto',
         padding: '20px',
     },
+    header: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '10px',
+        flexWrap: 'wrap',
+        gap: '15px',
+    },
     title: {
         fontSize: '2rem',
-        marginBottom: '10px',
         color: '#333',
+        margin: 0,
+    },
+    headerActions: {
+        display: 'flex',
+        gap: '10px',
+    },
+    shareBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        gap: '8px',
+        padding: '10px 20px',
+        backgroundColor: '#6366f1',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '0.5rem',
+        cursor: 'pointer',
     },
     subtitle: {
         color: '#666',
@@ -225,6 +368,138 @@ const styles = {
         backgroundColor: '#ccc',
         cursor: 'not-allowed',
     },
+    modal: {
+        position: 'fixed',
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        backgroundColor: 'rgba(0,0,0,0.5)',
+        display: 'flex',
+        justifyContent: 'center',
+        alignItems: 'center',
+        zIndex: 1000,
+    },
+    modalContent: {
+        backgroundColor: '#fff',
+        borderRadius: '1rem',
+        padding: '30px',
+        width: '90%',
+        maxWidth: '500px',
+    },
+    modalHeader: {
+        display: 'flex',
+        justifyContent: 'space-between',
+        alignItems: 'center',
+        marginBottom: '20px',
+    },
+    closeBtn: {
+        background: 'none',
+        border: 'none',
+        fontSize: '28px',
+        cursor: 'pointer',
+        color: '#999',
+    },
+    shareOptions: {
+        display: 'grid',
+        gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))',
+        gap: '10px',
+        marginBottom: '20px',
+    },
+    facebookBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: '10px',
+        backgroundColor: '#1877f2',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+    },
+
+    telegramBtn: {
+    display: 'flex',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: '8px',
+    padding: '10px',
+    backgroundColor: '#0088cc',
+    color: '#fff',
+    border: 'none',
+    borderRadius: '5px',
+    cursor: 'pointer',
+    },
+
+    twitterBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: '10px',
+        backgroundColor: '#1da1f2',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+    },
+    whatsappBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: '10px',
+        backgroundColor: '#25d366',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+    },
+    emailBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: '10px',
+        backgroundColor: '#ea4335',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+    },
+    copyBtn: {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '8px',
+        padding: '10px',
+        backgroundColor: '#6c757d',
+        color: '#fff',
+        border: 'none',
+        borderRadius: '5px',
+        cursor: 'pointer',
+    },
+    shareLinkContainer: {
+        marginTop: '20px',
+        padding: '15px',
+        backgroundColor: '#f8f9fa',
+        borderRadius: '8px',
+    },
+    shareLinkInput: {
+        width: '100%',
+        padding: '8px',
+        border: '1px solid #ddd',
+        borderRadius: '5px',
+        fontSize: '12px',
+        backgroundColor: '#fff',
+    },
+    shareNote: {
+        marginTop: '15px',
+        fontSize: '12px',
+        color: '#666',
+        textAlign: 'center',
+    },
     center: {
         textAlign: 'center',
         padding: '50px',
@@ -254,15 +529,5 @@ const styles = {
         marginBottom: '1rem',
     },
 };
-
-// Add keyframes for spinner
-const styleSheet = document.createElement("style");
-styleSheet.textContent = `
-    @keyframes spin {
-        from { transform: rotate(0deg); }
-        to { transform: rotate(360deg); }
-    }
-`;
-document.head.appendChild(styleSheet);
 
 export default WishlistPage;

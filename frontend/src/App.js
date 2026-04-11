@@ -5,7 +5,7 @@ import { Toaster } from 'react-hot-toast';
 import { store } from './redux/store';
 import { fetchWishlist } from './redux/slices/wishlistSlice';
 import { HelmetProvider } from 'react-helmet-async';
-import { ThemeProvider } from './context/ThemeContext';  // Add this import
+import { ThemeProvider } from './context/ThemeContext';  
 
 import Navbar from './components/Layout/Navbar';
 import Footer from './components/Layout/Footer';
@@ -19,6 +19,7 @@ import ProfilePage from './pages/Profile/ProfilePage';
 import OrdersPage from './pages/Orders/OrdersPage';
 import CheckoutPage from './pages/Checkout/CheckoutPage';
 import WishlistPage from './pages/Wishlist/WishlistPage';
+import SharedWishlistPage from './pages/SharedWishlistPage';
 
 import AdminDashboardPage from './pages/Admin/AdminDashboardPage';
 import AdminProductsPage from './pages/Admin/AdminProductsPage';
@@ -76,6 +77,7 @@ const AppContent = () => {
                     <Route path="/orders" element={<OrdersPage />} />
                     <Route path="/checkout" element={<CheckoutPage />} />
                     <Route path="/wishlist" element={<WishlistPage />} />
+                    <Route path="/shared-wishlist" element={<SharedWishlistPage />} />
                     <Route path="/admin" element={
                         <AdminRoute>
                             <AdminDashboardPage />
