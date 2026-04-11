@@ -31,8 +31,12 @@ const Navbar = () => {
         <nav style={styles.navbar}>
             <div style={styles.container}>
                 <Link to="/" style={styles.logo} onClick={closeMenu}>
-                    <span style={styles.logoIcon}>🛍️</span>
-                   <span style={styles.logoText}>Habesha Gebeya</span>                </Link>
+                    <img 
+                        src="/logo.png" 
+                        alt="Habesha Gebeya" 
+                        style={styles.logoImage}
+                    />
+                </Link>
 
                 <button 
                     onClick={() => setIsMenuOpen(!isMenuOpen)} 
@@ -133,6 +137,16 @@ const styles = {
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',
     },
+
+   
+    logoImage: {
+        height: '85px',
+        width: 'auto',
+        maxWidth: '180px',
+        objectFit: 'contain',
+    },
+
+
     menuBtn: {
         display: 'none',
         background: 'none',

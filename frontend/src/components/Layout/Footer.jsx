@@ -7,9 +7,15 @@ const Footer = () => {
             <div style={styles.container}>
                 <div style={styles.grid}>
                     <div>
-                        <h3 style={styles.logo}>🛍️ Habesha Gebeya</h3>
-                        <p style={styles.description}>
-                            Your one-stop shop for amazing products at great prices.
+                        
+                        <img 
+                            src="/logo.png" 
+                            alt="Habesha Gebeya" 
+                            style={styles.footerLogo}
+                        />
+                        <span style={styles.logoText}>Habesha Gebeya</span>
+                                            <p style={styles.description}>
+                                                Your one-stop shop for amazing products at great prices.
                         </p>
                     </div>
                     
@@ -73,10 +79,27 @@ const styles = {
         marginBottom: '2rem',
     },
     logo: {
-        fontSize: '1.5rem',
+        fontSize: '.5rem',
         marginBottom: '1rem',
         color: 'white',
     },
+
+    footerLogo: {
+        height: '60px',
+        width: 'auto',
+        marginRight: '10px',
+    },
+    logoContainer: {
+        display: 'flex',
+        alignItems: 'center',
+        marginBottom: '15px',
+    },
+    logoText: {
+        fontSize: '1.2rem',
+        fontWeight: 'bold',
+        color: '#fff',
+    },
+
     description: {
         fontSize: '0.875rem',
         lineHeight: '1.6',

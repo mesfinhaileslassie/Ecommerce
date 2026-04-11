@@ -116,6 +116,7 @@ const AdminDashboardPage = () => {
             <div className="admin-hero-fullwidth">
                 <div className="admin-hero-fullwidth-overlay"></div>
                 <div className="admin-hero-fullwidth-content">
+    
                     <h1 className="admin-hero-fullwidth-title">Admin Dashboard</h1>
                     <p className="admin-hero-fullwidth-subtitle">Welcome back, {user?.name}!</p>
                     <div className="admin-tab-container">

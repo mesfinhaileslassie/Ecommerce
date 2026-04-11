@@ -35,7 +35,7 @@ const AppContent = () => {
 
     // Set document title
     useEffect(() => {
-        document.title = "Habesha Market - Ethiopian Online Store";
+        document.title = "Habesha Gebeya - Ethiopian Online Store";
     }, []);
 
     // Fetch wishlist when user logs in
