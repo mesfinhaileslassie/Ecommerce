@@ -33,6 +33,12 @@ const AppContent = () => {
     const dispatch = useDispatch();
     const { token, user } = useSelector((state) => state.auth);
 
+    // Set document title
+    useEffect(() => {
+        document.title = "Habesha Market - Ethiopian Online Store";
+    }, []);
+
+    // Fetch wishlist when user logs in
     useEffect(() => {
         if (token && user) {
             dispatch(fetchWishlist());

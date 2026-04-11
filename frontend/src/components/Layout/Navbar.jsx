@@ -32,7 +32,7 @@ const Navbar = () => {
             <div style={styles.container}>
                 <Link to="/" style={styles.logo} onClick={closeMenu}>
                     <span style={styles.logoIcon}>🛍️</span>
-                    <span style={styles.logoText}>E-Shop</span>
+                   <span style={styles.logoText}>Habesha Market</span>
                 </Link>
 
                 <button 

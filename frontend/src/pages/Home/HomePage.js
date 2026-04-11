@@ -39,7 +39,7 @@ const HomePage = () => {
                 <div className="home-hero-fullwidth">
                     <div className="home-hero-fullwidth-overlay"></div>
                     <div className="home-hero-fullwidth-content">
-                        <h1 className="home-hero-fullwidth-title">Welcome to E-Shop</h1>
+                      <h1 className="home-hero-fullwidth-title">Welcome to Habesha Market</h1>
                         <p className="home-hero-fullwidth-subtitle">Discover amazing products at unbeatable prices</p>
                         <Link to="/products" className="home-hero-fullwidth-btn">
                             Shop Now →

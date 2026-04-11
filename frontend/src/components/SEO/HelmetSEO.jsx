@@ -16,7 +16,7 @@ const HelmetSEO = ({
     currency = 'USD',
     availability
 }) => {
-    const siteTitle = title ? `${title} | E-Shop` : 'E-Shop - Your One-Stop Online Store';
+    const siteTitle = title ? `${title} | Habesha Market` : 'Habesha Market - Ethiopian Online Store';
     const siteDescription = description || 'Discover amazing products at unbeatable prices. Shop electronics, clothing, books, home goods, and more with fast delivery and secure payment.';
     const siteUrl = url || `https://yourdomain.com${window.location.pathname}`;
     const siteImage = image || 'https://yourdomain.com/og-image.jpg';

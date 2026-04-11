@@ -7,7 +7,7 @@ const Footer = () => {
             <div style={styles.container}>
                 <div style={styles.grid}>
                     <div>
-                        <h3 style={styles.logo}>🛍️ E-Shop</h3>
+                        <h3 style={styles.logo}>🛍️ Habesha Market</h3>
                         <p style={styles.description}>
                             Your one-stop shop for amazing products at great prices.
                         </p>
@@ -48,7 +48,7 @@ const Footer = () => {
                 </div>
                 
                 <div style={styles.copyright}>
-                    <p>&copy; 2024 E-Shop. All rights reserved. Built with ❤️</p>
+                   <p>&copy; 2026 Habesha Market. All rights reserved. Built with ❤️ for Ethiopia</p>
                 </div>
             </div>
         </footer>
