@@ -1,5 +1,5 @@
 import React, { useEffect, useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import { useParams, Link, useLocation } from 'react-router-dom';
 import { useDispatch, useSelector } from 'react-redux';
 import { fetchProduct } from '../../redux/slices/productSlice';
 import { addToCart } from '../../redux/slices/cartSlice';
@@ -14,6 +14,7 @@ import api from '../../services/api';
 
 const ProductDetailsPage = () => {
     const { id } = useParams();
+    const location = useLocation();
     const dispatch = useDispatch();
     const { product, loading } = useSelector((state) => state.products);
     const { user } = useSelector((state) => state.auth);
@@ -21,6 +22,30 @@ const ProductDetailsPage = () => {
     const [adding, setAdding] = useState(false);
     const [selectedSize, setSelectedSize] = useState(null);
     const [selectedImage, setSelectedImage] = useState(0);
+
+    // Scroll to top when product page loads - FIXES THE SCROLL ISSUE
+    useEffect(() => {
+        // Scroll to top immediately when the component mounts
+        window.scrollTo({
+            top: 0,
+            left: 0,
+            behavior: 'instant'
+        });
+    }, [id]); // Re-run when product ID changes
+
+    // Alternative: Use history scroll restoration disable
+    useEffect(() => {
+        // Save current scroll position
+        const scrollY = window.scrollY;
+        
+        // Force scroll to top
+        window.scrollTo(0, 0);
+        
+        // Cleanup function (optional)
+        return () => {
+            // You can restore scroll position if needed, but we don't want to
+        };
+    }, [id]);
 
     useEffect(() => {
         if (id) {
@@ -138,7 +163,7 @@ const ProductDetailsPage = () => {
             />
             
             <div className="product-details-container">
-                <Link to="/products" className="product-details-back-link">
+                <Link to="/products" className="product-details-back-link" onClick={() => window.scrollTo(0, 0)}>
                     <FaArrowLeft /> Back to Products
                 </Link>
                 
@@ -329,6 +354,10 @@ styleSheet.textContent = `
         margin: 0;
     }
     
+    body.dark-mode .product-details-name {
+        color: #ffffff;
+    }
+    
     .product-details-rating {
         display: flex;
         align-items: center;
@@ -376,6 +405,10 @@ styleSheet.textContent = `
         color: var(--text-primary, #333);
     }
     
+    body.dark-mode .product-details-price-label {
+        color: #ffffff;
+    }
+    
     .product-details-price {
         font-size: 1.5rem;
         font-weight: bold;
@@ -415,12 +448,22 @@ styleSheet.textContent = `
         color: var(--text-primary, #333);
     }
     
+    body.dark-mode .product-details-label {
+        color: #ffffff;
+    }
+    
     .product-details-select {
         padding: 8px;
         border: 1px solid var(--border-color, #ddd);
         border-radius: 5px;
         background-color: var(--input-bg, #fff);
         color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .product-details-select {
+        background-color: #0a0a0a;
+        border-color: #444444;
+        color: #ffffff;
     }
     
     .product-details-button-group {
