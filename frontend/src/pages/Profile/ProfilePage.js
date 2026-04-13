@@ -183,38 +183,38 @@ const ProfilePage = () => {
 
     if (!user) {
         return (
-            <div style={styles.center}>
+            <div className="profile-center">
                 <h2>Please login to view your profile</h2>
-                <Link to="/login" style={styles.loginBtn}>Login</Link>
+                <Link to="/login" className="profile-login-btn">Login</Link>
             </div>
         );
     }
 
     if (ordersLoading || wishlistLoading) {
         return (
-            <div style={styles.center}>
-                <FaSpinner style={styles.spinner} />
+            <div className="profile-center">
+                <FaSpinner className="profile-spinner" />
                 <p>Loading your profile...</p>
             </div>
         );
     }
 
     return (
-        <div style={styles.container}>
-            <h1 style={styles.title}>My Profile</h1>
+        <div className="profile-container">
+            <h1 className="profile-title">My Profile</h1>
             
-            <div style={styles.profileGrid}>
+            <div className="profile-grid">
                 {/* Profile Card */}
-                <div style={styles.profileCard}>
-                    <div style={styles.avatarSection}>
-                        <div style={styles.avatarContainer}>
+                <div className="profile-card">
+                    <div className="profile-avatar-section">
+                        <div className="profile-avatar-container">
                             <img 
                                 src={getAvatarUrl()} 
                                 alt={user.name}
-                                style={styles.avatar}
+                                className="profile-avatar"
                             />
-                            <label htmlFor="avatar-upload" style={styles.cameraIcon}>
-                                {uploadingAvatar ? <FaSpinner style={styles.spinnerIcon} /> : <FaCamera />}
+                            <label htmlFor="avatar-upload" className="profile-camera-icon">
+                                {uploadingAvatar ? <FaSpinner className="profile-spinner-icon" /> : <FaCamera />}
                                 <input
                                     id="avatar-upload"
                                     type="file"
@@ -225,58 +225,58 @@ const ProfilePage = () => {
                                 />
                             </label>
                         </div>
-                        <h2 style={styles.userName}>{user.name}</h2>
-                        <p style={styles.userEmail}>{user.email}</p>
+                        <h2 className="profile-user-name">{user.name}</h2>
+                        <p className="profile-user-email">{user.email}</p>
                         {isGoogleUser && (
-                            <p style={styles.googleBadge}>
+                            <p className="profile-google-badge">
                                 <FaGoogle /> Signed in with Google
                             </p>
                         )}
-                        <p style={styles.userSince}>
+                        <p className="profile-user-since">
                             Member since {formatDate(user.createdAt)}
                         </p>
-                        <button onClick={handleLogout} style={styles.logoutBtn}>
+                        <button onClick={handleLogout} className="profile-logout-btn">
                             <FaSignOutAlt /> Logout
                         </button>
                     </div>
                     
-                    <div style={styles.statsSection}>
-                        <Link to="/orders" style={styles.statItem}>
-                            <div style={styles.statIconContainer}>
-                                <FaShoppingBag style={styles.statIcon} />
+                    <div className="profile-stats-section">
+                        <Link to="/orders" className="profile-stat-item">
+                            <div className="profile-stat-icon-container">
+                                <FaShoppingBag className="profile-stat-icon" />
                             </div>
                             <div>
-                                <h3 style={styles.statNumber}>{orderCount}</h3>
-                                <p style={styles.statLabel}>Orders</p>
+                                <h3 className="profile-stat-number">{orderCount}</h3>
+                                <p className="profile-stat-label">Orders</p>
                             </div>
                         </Link>
-                        <Link to="/wishlist" style={styles.statItem}>
-                            <div style={styles.statIconContainer}>
-                                <FaHeart style={styles.statIcon} />
+                        <Link to="/wishlist" className="profile-stat-item">
+                            <div className="profile-stat-icon-container">
+                                <FaHeart className="profile-stat-icon" />
                             </div>
                             <div>
-                                <h3 style={styles.statNumber}>{wishlistCount}</h3>
-                                <p style={styles.statLabel}>Wishlist</p>
+                                <h3 className="profile-stat-number">{wishlistCount}</h3>
+                                <p className="profile-stat-label">Wishlist</p>
                             </div>
                         </Link>
                     </div>
                 </div>
                 
                 {/* Edit Profile Form */}
-                <div style={styles.editCard}>
-                    <div style={styles.cardHeader}>
+                <div className="profile-edit-card">
+                    <div className="profile-card-header">
                         <h2>Account Information</h2>
                         {!isEditing && (
-                            <button onClick={() => setIsEditing(true)} style={styles.editBtn}>
+                            <button onClick={() => setIsEditing(true)} className="profile-edit-btn">
                                 Edit Profile
                             </button>
                         )}
                     </div>
                     
                     {isEditing ? (
-                        <form onSubmit={handleSubmit} style={styles.form}>
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>
+                        <form onSubmit={handleSubmit} className="profile-form">
+                            <div className="profile-form-group">
+                                <label className="profile-label">
                                     <FaUser /> Full Name
                                 </label>
                                 <input
@@ -285,13 +285,13 @@ const ProfilePage = () => {
                                     value={formData.name}
                                     onChange={handleChange}
                                     required
-                                    style={styles.input}
+                                    className="profile-input"
                                     placeholder="Enter your full name"
                                 />
                             </div>
                             
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>
+                            <div className="profile-form-group">
+                                <label className="profile-label">
                                     <FaEnvelope /> Email Address
                                 </label>
                                 <input
@@ -300,26 +300,26 @@ const ProfilePage = () => {
                                     value={formData.email}
                                     onChange={handleChange}
                                     required
-                                    style={styles.input}
+                                    className="profile-input"
                                     placeholder="Enter your email"
                                 />
                             </div>
                             
-                            <div style={styles.divider} />
+                            <div className="profile-divider" />
                             
-                            <h3 style={styles.subtitle}>
+                            <h3 className="profile-subtitle">
                                 {isGoogleUser ? 'Set Password (Optional)' : 'Change Password'}
                             </h3>
                             
                             {isGoogleUser && (
-                                <p style={styles.hintText}>
+                                <p className="profile-hint-text">
                                     You signed up with Google. You can set a password to login with email in the future.
                                 </p>
                             )}
                             
                             {!isGoogleUser && (
-                                <div style={styles.formGroup}>
-                                    <label style={styles.label}>
+                                <div className="profile-form-group">
+                                    <label className="profile-label">
                                         <FaLock /> Current Password
                                     </label>
                                     <input
@@ -328,13 +328,13 @@ const ProfilePage = () => {
                                         value={formData.currentPassword}
                                         onChange={handleChange}
                                         placeholder="Enter your current password"
-                                        style={styles.input}
+                                        className="profile-input"
                                     />
                                 </div>
                             )}
                             
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>
+                            <div className="profile-form-group">
+                                <label className="profile-label">
                                     <FaLock /> {isGoogleUser ? 'New Password (Optional)' : 'New Password'}
                                 </label>
                                 <input
@@ -343,12 +343,12 @@ const ProfilePage = () => {
                                     value={formData.newPassword}
                                     onChange={handleChange}
                                     placeholder={isGoogleUser ? "Enter new password (min 6 characters)" : "Enter new password (min 6 characters)"}
-                                    style={styles.input}
+                                    className="profile-input"
                                 />
                             </div>
                             
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>
+                            <div className="profile-form-group">
+                                <label className="profile-label">
                                     <FaLock /> Confirm New Password
                                 </label>
                                 <input
@@ -357,12 +357,12 @@ const ProfilePage = () => {
                                     value={formData.confirmPassword}
                                     onChange={handleChange}
                                     placeholder="Confirm your new password"
-                                    style={styles.input}
+                                    className="profile-input"
                                 />
                             </div>
                             
-                            <div style={styles.buttonGroup}>
-                                <button type="submit" style={styles.saveBtn} disabled={authLoading}>
+                            <div className="profile-button-group">
+                                <button type="submit" className="profile-save-btn" disabled={authLoading}>
                                     {authLoading ? 'Saving...' : 'Save Changes'}
                                 </button>
                                 <button 
@@ -377,41 +377,41 @@ const ProfilePage = () => {
                                             confirmPassword: '',
                                         });
                                     }}
-                                    style={styles.cancelBtn}
+                                    className="profile-cancel-btn"
                                 >
                                     Cancel
                                 </button>
                             </div>
                         </form>
                     ) : (
-                        <div style={styles.infoDisplay}>
-                            <div style={styles.infoRow}>
+                        <div className="profile-info-display">
+                            <div className="profile-info-row">
                                 <strong>Name:</strong>
                                 <span>{user.name}</span>
                             </div>
-                            <div style={styles.infoRow}>
+                            <div className="profile-info-row">
                                 <strong>Email:</strong>
                                 <span>{user.email}</span>
                             </div>
-                            <div style={styles.infoRow}>
+                            <div className="profile-info-row">
                                 <strong>Account Type:</strong>
                                 <span>{user.isAdmin ? 'Administrator' : 'Customer'}</span>
                             </div>
-                            <div style={styles.infoRow}>
+                            <div className="profile-info-row">
                                 <strong>Login Method:</strong>
                                 <span>{isGoogleUser ? 'Google Account' : 'Email & Password'}</span>
                             </div>
-                            <div style={styles.infoRow}>
+                            <div className="profile-info-row">
                                 <strong>Member Since:</strong>
                                 <span>{formatDate(user.createdAt)}</span>
                             </div>
-                            <div style={styles.infoRow}>
+                            <div className="profile-info-row">
                                 <strong>Total Orders:</strong>
-                                <span style={styles.orderCount}>{orderCount}</span>
+                                <span className="profile-order-count">{orderCount}</span>
                             </div>
-                            <div style={styles.infoRow}>
+                            <div className="profile-info-row">
                                 <strong>Wishlist Items:</strong>
-                                <span style={styles.wishlistCount}>{wishlistCount}</span>
+                                <span className="profile-wishlist-count">{wishlistCount}</span>
                             </div>
                         </div>
                     )}
@@ -419,20 +419,20 @@ const ProfilePage = () => {
             </div>
             
             {/* Quick Links */}
-            <div style={styles.quickLinks}>
-                <h2 style={styles.sectionTitle}>Quick Actions</h2>
-                <div style={styles.linksGrid}>
-                    <Link to="/orders" style={styles.linkCard}>
+            <div className="profile-quick-links">
+                <h2 className="profile-section-title">Quick Actions</h2>
+                <div className="profile-links-grid">
+                    <Link to="/orders" className="profile-link-card">
                         <FaShoppingBag size={24} />
                         <span>My Orders</span>
                         <p>{orderCount} order{orderCount !== 1 ? 's' : ''}</p>
                     </Link>
-                    <Link to="/wishlist" style={styles.linkCard}>
+                    <Link to="/wishlist" className="profile-link-card">
                         <FaHeart size={24} />
                         <span>Wishlist</span>
                         <p>{wishlistCount} item{wishlistCount !== 1 ? 's' : ''}</p>
                     </Link>
-                    <Link to="/checkout" style={styles.linkCard}>
+                    <Link to="/checkout" className="profile-link-card">
                         <FaMapMarkerAlt size={24} />
                         <span>Checkout</span>
                         <p>Complete purchase</p>
@@ -443,482 +443,437 @@ const ProfilePage = () => {
     );
 };
 
-const styles = {
-    container: {
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '20px',
-    },
-    title: {
-        fontSize: '2rem',
-        marginBottom: '30px',
-        color: '#333',
-    },
-    profileGrid: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 2fr',
-        gap: '30px',
-        marginBottom: '40px',
-    },
-    profileCard: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '30px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        textAlign: 'center',
-    },
-    avatarSection: {
-        marginBottom: '20px',
-    },
-    avatarContainer: {
-        position: 'relative',
-        display: 'inline-block',
-        marginBottom: '15px',
-    },
-    avatar: {
-        width: '120px',
-        height: '120px',
-        borderRadius: '50%',
-        objectFit: 'cover',
-        border: '4px solid #6366f1',
-    },
-    cameraIcon: {
-        position: 'absolute',
-        bottom: '5px',
-        right: '5px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        borderRadius: '50%',
-        width: '32px',
-        height: '32px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        transition: 'all 0.3s',
-    },
-    spinnerIcon: {
-        animation: 'spin 1s linear infinite',
-    },
-    userName: {
-        fontSize: '1.25rem',
-        marginBottom: '5px',
-        color: '#333',
-    },
-    userEmail: {
-        color: '#666',
-        fontSize: '0.875rem',
-        marginBottom: '5px',
-    },
-    googleBadge: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '6px',
-        backgroundColor: '#e8eaed',
-        color: '#5f6368',
-        padding: '4px 12px',
-        borderRadius: '20px',
-        fontSize: '0.7rem',
-        marginBottom: '10px',
-    },
-    userSince: {
-        color: '#999',
-        fontSize: '0.75rem',
-        marginBottom: '15px',
-    },
-    logoutBtn: {
-        backgroundColor: '#dc3545',
-        color: '#fff',
-        border: 'none',
-        padding: '8px 16px',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontSize: '0.875rem',
-        transition: 'all 0.3s',
-    },
-    statsSection: {
-        display: 'flex',
-        justifyContent: 'space-around',
-        paddingTop: '20px',
-        borderTop: '1px solid #eee',
-        marginTop: '20px',
-    },
-    statItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        textAlign: 'left',
-        textDecoration: 'none',
-        color: 'inherit',
-        cursor: 'pointer',
-        transition: 'transform 0.3s',
-        padding: '10px',
-        borderRadius: '0.5rem',
-    },
-    statIconContainer: {
-        width: '40px',
-        height: '40px',
-        backgroundColor: '#f3f4f6',
-        borderRadius: '50%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    statIcon: {
-        fontSize: '20px',
-        color: '#6366f1',
-    },
-    statNumber: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: '#333',
-        margin: 0,
-    },
-    statLabel: {
-        fontSize: '0.75rem',
-        color: '#666',
-        margin: 0,
-    },
-    editCard: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '30px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    },
-    cardHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '20px',
-        paddingBottom: '15px',
-        borderBottom: '1px solid #eee',
-    },
-    editBtn: {
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        border: 'none',
-        padding: '8px 16px',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '15px',
-    },
-    formGroup: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '5px',
-    },
-    label: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        fontWeight: '500',
-        color: '#555',
-    },
-    input: {
-        padding: '10px',
-        border: '1px solid #ddd',
-        borderRadius: '0.5rem',
-        fontSize: '1rem',
-        transition: 'all 0.3s',
-    },
-    divider: {
-        height: '1px',
-        backgroundColor: '#eee',
-        margin: '10px 0',
-    },
-    subtitle: {
-        fontSize: '1rem',
-        marginBottom: '10px',
-        color: '#333',
-    },
-    hintText: {
-        fontSize: '0.75rem',
-        color: '#666',
-        marginBottom: '10px',
-        fontStyle: 'italic',
-    },
-    buttonGroup: {
-        display: 'flex',
-        gap: '10px',
-        marginTop: '10px',
-    },
-    saveBtn: {
-        flex: 1,
-        padding: '10px',
-        backgroundColor: '#28a745',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-    },
-    cancelBtn: {
-        flex: 1,
-        padding: '10px',
-        backgroundColor: '#6c757d',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-    },
-    infoDisplay: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '15px',
-    },
-    infoRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        padding: '10px 0',
-        borderBottom: '1px solid #f0f0f0',
-    },
-    orderCount: {
-        fontWeight: 'bold',
-        color: '#28a745',
-    },
-    wishlistCount: {
-        fontWeight: 'bold',
-        color: '#ef4444',
-    },
-    quickLinks: {
-        marginTop: '40px',
-    },
-    sectionTitle: {
-        fontSize: '1.25rem',
-        marginBottom: '20px',
-        color: '#333',
-    },
-    linksGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: '20px',
-    },
-    linkCard: {
-        backgroundColor: '#fff',
-        padding: '20px',
-        borderRadius: '1rem',
-        textDecoration: 'none',
-        textAlign: 'center',
-        transition: 'all 0.3s',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        color: '#333',
-        display: 'flex',
-        flexDirection: 'column',
-        alignItems: 'center',
-        gap: '8px',
-    },
-    center: {
-        textAlign: 'center',
-        padding: '50px',
-    },
-    loginBtn: {
-        display: 'inline-block',
-        marginTop: '20px',
-        padding: '10px 30px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        textDecoration: 'none',
-        borderRadius: '0.5rem',
-    },
-    spinner: {
-        animation: 'spin 1s linear infinite',
-        fontSize: '2rem',
-        color: '#6366f1',
-        marginBottom: '1rem',
-    },
-};
-
-// Add keyframes for spinner animation
+// Inject CSS Styles for Profile Page
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    @keyframes spin {
-        from {
-            transform: rotate(0deg);
-        }
-        to {
-            transform: rotate(360deg);
-        }
+    /* Profile Page Styles - Light & Dark Mode Compatible */
+    
+    @keyframes profileSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
     }
     
-    input:focus {
+    .profile-center {
+        text-align: center;
+        padding: 50px;
+    }
+    
+    .profile-spinner {
+        animation: profileSpin 1s linear infinite;
+        font-size: 2rem;
+        color: #6366f1;
+        margin-bottom: 1rem;
+    }
+    
+    .profile-spinner-icon {
+        animation: profileSpin 1s linear infinite;
+    }
+    
+    .profile-login-btn {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 30px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 0.5rem;
+    }
+    
+    .profile-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .profile-title {
+        font-size: 2rem;
+        margin-bottom: 30px;
+        color: var(--text-primary, #333);
+    }
+    
+    .profile-grid {
+        display: grid;
+        grid-template-columns: 1fr 2fr;
+        gap: 30px;
+        margin-bottom: 40px;
+    }
+    
+    /* Profile Card */
+    .profile-card {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-align: center;
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    .profile-avatar-section {
+        margin-bottom: 20px;
+    }
+    
+    .profile-avatar-container {
+        position: relative;
+        display: inline-block;
+        margin-bottom: 15px;
+    }
+    
+    .profile-avatar {
+        width: 120px;
+        height: 120px;
+        border-radius: 50%;
+        object-fit: cover;
+        border: 4px solid #6366f1;
+    }
+    
+    .profile-camera-icon {
+        position: absolute;
+        bottom: 5px;
+        right: 5px;
+        background-color: #6366f1;
+        color: #fff;
+        border-radius: 50%;
+        width: 32px;
+        height: 32px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .profile-camera-icon:hover {
+        transform: scale(1.05);
+    }
+    
+    .profile-user-name {
+        font-size: 1.25rem;
+        margin-bottom: 5px;
+        color: var(--text-primary, #333);
+    }
+    
+    .profile-user-email {
+        color: var(--text-secondary, #666);
+        font-size: 0.875rem;
+        margin-bottom: 5px;
+    }
+    
+    .profile-google-badge {
+        display: inline-flex;
+        align-items: center;
+        gap: 6px;
+        background-color: #e8eaed;
+        color: #5f6368;
+        padding: 4px 12px;
+        border-radius: 20px;
+        font-size: 0.7rem;
+        margin-bottom: 10px;
+    }
+    
+    body.dark-mode .profile-google-badge {
+        background-color: #1a1a1a;
+        color: #a5b4fc;
+        border: 1px solid #333333;
+    }
+    
+    .profile-user-since {
+        color: var(--text-secondary, #999);
+        font-size: 0.75rem;
+        margin-bottom: 15px;
+    }
+    
+    .profile-logout-btn {
+        background-color: #dc3545;
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        font-size: 0.875rem;
+        transition: all 0.3s;
+    }
+    
+    .profile-logout-btn:hover {
+        background-color: #c82333;
+        transform: translateY(-2px);
+    }
+    
+    .profile-stats-section {
+        display: flex;
+        justify-content: space-around;
+        padding-top: 20px;
+        border-top: 1px solid var(--border-color, #eee);
+        margin-top: 20px;
+    }
+    
+    .profile-stat-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        text-align: left;
+        text-decoration: none;
+        cursor: pointer;
+        transition: transform 0.3s;
+        padding: 10px;
+        border-radius: 0.5rem;
+        flex: 1;
+        justify-content: center;
+    }
+    
+    .profile-stat-item:hover {
+        transform: translateY(-2px);
+        background-color: var(--bg-secondary, #f8fafc);
+    }
+    
+    .profile-stat-icon-container {
+        width: 40px;
+        height: 40px;
+        background-color: var(--bg-secondary, #f3f4f6);
+        border-radius: 50%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+    
+    .profile-stat-icon {
+        font-size: 20px;
+        color: #6366f1;
+    }
+    
+    .profile-stat-number {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--text-primary, #333);
+        margin: 0;
+    }
+    
+    .profile-stat-label {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #666);
+        margin: 0;
+    }
+    
+    /* Edit Card */
+    .profile-edit-card {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    .profile-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 20px;
+        padding-bottom: 15px;
+        border-bottom: 1px solid var(--border-color, #eee);
+    }
+    
+    .profile-card-header h2 {
+        color: var(--text-primary, #333);
+        margin: 0;
+    }
+    
+    .profile-edit-btn {
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        border: none;
+        padding: 8px 16px;
+        border-radius: 0.5rem;
+        cursor: pointer;
+    }
+    
+    .profile-form {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .profile-form-group {
+        display: flex;
+        flex-direction: column;
+        gap: 5px;
+    }
+    
+    .profile-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        font-weight: 500;
+        color: var(--text-primary, #555);
+    }
+    
+    .profile-input {
+        padding: 10px;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        transition: all 0.3s;
+        background-color: var(--input-bg, #fff);
+        color: var(--text-primary, #333);
+    }
+    
+    .profile-input:focus {
         outline: none;
         border-color: #6366f1;
         box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
     }
     
-    .stat-item:hover {
-        transform: translateY(-2px);
-        background-color: #f8fafc;
+    .profile-divider {
+        height: 1px;
+        background-color: var(--border-color, #eee);
+        margin: 10px 0;
     }
     
-    .link-card:hover {
+    .profile-subtitle {
+        font-size: 1rem;
+        margin-bottom: 10px;
+        color: var(--text-primary, #333);
+    }
+    
+    .profile-hint-text {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #666);
+        margin-bottom: 10px;
+        font-style: italic;
+    }
+    
+    .profile-button-group {
+        display: flex;
+        gap: 10px;
+        margin-top: 10px;
+    }
+    
+    .profile-save-btn {
+        flex: 1;
+        padding: 10px;
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+    }
+    
+    .profile-cancel-btn {
+        flex: 1;
+        padding: 10px;
+        background-color: #6c757d;
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+    }
+    
+    .profile-info-display {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .profile-info-row {
+        display: flex;
+        justify-content: space-between;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-color, #f0f0f0);
+        color: var(--text-primary, #333);
+    }
+    
+    .profile-order-count {
+        font-weight: bold;
+        color: #10b981;
+    }
+    
+    .profile-wishlist-count {
+        font-weight: bold;
+        color: #ef4444;
+    }
+    
+    /* Quick Links */
+    .profile-quick-links {
+        margin-top: 40px;
+    }
+    
+    .profile-section-title {
+        font-size: 1.25rem;
+        margin-bottom: 20px;
+        color: var(--text-primary, #333);
+    }
+    
+    .profile-links-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+        gap: 20px;
+    }
+    
+    .profile-link-card {
+        background-color: var(--card-bg, #fff);
+        padding: 20px;
+        border-radius: 1rem;
+        text-decoration: none;
+        text-align: center;
+        transition: all 0.3s;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color, #e5e7eb);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 8px;
+    }
+    
+    .profile-link-card:hover {
         transform: translateY(-4px);
         box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
-`;
-
-// Dark mode styles for Profile Page - STRONGER VERSION
-const profileDarkStyles = document.createElement("style");
-profileDarkStyles.textContent = `
-    /* Force dark mode on all profile containers */
-    body.dark-mode .profile-card,
-    body.dark-mode .edit-card,
-    body.dark-mode .link-card,
-    body.dark-mode [class*="profileCard"],
-    body.dark-mode [class*="editCard"],
-    body.dark-mode [class*="linkCard"] {
-        background-color: #1a1a1a !important;
-        border: 1px solid #333333 !important;
-        box-shadow: none !important;
+    
+    .profile-link-card span {
+        color: var(--text-primary, #333);
+        font-weight: 500;
     }
     
-    /* Force all text to be white */
-    body.dark-mode .profile-card *,
-    body.dark-mode .edit-card *,
-    body.dark-mode .link-card *,
-    body.dark-mode .profile-card div,
-    body.dark-mode .edit-card div,
-    body.dark-mode .profile-card span,
-    body.dark-mode .edit-card span,
-    body.dark-mode .profile-card p,
-    body.dark-mode .edit-card p,
-    body.dark-mode .profile-card h2,
-    body.dark-mode .edit-card h2,
-    body.dark-mode .profile-card h3,
-    body.dark-mode .edit-card h3,
-    body.dark-mode .profile-card label,
-    body.dark-mode .edit-card label,
-    body.dark-mode .profile-card strong,
-    body.dark-mode .edit-card strong {
-        color: #ffffff !important;
+    .profile-link-card p {
+        color: var(--text-secondary, #666);
+        font-size: 0.75rem;
+        margin: 0;
     }
     
-    /* Info rows */
-    body.dark-mode .info-row {
-        border-bottom-color: #333333 !important;
+    .profile-link-card svg {
+        color: #6366f1;
     }
     
-    body.dark-mode .info-row strong,
-    body.dark-mode .info-row span {
-        color: #ffffff !important;
+    /* Dark Mode Specific Overrides */
+    body.dark-mode .profile-stat-icon-container {
+        background-color: #1a1a1a;
     }
     
-    /* Stats section */
-    body.dark-mode .stats-section {
-        border-top-color: #333333 !important;
+    body.dark-mode .profile-stat-item:hover {
+        background-color: #1a1a1a;
     }
     
-    body.dark-mode .stat-item {
-        background-color: #0a0a0a !important;
-        border-radius: 8px !important;
+    body.dark-mode .profile-link-card p {
+        color: #aaaaaa;
     }
     
-    body.dark-mode .stat-item h3,
-    body.dark-mode .stat-item p,
-    body.dark-mode .stat-number,
-    body.dark-mode .stat-label {
-        color: #ffffff !important;
-    }
-    
-    body.dark-mode .stat-icon-container {
-        background-color: #1a1a1a !important;
-    }
-    
-    body.dark-mode .stat-icon {
-        color: #a5b4fc !important;
-    }
-    
-    /* Input fields */
-    body.dark-mode .input,
-    body.dark-mode input:not([type="submit"]):not([type="button"]),
-    body.dark-mode textarea,
-    body.dark-mode select {
-        background-color: #0a0a0a !important;
-        border: 1px solid #444444 !important;
-        color: #ffffff !important;
-    }
-    
-    body.dark-mode .input::placeholder {
-        color: #888888 !important;
-    }
-    
-    /* Buttons */
-    body.dark-mode .edit-btn {
-        background-color: #4f46e5 !important;
-        color: white !important;
-    }
-    
-    body.dark-mode .save-btn {
-        background-color: #059669 !important;
-        color: white !important;
-    }
-    
-    body.dark-mode .cancel-btn {
-        background-color: #4b5563 !important;
-        color: white !important;
-    }
-    
-    body.dark-mode .logout-btn {
-        background-color: #dc2626 !important;
-        color: white !important;
-    }
-    
-    /* Avatar */
-    body.dark-mode .avatar {
-        border-color: #4f46e5 !important;
-    }
-    
-    body.dark-mode .camera-icon {
-        background-color: #4f46e5 !important;
-        color: white !important;
-    }
-    
-    /* Dividers and text */
-    body.dark-mode .divider {
-        background-color: #333333 !important;
-    }
-    
-    body.dark-mode .hint-text {
-        color: #aaaaaa !important;
-    }
-    
-    body.dark-mode .error-text {
-        color: #f87171 !important;
-    }
-    
-    body.dark-mode .google-badge {
-        background-color: #1a1a1a !important;
-        color: #a5b4fc !important;
-        border: 1px solid #333333 !important;
-    }
-    
-    body.dark-mode .user-since {
-        color: #aaaaaa !important;
-    }
-    
-    /* Card header */
-    body.dark-mode .card-header {
-        border-bottom-color: #333333 !important;
-    }
-    
-    /* Quick links grid */
-    body.dark-mode .quick-links {
-        border-top-color: #333333 !important;
-    }
-    
-    body.dark-mode .section-title {
-        color: #ffffff !important;
+    /* Responsive */
+    @media (max-width: 768px) {
+        .profile-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .profile-title {
+            font-size: 1.5rem;
+        }
+        
+        .profile-links-grid {
+            grid-template-columns: 1fr;
+        }
     }
 `;
-document.head.appendChild(profileDarkStyles);
 document.head.appendChild(styleSheet);
-
-
 
 export default ProfilePage;
