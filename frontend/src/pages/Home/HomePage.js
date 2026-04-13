@@ -26,7 +26,7 @@ const HomePage = () => {
 
     if (loading) {
         return (
-            <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '400px', gap: '1rem' }}>
+            <div className="home-loading-container">
                 <div className="spinner"></div>
                 <p>Loading amazing products...</p>
             </div>
@@ -34,32 +34,32 @@ const HomePage = () => {
     }
 
     // Section Component for reusability
-    const ProductSection = ({ title, products, viewAllLink, bgColor = '#fff' }) => {
-    if (products.length === 0) return null;
-    
-    return (
-        <div className="section" style={{ backgroundColor: bgColor }}>
-            <div className="container">
-                <div style={styles.sectionHeader}>
-                    <div>
-                        <h2 className="section-title" style={{ textAlign: 'left', marginBottom: '0' }}>{title}</h2>
-                        <p className="section-subtitle" style={{ textAlign: 'left', marginTop: '5px' }}>Discover our best selection</p>
+    const ProductSection = ({ title, products, viewAllLink, isAlt = false }) => {
+        if (products.length === 0) return null;
+        
+        return (
+            <div className={`home-section ${isAlt ? 'home-section-alt' : ''}`}>
+                <div className="container">
+                    <div className="home-section-header">
+                        <div>
+                            <h2 className="home-section-title">{title}</h2>
+                            <p className="home-section-subtitle">Discover our best selection</p>
+                        </div>
+                        {viewAllLink && (
+                            <Link to={viewAllLink} className="home-view-all-btn">
+                                View More <FaArrowRight style={{ marginLeft: '5px' }} />
+                            </Link>
+                        )}
                     </div>
-                    {viewAllLink && (
-                        <Link to={viewAllLink} style={styles.viewAllBtn}>
-                            View More <FaArrowRight style={{ marginLeft: '5px' }} />
-                        </Link>
-                    )}
-                </div>
-                <div className="products-grid">
-                    {products.map(product => (
-                        <ProductCard key={product._id} product={product} />
-                    ))}
+                    <div className="products-grid">
+                        {products.map(product => (
+                            <ProductCard key={product._id} product={product} />
+                        ))}
+                    </div>
                 </div>
             </div>
-        </div>
-    );
-};
+        );
+    };
 
     return (
         <>
@@ -84,28 +84,28 @@ const HomePage = () => {
                 </div>
 
                 {/* Features Section */}
-                <div className="features">
+                <div className="home-features">
                     <div className="container">
-                        <div className="features-grid">
-                            <div className="feature-card">
-                                <div className="feature-icon">🚚</div>
-                                <h3 className="feature-title">Free Shipping</h3>
-                                <p className="feature-desc">On orders over $50</p>
+                        <div className="home-features-grid">
+                            <div className="home-feature-card">
+                                <div className="home-feature-icon">🚚</div>
+                                <h3 className="home-feature-title">Free Shipping</h3>
+                                <p className="home-feature-desc">On orders over $50</p>
                             </div>
-                            <div className="feature-card">
-                                <div className="feature-icon">⚡</div>
-                                <h3 className="feature-title">Fast Delivery</h3>
-                                <p className="feature-desc">Within 3-5 days</p>
+                            <div className="home-feature-card">
+                                <div className="home-feature-icon">⚡</div>
+                                <h3 className="home-feature-title">Fast Delivery</h3>
+                                <p className="home-feature-desc">Within 3-5 days</p>
                             </div>
-                            <div className="feature-card">
-                                <div className="feature-icon">🔒</div>
-                                <h3 className="feature-title">Secure Payment</h3>
-                                <p className="feature-desc">100% secure transactions</p>
+                            <div className="home-feature-card">
+                                <div className="home-feature-icon">🔒</div>
+                                <h3 className="home-feature-title">Secure Payment</h3>
+                                <p className="home-feature-desc">100% secure transactions</p>
                             </div>
-                            <div className="feature-card">
-                                <div className="feature-icon">💬</div>
-                                <h3 className="feature-title">24/7 Support</h3>
-                                <p className="feature-desc">Dedicated customer service</p>
+                            <div className="home-feature-card">
+                                <div className="home-feature-icon">💬</div>
+                                <h3 className="home-feature-title">24/7 Support</h3>
+                                <p className="home-feature-desc">Dedicated customer service</p>
                             </div>
                         </div>
                     </div>
@@ -133,7 +133,7 @@ const HomePage = () => {
                         title="Electronics" 
                         products={electronicsProducts} 
                         viewAllLink="/products?category=Electronics"
-                        bgColor="#f8fafc"
+                        isAlt={true}
                     />
                 )}
 
@@ -152,7 +152,7 @@ const HomePage = () => {
                         title="Home & Living" 
                         products={homeProducts} 
                         viewAllLink="/products?category=Home"
-                        bgColor="#f8fafc"
+                        isAlt={true}
                     />
                 )}
 
@@ -171,7 +171,7 @@ const HomePage = () => {
                         title="Sports & Outdoors" 
                         products={sportsProducts} 
                         viewAllLink="/products?category=Sports"
-                        bgColor="#f8fafc"
+                        isAlt={true}
                     />
                 )}
 
@@ -195,33 +195,20 @@ const HomePage = () => {
     );
 };
 
-const styles = {
-    sectionHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '30px',
-        flexWrap: 'wrap',
-        gap: '15px',
-    },
-    viewMoreBtn: {
-    display: 'inline-flex',
-    alignItems: 'center',
-    padding: '10px 20px',
-    backgroundColor: '#6366f1',
-    color: '#fff',
-    textDecoration: 'none',
-    borderRadius: '8px',
-    fontSize: '14px',
-    fontWeight: '500',
-    transition: 'all 0.3s',
-},
-};
-
-// Inject CSS Styles for Full Width Hero
+// Inject CSS Styles for HomePage
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    /* FULL WIDTH HERO SECTION */
+    /* HomePage Loading */
+    .home-loading-container {
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        min-height: 400px;
+        gap: 1rem;
+    }
+    
+    /* Hero Section */
     .home-hero-fullwidth {
         position: relative;
         width: 100%;
@@ -260,20 +247,22 @@ styleSheet.textContent = `
         font-size: 3.5rem;
         font-weight: bold;
         margin-bottom: 1rem;
-        animation: fadeIn 0.6s ease-out;
+        animation: homeFadeIn 0.6s ease-out;
+        color: white !important;
     }
     
     .home-hero-fullwidth-subtitle {
         font-size: 1.2rem;
         margin-bottom: 2rem;
         opacity: 0.9;
+        color: white !important;
     }
     
     .home-hero-fullwidth-btn {
         display: inline-block;
         padding: 1rem 2rem;
         background: white;
-        color: #6366f1;
+        color: #6366f1 !important;
         text-decoration: none;
         border-radius: 50px;
         font-weight: bold;
@@ -287,7 +276,7 @@ styleSheet.textContent = `
         box-shadow: 0 6px 20px rgba(0,0,0,0.3);
     }
     
-    @keyframes fadeIn {
+    @keyframes homeFadeIn {
         from {
             opacity: 0;
             transform: translateY(20px);
@@ -299,81 +288,127 @@ styleSheet.textContent = `
     }
     
     /* Features Section */
-    .features {
+    .home-features {
         padding: 4rem 0;
-        background: white;
+        background-color: var(--bg-primary, #ffffff);
     }
     
+    body.dark-mode .home-features {
+        background-color: #0a0a0a !important;
+    }
+    
+    .home-features-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+        gap: 2rem;
+    }
+    
+    .home-feature-card {
+        text-align: center;
+        padding: 2rem;
+        background-color: var(--card-bg, #ffffff);
+        border-radius: 1rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        transition: transform 0.3s;
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    body.dark-mode .home-feature-card {
+        background-color: #1a1a1a !important;
+        border-color: #333333 !important;
+    }
+    
+    .home-feature-card:hover {
+        transform: translateY(-4px);
+    }
+    
+    .home-feature-icon {
+        font-size: 2.5rem;
+        margin-bottom: 1rem;
+    }
+    
+    .home-feature-title {
+        font-size: 1.2rem;
+        font-weight: bold;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary, #1f2937);
+    }
+    
+    .home-feature-desc {
+        color: var(--text-secondary, #6b7280);
+        font-size: 0.875rem;
+    }
+    
+    /* Sections */
+    .home-section {
+        padding: 4rem 0;
+        background-color: var(--bg-primary, #ffffff);
+    }
+    
+    .home-section-alt {
+        background-color: var(--bg-secondary, #f8fafc);
+    }
+    
+    body.dark-mode .home-section {
+        background-color: #0a0a0a !important;
+    }
+    
+    body.dark-mode .home-section-alt {
+        background-color: #0a0a0a !important;
+    }
+    
+    .home-section-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 30px;
+        flex-wrap: wrap;
+        gap: 15px;
+    }
+    
+    .home-section-title {
+        font-size: 2rem;
+        text-align: left;
+        margin-bottom: 0;
+        color: var(--text-primary, #1f2937);
+    }
+    
+    .home-section-subtitle {
+        text-align: left;
+        margin-top: 5px;
+        color: var(--text-secondary, #6b7280);
+    }
+    
+    .home-view-all-btn {
+        display: inline-flex;
+        align-items: center;
+        padding: 10px 20px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff !important;
+        text-decoration: none;
+        border-radius: 8px;
+        font-size: 14px;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .home-view-all-btn:hover {
+        transform: translateY(-2px);
+        background: linear-gradient(135deg, #4338ca, #4f46e5);
+    }
+    
+    /* Container */
     .container {
         max-width: 1280px;
         margin: 0 auto;
         padding: 0 1.5rem;
     }
     
-    .features-grid {
-        display: grid;
-        grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
-        gap: 2rem;
-    }
-    
-    .feature-card {
-        text-align: center;
-        padding: 2rem;
-        background: white;
-        border-radius: 1rem;
-        box-shadow: 0 2px 4px rgba(0,0,0,0.05);
-        transition: transform 0.3s;
-    }
-    
-    .feature-card:hover {
-        transform: translateY(-4px);
-    }
-    
-    .feature-icon {
-        font-size: 2.5rem;
-        margin-bottom: 1rem;
-    }
-    
-    .feature-title {
-        font-size: 1.2rem;
-        font-weight: bold;
-        margin-bottom: 0.5rem;
-        color: #1f2937;
-    }
-    
-    .feature-desc {
-        color: #6b7280;
-        font-size: 0.875rem;
-    }
-    
-    /* Sections */
-    .section {
-        padding: 4rem 0;
-    }
-    
-    .section-title {
-        font-size: 2rem;
-        text-align: center;
-        margin-bottom: 1rem;
-        color: #1f2937;
-    }
-    
-    .section-subtitle {
-        text-align: center;
-        color: #6b7280;
-        margin-bottom: 3rem;
-    }
-    
+    /* Products Grid */
     .products-grid {
         display: grid;
         grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
         gap: 2rem;
-    }
-    
-    /* View All Button Hover */
-    .view-all-btn:hover {
-        background-color: #4f46e5;
-        transform: translateY(-2px);
     }
     
     /* Spinner */
@@ -383,11 +418,11 @@ styleSheet.textContent = `
         border: 4px solid #f3f4f6;
         border-top-color: #6366f1;
         border-radius: 50%;
-        animation: spin 1s linear infinite;
+        animation: homeSpin 1s linear infinite;
         margin: 0 auto;
     }
     
-    @keyframes spin {
+    @keyframes homeSpin {
         to { transform: rotate(360deg); }
     }
     
@@ -410,15 +445,15 @@ styleSheet.textContent = `
             font-size: 0.9rem;
         }
         
-        .features {
+        .home-features {
             padding: 2rem 0;
         }
         
-        .section {
+        .home-section {
             padding: 2rem 0;
         }
         
-        .section-title {
+        .home-section-title {
             font-size: 1.5rem;
         }
         
@@ -426,8 +461,13 @@ styleSheet.textContent = `
             gap: 1rem;
         }
         
-        .section-header {
+        .home-section-header {
             flex-direction: column;
+            text-align: center;
+        }
+        
+        .home-section-title,
+        .home-section-subtitle {
             text-align: center;
         }
     }
@@ -451,6 +491,11 @@ styleSheet.textContent = `
         }
         
         .products-grid {
+            gap: 1rem;
+        }
+        
+        .home-features-grid {
+            grid-template-columns: 1fr;
             gap: 1rem;
         }
     }

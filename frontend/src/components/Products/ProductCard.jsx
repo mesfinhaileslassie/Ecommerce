@@ -116,25 +116,23 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
     // Grid View
     if (viewMode === 'grid') {
         return (
-            <div className="product-card" style={styles.gridCard}>
-                <button onClick={handleWishlist} style={styles.wishlistBtn}>
+            <div className="product-card-grid">
+                <button onClick={handleWishlist} className="product-wishlist-btn">
                     {isInWishlist ? <FaHeart color="#ef4444" size={18} /> : <FaRegHeart size={18} />}
                 </button>
                 
-                <Link to={`/products/${product._id}`} style={styles.imageLink}>
-                    <div style={styles.imageContainer}>
+                <Link to={`/products/${product._id}`} className="product-image-link">
+                    <div className="product-image-container">
                         {!imageLoaded && (
-                            <div style={styles.imagePlaceholder}>
-                                <FaSpinner style={styles.spinnerIcon} />
+                            <div className="product-image-placeholder">
+                                <FaSpinner className="product-spinner-icon" />
                             </div>
                         )}
                         <img 
                             src={getProductImage()} 
                             alt={product.name}
-                            style={{
-                                ...styles.gridImage,
-                                opacity: imageLoaded ? 1 : 0
-                            }}
+                            className="product-grid-image"
+                            style={{ opacity: imageLoaded ? 1 : 0 }}
                             onLoad={() => setImageLoaded(true)}
                             onError={(e) => {
                                 e.target.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=400&h=400&fit=crop';
@@ -142,35 +140,35 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                             }}
                         />
                         {product.isFeatured && (
-                            <span style={styles.featuredBadge}>Featured</span>
+                            <span className="product-featured-badge">Featured</span>
                         )}
                         {hasSizes && (
-                            <span style={styles.sizesBadge}>Multiple Sizes</span>
+                            <span className="product-sizes-badge">Multiple Sizes</span>
                         )}
                     </div>
                 </Link>
                 
-                <div style={styles.gridContent}>
-                    <Link to={`/products/${product._id}`} style={styles.titleLink}>
-                        <h3 style={styles.title}>{product.name}</h3>
+                <div className="product-grid-content">
+                    <Link to={`/products/${product._id}`} className="product-title-link">
+                        <h3 className="product-title">{product.name}</h3>
                     </Link>
                     
-                    <p style={styles.category}>{product.category}</p>
+                    <p className="product-category">{product.category}</p>
                     
-                    <div style={styles.ratingContainer}>
+                    <div className="product-rating-container">
                         {renderStars(product.rating)}
-                        <span style={styles.reviewCount}>({product.numReviews})</span>
+                        <span className="product-review-count">({product.numReviews})</span>
                     </div>
                     
-                    <div style={styles.priceContainer}>
-                        <span style={styles.price}>{getDisplayPrice()}</span>
-                        <span className={`product-stock ${product.countInStock > 0 ? 'stock-in' : 'stock-out'}`} style={styles.stockBadge}>
+                    <div className="product-price-container">
+                        <span className="product-price">{getDisplayPrice()}</span>
+                        <span className={`product-stock-badge ${hasSizes ? 'product-stock-sizes' : (product.countInStock > 0 ? 'product-stock-in' : 'product-stock-out')}`}>
                             {hasSizes ? 'Sizes available' : (product.countInStock > 0 ? `${product.countInStock} left` : 'Out of stock')}
                         </span>
                     </div>
                     
                     {hasSizes ? (
-                        <Link to={`/products/${product._id}`} style={styles.selectSizeBtn}>
+                        <Link to={`/products/${product._id}`} className="product-select-size-btn">
                             <FaInfoCircle size={14} />
                             <span>Select Size</span>
                         </Link>
@@ -178,10 +176,7 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
                         <button 
                             onClick={handleAddToCart}
                             disabled={product.countInStock === 0 || adding}
-                            style={{
-                                ...styles.addToCartBtn,
-                                ...(product.countInStock === 0 && styles.disabledBtn)
-                            }}
+                            className={`product-add-to-cart-btn ${product.countInStock === 0 ? 'product-disabled-btn' : ''}`}
                         >
                             <FaShoppingCart size={14} />
                             <span>{adding ? 'Adding...' : 'Add to Cart'}</span>
@@ -194,66 +189,63 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
 
     // List View
     return (
-        <div style={styles.listCard}>
-            <div style={styles.listImageContainer}>
+        <div className="product-card-list">
+            <div className="product-list-image-container">
                 <Link to={`/products/${product._id}`}>
-                    <div style={styles.listImageWrapper}>
+                    <div className="product-list-image-wrapper">
                         <img 
                             src={getProductImage()} 
                             alt={product.name}
-                            style={styles.listImage}
+                            className="product-list-image"
                             onError={(e) => {
                                 e.target.src = 'https://images.unsplash.com/photo-1472851294608-062f824d29cc?w=100&h=100&fit=crop';
                             }}
                         />
                         {hasSizes && (
-                            <span style={styles.listSizesBadge}>Sizes Available</span>
+                            <span className="product-list-sizes-badge">Sizes Available</span>
                         )}
                     </div>
                 </Link>
-                <button onClick={handleWishlist} style={styles.listWishlistBtn}>
+                <button onClick={handleWishlist} className="product-list-wishlist-btn">
                     {isInWishlist ? <FaHeart color="#ef4444" size={16} /> : <FaRegHeart size={16} />}
                 </button>
             </div>
             
-            <div style={styles.listContent}>
-                <Link to={`/products/${product._id}`} style={styles.titleLink}>
-                    <h3 style={styles.listTitle}>{product.name}</h3>
+            <div className="product-list-content">
+                <Link to={`/products/${product._id}`} className="product-title-link">
+                    <h3 className="product-list-title">{product.name}</h3>
                 </Link>
                 
-                <div style={styles.listMeta}>
-                    <span style={styles.listCategory}>{product.category}</span>
-                    <div style={styles.ratingContainer}>
+                <div className="product-list-meta">
+                    <span className="product-list-category">{product.category}</span>
+                    <div className="product-rating-container">
                         {renderStars(product.rating)}
-                        <span style={styles.reviewCount}>({product.numReviews} reviews)</span>
+                        <span className="product-review-count">({product.numReviews} reviews)</span>
                     </div>
                 </div>
                 
-                <p style={styles.description}>
+                <p className="product-description">
                     {product.description.length > 150 
                         ? `${product.description.substring(0, 150)}...` 
                         : product.description}
                 </p>
                 
-                <div style={styles.listFooter}>
+                <div className="product-list-footer">
                     <div>
-                        <span style={styles.listPrice}>{getDisplayPrice()}</span>
-                        <span style={styles.listStock}>
+                        <span className="product-list-price">{getDisplayPrice()}</span>
+                        <span className="product-list-stock">
                             {hasSizes ? 'Multiple sizes available' : (product.countInStock > 0 ? `✓ In Stock (${product.countInStock})` : '✗ Out of Stock')}
                         </span>
                     </div>
-                    <div style={styles.listActions}>
-                        <Link to={`/products/${product._id}`} style={styles.viewBtn}>
+                    <div className="product-list-actions">
+                        <Link to={`/products/${product._id}`} className="product-view-btn">
                             {hasSizes ? 'Select Size' : 'View Details'}
                         </Link>
                         {!hasSizes && (
                             <button 
                                 onClick={handleAddToCart}
                                 disabled={product.countInStock === 0 || adding}
-                                style={{
-                                    ...styles.listAddBtn,
-                                    ...(product.countInStock === 0 && styles.disabledBtn)
-                                }}
+                                className={`product-list-add-btn ${product.countInStock === 0 ? 'product-disabled-btn' : ''}`}
                             >
                                 <FaShoppingCart />
                                 <span>{adding ? 'Adding...' : 'Add to Cart'}</span>
@@ -266,392 +258,482 @@ const ProductCard = ({ product, viewMode = 'grid' }) => {
     );
 };
 
-const styles = {
-    // Grid View Styles
-    gridCard: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        overflow: 'hidden',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        transition: 'transform 0.3s, box-shadow 0.3s',
-        position: 'relative',
-        height: '100%',
-        display: 'flex',
-        flexDirection: 'column',
-    },
-    wishlistBtn: {
-        position: 'absolute',
-        top: '12px',
-        right: '12px',
-        backgroundColor: '#fff',
-        border: 'none',
-        borderRadius: '50%',
-        width: '34px',
-        height: '34px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        zIndex: 10,
-        transition: 'transform 0.2s',
-    },
-    imageLink: {
-        display: 'block',
-        position: 'relative',
-        overflow: 'hidden',
-    },
-    imageContainer: {
-        position: 'relative',
-        width: '100%',
-        paddingTop: '100%',
-        backgroundColor: '#f5f5f5',
-        overflow: 'hidden',
-    },
-    imagePlaceholder: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        backgroundColor: '#f5f5f5',
-    },
-    spinnerIcon: {
-        animation: 'spin 1s linear infinite',
-        fontSize: '24px',
-        color: '#6366f1',
-    },
-    gridImage: {
-        position: 'absolute',
-        top: 0,
-        left: 0,
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-        objectPosition: 'center',
-        transition: 'transform 0.5s, opacity 0.3s',
-    },
-    featuredBadge: {
-        position: 'absolute',
-        top: '12px',
-        left: '12px',
-        backgroundColor: '#fbbf24',
-        color: '#333',
-        padding: '4px 10px',
-        borderRadius: '20px',
-        fontSize: '11px',
-        fontWeight: 'bold',
-        zIndex: 10,
-    },
-    sizesBadge: {
-        position: 'absolute',
-        bottom: '12px',
-        left: '12px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        padding: '4px 10px',
-        borderRadius: '20px',
-        fontSize: '10px',
-        fontWeight: 'bold',
-        zIndex: 10,
-    },
-    gridContent: {
-        padding: '1rem',
-        display: 'flex',
-        flexDirection: 'column',
-        flex: 1,
-    },
-    titleLink: {
-        textDecoration: 'none',
-    },
-    title: {
-        fontSize: '1rem',
-        fontWeight: '600',
-        marginBottom: '0.5rem',
-        color: '#333',
-        lineHeight: '1.4',
-        display: '-webkit-box',
-        WebkitLineClamp: 2,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-    },
-    category: {
-        fontSize: '0.75rem',
-        color: '#666',
-        marginBottom: '0.5rem',
-        textTransform: 'uppercase',
-        letterSpacing: '0.5px',
-    },
-    ratingContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        marginBottom: '0.75rem',
-    },
-    reviewCount: {
-        fontSize: '0.7rem',
-        color: '#999',
-        marginLeft: '0.5rem',
-    },
-    priceContainer: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '1rem',
-    },
-    price: {
-        fontSize: '1.25rem',
-        fontWeight: 'bold',
-        color: '#6366f1',
-    },
-    stockBadge: {
-        fontSize: '0.7rem',
-        padding: '3px 8px',
-        borderRadius: '20px',
-        backgroundColor: '#d1fae5',
-        color: '#065f46',
-    },
-    addToCartBtn: {
-        width: '100%',
-        padding: '0.6rem',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        fontSize: '0.9rem',
-        fontWeight: '500',
-        transition: 'background-color 0.3s',
-    },
-    selectSizeBtn: {
-        width: '100%',
-        padding: '0.6rem',
-        backgroundColor: '#10b981',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        fontSize: '0.9rem',
-        fontWeight: '500',
-        textDecoration: 'none',
-        transition: 'background-color 0.3s',
-    },
-    
-    // List View Styles
-    listCard: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '1rem',
-        display: 'flex',
-        gap: '1.5rem',
-        boxShadow: '0 2px 8px rgba(0,0,0,0.08)',
-        transition: 'box-shadow 0.3s',
-    },
-    listImageContainer: {
-        position: 'relative',
-        flexShrink: 0,
-    },
-    listImageWrapper: {
-        width: '180px',
-        height: '180px',
-        overflow: 'hidden',
-        borderRadius: '0.5rem',
-        backgroundColor: '#f5f5f5',
-        position: 'relative',
-    },
-    listImage: {
-        width: '100%',
-        height: '100%',
-        objectFit: 'cover',
-        objectPosition: 'center',
-        transition: 'transform 0.3s',
-    },
-    listSizesBadge: {
-        position: 'absolute',
-        bottom: '8px',
-        left: '8px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        padding: '2px 8px',
-        borderRadius: '20px',
-        fontSize: '9px',
-        fontWeight: 'bold',
-    },
-    listWishlistBtn: {
-        position: 'absolute',
-        top: '8px',
-        right: '8px',
-        backgroundColor: '#fff',
-        border: 'none',
-        borderRadius: '50%',
-        width: '30px',
-        height: '30px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        cursor: 'pointer',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    },
-    listContent: {
-        flex: 1,
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '0.75rem',
-    },
-    listTitle: {
-        fontSize: '1.2rem',
-        fontWeight: '600',
-        color: '#333',
-        margin: 0,
-    },
-    listMeta: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '1rem',
-        flexWrap: 'wrap',
-    },
-    listCategory: {
-        fontSize: '0.8rem',
-        color: '#666',
-        backgroundColor: '#f0f0f0',
-        padding: '3px 10px',
-        borderRadius: '20px',
-    },
-    description: {
-        fontSize: '0.9rem',
-        color: '#666',
-        lineHeight: '1.5',
-        margin: 0,
-        display: '-webkit-box',
-        WebkitLineClamp: 3,
-        WebkitBoxOrient: 'vertical',
-        overflow: 'hidden',
-    },
-    listFooter: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        flexWrap: 'wrap',
-        gap: '1rem',
-        marginTop: '0.5rem',
-    },
-    listPrice: {
-        fontSize: '1.3rem',
-        fontWeight: 'bold',
-        color: '#6366f1',
-        marginRight: '1rem',
-    },
-    listStock: {
-        fontSize: '0.8rem',
-        color: '#10b981',
-    },
-    listActions: {
-        display: 'flex',
-        gap: '0.75rem',
-    },
-    viewBtn: {
-        padding: '0.5rem 1rem',
-        backgroundColor: '#f0f0f0',
-        color: '#333',
-        textDecoration: 'none',
-        borderRadius: '0.5rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontSize: '0.85rem',
-        transition: 'background-color 0.3s',
-    },
-    listAddBtn: {
-        padding: '0.5rem 1rem',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '6px',
-        fontSize: '0.85rem',
-        transition: 'background-color 0.3s',
-    },
-    disabledBtn: {
-        backgroundColor: '#ccc',
-        cursor: 'not-allowed',
-    },
-};
-
-// Add keyframes for spinner animation
+// Inject CSS Styles for ProductCard
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    @keyframes spin {
+    @keyframes productSpin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
     }
     
-    .product-card:hover .grid-image {
-        transform: scale(1.05);
+    /* Grid View Styles */
+    .product-card-grid {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        overflow: hidden;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: transform 0.3s, box-shadow 0.3s;
+        position: relative;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        border: 1px solid var(--border-color, #e5e7eb);
     }
     
-    .product-card:hover .list-image {
-        transform: scale(1.05);
+    .product-card-grid:hover {
+        transform: translateY(-4px);
+        box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
     
-    .wishlist-btn:hover {
+    .product-wishlist-btn {
+        position: absolute;
+        top: 12px;
+        right: 12px;
+        background-color: var(--card-bg, #fff);
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 50%;
+        width: 34px;
+        height: 34px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        z-index: 10;
+        transition: transform 0.2s;
+        color: var(--text-primary, #333);
+    }
+    
+    .product-wishlist-btn:hover {
         transform: scale(1.1);
     }
     
-    .add-to-cart-btn:hover {
-        background-color: #4f46e5;
+    .product-image-link {
+        display: block;
+        position: relative;
+        overflow: hidden;
     }
     
-    .select-size-btn:hover {
-        background-color: #059669;
+    .product-image-container {
+        position: relative;
+        width: 100%;
+        padding-top: 100%;
+        background-color: var(--bg-secondary, #f5f5f5);
+        overflow: hidden;
     }
     
-    .list-card:hover {
+    .product-image-placeholder {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background-color: var(--bg-secondary, #f5f5f5);
+    }
+    
+    .product-spinner-icon {
+        animation: productSpin 1s linear infinite;
+        font-size: 24px;
+        color: #6366f1;
+    }
+    
+    .product-grid-image {
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.5s, opacity 0.3s;
+    }
+    
+    .product-card-grid:hover .product-grid-image {
+        transform: scale(1.05);
+    }
+    
+    .product-featured-badge {
+        position: absolute;
+        top: 12px;
+        left: 12px;
+        background-color: #fbbf24;
+        color: #333;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 11px;
+        font-weight: bold;
+        z-index: 10;
+    }
+    
+    .product-sizes-badge {
+        position: absolute;
+        bottom: 12px;
+        left: 12px;
+        background-color: #6366f1;
+        color: #fff;
+        padding: 4px 10px;
+        border-radius: 20px;
+        font-size: 10px;
+        font-weight: bold;
+        z-index: 10;
+    }
+    
+    .product-grid-content {
+        padding: 1rem;
+        display: flex;
+        flex-direction: column;
+        flex: 1;
+    }
+    
+    .product-title-link {
+        text-decoration: none;
+    }
+    
+    .product-title {
+        font-size: 1rem;
+        font-weight: 600;
+        margin-bottom: 0.5rem;
+        color: var(--text-primary, #333);
+        line-height: 1.4;
+        display: -webkit-box;
+        -webkit-line-clamp: 2;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .product-category {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #666);
+        margin-bottom: 0.5rem;
+        text-transform: uppercase;
+        letter-spacing: 0.5px;
+    }
+    
+    .product-rating-container {
+        display: flex;
+        align-items: center;
+        margin-bottom: 0.75rem;
+    }
+    
+    .product-review-count {
+        font-size: 0.7rem;
+        color: var(--text-secondary, #999);
+        margin-left: 0.5rem;
+    }
+    
+    .product-price-container {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 1rem;
+    }
+    
+    .product-price {
+        font-size: 1.25rem;
+        font-weight: bold;
+        color: #6366f1;
+    }
+    
+    .product-stock-badge {
+        font-size: 0.7rem;
+        padding: 3px 8px;
+        border-radius: 20px;
+    }
+    
+    .product-stock-in {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    
+    body.dark-mode .product-stock-in {
+        background-color: #064e3b;
+        color: #34d399;
+    }
+    
+    .product-stock-out {
+        background-color: #fee2e2;
+        color: #991b1b;
+    }
+    
+    body.dark-mode .product-stock-out {
+        background-color: #7f1d1d;
+        color: #fca5a5;
+    }
+    
+    .product-stock-sizes {
+        background-color: #dbeafe;
+        color: #1e40af;
+    }
+    
+    body.dark-mode .product-stock-sizes {
+        background-color: #1e3a5f;
+        color: #93c5fd;
+    }
+    
+    .product-add-to-cart-btn {
+        width: 100%;
+        padding: 0.6rem;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        transition: all 0.3s;
+    }
+    
+    .product-add-to-cart-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #4338ca, #4f46e5);
+        transform: translateY(-2px);
+    }
+    
+    .product-select-size-btn {
+        width: 100%;
+        padding: 0.6rem;
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        font-size: 0.9rem;
+        font-weight: 500;
+        text-decoration: none;
+        transition: all 0.3s;
+    }
+    
+    .product-select-size-btn:hover {
+        background: linear-gradient(135deg, #047857, #059669);
+        transform: translateY(-2px);
+    }
+    
+    .product-disabled-btn {
+        background-color: #ccc !important;
+        cursor: not-allowed !important;
+        opacity: 0.6;
+    }
+    
+    body.dark-mode .product-disabled-btn {
+        background-color: #374151 !important;
+    }
+    
+    /* List View Styles */
+    .product-card-list {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 1rem;
+        display: flex;
+        gap: 1.5rem;
+        box-shadow: 0 2px 8px rgba(0,0,0,0.08);
+        transition: box-shadow 0.3s;
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    .product-card-list:hover {
         box-shadow: 0 4px 15px rgba(0,0,0,0.12);
     }
     
-    .view-btn:hover {
-        background-color: #e5e7eb;
+    .product-list-image-container {
+        position: relative;
+        flex-shrink: 0;
     }
     
-    .list-add-btn:hover {
-        background-color: #4f46e5;
+    .product-list-image-wrapper {
+        width: 180px;
+        height: 180px;
+        overflow: hidden;
+        border-radius: 0.5rem;
+        background-color: var(--bg-secondary, #f5f5f5);
+        position: relative;
     }
     
+    .product-list-image {
+        width: 100%;
+        height: 100%;
+        object-fit: cover;
+        object-position: center;
+        transition: transform 0.3s;
+    }
+    
+    .product-card-list:hover .product-list-image {
+        transform: scale(1.05);
+    }
+    
+    .product-list-sizes-badge {
+        position: absolute;
+        bottom: 8px;
+        left: 8px;
+        background-color: #6366f1;
+        color: #fff;
+        padding: 2px 8px;
+        border-radius: 20px;
+        font-size: 9px;
+        font-weight: bold;
+    }
+    
+    .product-list-wishlist-btn {
+        position: absolute;
+        top: 8px;
+        right: 8px;
+        background-color: var(--card-bg, #fff);
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 50%;
+        width: 30px;
+        height: 30px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        cursor: pointer;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    }
+    
+    .product-list-content {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+    
+    .product-list-title {
+        font-size: 1.2rem;
+        font-weight: 600;
+        color: var(--text-primary, #333);
+        margin: 0;
+    }
+    
+    .product-list-meta {
+        display: flex;
+        align-items: center;
+        gap: 1rem;
+        flex-wrap: wrap;
+    }
+    
+    .product-list-category {
+        font-size: 0.8rem;
+        color: var(--text-secondary, #666);
+        background-color: var(--bg-secondary, #f0f0f0);
+        padding: 3px 10px;
+        border-radius: 20px;
+    }
+    
+    body.dark-mode .product-list-category {
+        background-color: #1a1a1a;
+        color: #aaaaaa;
+    }
+    
+    .product-description {
+        font-size: 0.9rem;
+        color: var(--text-secondary, #666);
+        line-height: 1.5;
+        margin: 0;
+        display: -webkit-box;
+        -webkit-line-clamp: 3;
+        -webkit-box-orient: vertical;
+        overflow: hidden;
+    }
+    
+    .product-list-footer {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        flex-wrap: wrap;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .product-list-price {
+        font-size: 1.3rem;
+        font-weight: bold;
+        color: #6366f1;
+        margin-right: 1rem;
+    }
+    
+    .product-list-stock {
+        font-size: 0.8rem;
+        color: #10b981;
+    }
+    
+    body.dark-mode .product-list-stock {
+        color: #34d399;
+    }
+    
+    .product-list-actions {
+        display: flex;
+        gap: 0.75rem;
+    }
+    
+    .product-view-btn {
+        padding: 0.5rem 1rem;
+        background-color: var(--bg-secondary, #f0f0f0);
+        color: var(--text-primary, #333);
+        text-decoration: none;
+        border-radius: 0.5rem;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        transition: all 0.3s;
+        border: 1px solid var(--border-color, #ddd);
+    }
+    
+    .product-view-btn:hover {
+        background-color: var(--border-color, #e5e7eb);
+    }
+    
+    .product-list-add-btn {
+        padding: 0.5rem 1rem;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        font-size: 0.85rem;
+        transition: all 0.3s;
+    }
+    
+    .product-list-add-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #4338ca, #4f46e5);
+        transform: translateY(-2px);
+    }
+    
+    /* Responsive */
     @media (max-width: 768px) {
-        .list-image-wrapper {
+        .product-list-image-wrapper {
             width: 120px;
             height: 120px;
         }
     }
     
     @media (max-width: 480px) {
-        .list-card {
+        .product-card-list {
             flex-direction: column;
         }
         
-        .list-image-wrapper {
+        .product-list-image-wrapper {
             width: 100%;
             height: 200px;
         }
         
-        .list-actions {
+        .product-list-actions {
             flex-direction: column;
         }
         
-        .view-btn, .list-add-btn {
+        .product-view-btn,
+        .product-list-add-btn {
             width: 100%;
             justify-content: center;
         }
