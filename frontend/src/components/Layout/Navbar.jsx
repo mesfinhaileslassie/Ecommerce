@@ -32,9 +32,13 @@ const Navbar = () => {
     return (
         <nav className="navbar">
             <div className="navbar-container">
-                {/* Logo */}
+                {/* Logo with Image */}
                 <Link to="/" className="navbar-logo" onClick={closeMenu}>
-                    <span className="navbar-logo-icon">🛍️</span>
+                    <img 
+                        src="/logo.png" 
+                        alt="Habesha Gebeya" 
+                        className="navbar-logo-image"
+                    />
                     <span className="navbar-logo-text">Habesha Gebeya</span>
                 </Link>
 
@@ -184,13 +188,19 @@ styleSheet.textContent = `
     .navbar-logo {
         display: flex;
         align-items: center;
-        gap: 0.5rem;
+        gap: 0.75rem;
         text-decoration: none;
         z-index: 1001;
     }
     
-    .navbar-logo-icon {
-        font-size: 1.8rem;
+    .navbar-logo-image {
+        height: 40px;
+        width: auto;
+        transition: transform 0.3s ease;
+    }
+    
+    .navbar-logo:hover .navbar-logo-image {
+        transform: scale(1.05);
     }
     
     .navbar-logo-text {
@@ -499,8 +509,8 @@ styleSheet.textContent = `
             font-size: 1rem;
         }
         
-        .navbar-logo-icon {
-            font-size: 1.5rem;
+        .navbar-logo-image {
+            height: 32px;
         }
     }
     
@@ -535,6 +545,14 @@ styleSheet.textContent = `
             height: 16px;
             font-size: 9px;
             padding: 0 4px;
+        }
+        
+        .navbar-logo-image {
+            height: 28px;
+        }
+        
+        .navbar-logo {
+            gap: 0.5rem;
         }
     }
 `;
