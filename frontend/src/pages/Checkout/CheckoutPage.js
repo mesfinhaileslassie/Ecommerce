@@ -173,14 +173,6 @@ const CheckoutPage = () => {
                 toast.error('Invalid CBE Birr account number. Must start with 1000 followed by 9 digits');
                 return;
             }
-            if (!phoneNumber) {
-                toast.error('Please enter your phone number');
-                return;
-            }
-            if (!validatePhoneNumber(phoneNumber)) {
-                toast.error('Invalid phone number format. Use +2519XXXXXXXX');
-                return;
-            }
         }
 
         if (paymentMethod === 'Telebirr') {
@@ -221,7 +213,7 @@ const CheckoutPage = () => {
                 })),
                 paymentDetails: {
                     accountNumber: paymentMethod === 'CBE Birr' ? accountNumber : null,
-                    phoneNumber: phoneNumber,
+                    phoneNumber: paymentMethod === 'Telebirr' ? phoneNumber : null,
                     referenceNumber: referenceNumber
                 }
             };
@@ -286,10 +278,6 @@ const CheckoutPage = () => {
 
     const handleConfirmPayment = async () => {
         if (paymentMethod === 'CBE Birr') {
-            if (!phoneNumber) {
-                toast.error('Please enter your phone number');
-                return;
-            }
             if (!referenceNumber) {
                 toast.error('Please enter the transaction reference number');
                 return;
@@ -303,7 +291,7 @@ const CheckoutPage = () => {
                 paymentStatus: 'paid',
                 paymentDetails: {
                     accountNumber: accountNumber,
-                    phoneNumber: phoneNumber,
+                    phoneNumber: phoneNumber || null,
                     referenceNumber: referenceNumber,
                     paidAt: new Date()
                 }
@@ -331,9 +319,9 @@ const CheckoutPage = () => {
 
     if (!user) {
         return (
-            <div style={styles.center}>
+            <div className="checkout-center">
                 <h2>Please login to checkout</h2>
-                <button onClick={() => navigate('/login')} style={styles.loginBtn}>
+                <button onClick={() => navigate('/login')} className="checkout-login-btn">
                     Login
                 </button>
             </div>
@@ -342,8 +330,8 @@ const CheckoutPage = () => {
 
     if (cartLoading) {
         return (
-            <div style={styles.center}>
-                <FaSpinner style={styles.spinner} />
+            <div className="checkout-center">
+                <FaSpinner className="checkout-spinner" />
                 <p>Loading checkout...</p>
             </div>
         );
@@ -351,10 +339,10 @@ const CheckoutPage = () => {
 
     if (checkoutItems.length === 0 && !orderCreated) {
         return (
-            <div style={styles.center}>
+            <div className="checkout-center">
                 <h2>No items selected for checkout</h2>
                 <p>Please go back to cart and select items to checkout</p>
-                <button onClick={() => navigate('/cart')} style={styles.shopBtn}>
+                <button onClick={() => navigate('/cart')} className="checkout-shop-btn">
                     Go to Cart
                 </button>
             </div>
@@ -366,14 +354,14 @@ const CheckoutPage = () => {
     // Show payment instructions after order is created (for CBE Birr)
     if (orderCreated && !paymentConfirmed && isMobilePayment() && paymentMethod !== 'Telebirr') {
         return (
-            <div style={styles.container}>
-                <button onClick={() => setOrderCreated(false)} style={styles.backBtn}>
+            <div className="checkout-container">
+                <button onClick={() => setOrderCreated(false)} className="checkout-back-btn">
                     <FaArrowLeft /> Back to Checkout
                 </button>
                 
-                <div style={styles.paymentContainer}>
-                    <h1 style={styles.title}>Complete Payment</h1>
-                    <p style={styles.orderInfo}>Order ID: {createdOrder?._id}</p>
+                <div className="checkout-payment-container">
+                    <h1 className="checkout-title">Complete Payment</h1>
+                    <p className="checkout-order-info">Order ID: {createdOrder?._id}</p>
                     
                     <PaymentInstructions 
                         paymentMethod={paymentMethod}
@@ -381,37 +369,25 @@ const CheckoutPage = () => {
                         totalAmount={finalTotal}
                     />
                     
-                    <div style={styles.paymentForm}>
-                        <div style={styles.formGroup}>
-                            <label style={styles.label}>Phone Number</label>
-                            <input
-                                type="tel"
-                                value={phoneNumber}
-                                onChange={(e) => setPhoneNumber(e.target.value)}
-                                placeholder="Enter your phone number"
-                                style={styles.input}
-                                required
-                            />
-                        </div>
-                        
-                        <div style={styles.formGroup}>
-                            <label style={styles.label}>Transaction Reference Number</label>
+                    <div className="checkout-payment-form">
+                        <div className="checkout-form-group">
+                            <label className="checkout-label">Transaction Reference Number</label>
                             <input
                                 type="text"
                                 value={referenceNumber}
                                 onChange={(e) => setReferenceNumber(e.target.value)}
                                 placeholder="Enter the reference number from your payment"
-                                style={styles.input}
+                                className="checkout-input"
                                 required
                             />
                         </div>
                         
                         <button 
                             onClick={handleConfirmPayment}
-                            style={styles.confirmPaymentBtn}
+                            className="checkout-confirm-payment-btn"
                             disabled={submitting}
                         >
-                            {submitting ? <FaSpinner style={styles.spinnerIcon} /> : <FaCheckCircle />}
+                            {submitting ? <FaSpinner className="checkout-spinner-icon" /> : <FaCheckCircle />}
                             {submitting ? 'Confirming...' : 'I Have Paid - Confirm Payment'}
                         </button>
                     </div>
@@ -423,8 +399,8 @@ const CheckoutPage = () => {
     // Show Telebirr processing state
     if (isProcessingTelebirr) {
         return (
-            <div style={styles.center}>
-                <FaSpinner style={styles.spinner} />
+            <div className="checkout-center">
+                <FaSpinner className="checkout-spinner" />
                 <h2>Redirecting to Telebirr...</h2>
                 <p>Please wait while we redirect you to the Telebirr payment page.</p>
             </div>
@@ -434,11 +410,11 @@ const CheckoutPage = () => {
     // Show success message after payment
     if (paymentConfirmed) {
         return (
-            <div style={styles.center}>
-                <FaCheckCircle size={64} color="#10b981" />
+            <div className="checkout-center">
+                <FaCheckCircle size={64} className="checkout-success-icon" />
                 <h2>Payment Successful!</h2>
                 <p>Your order has been confirmed and will be processed soon.</p>
-                <button onClick={() => navigate('/orders')} style={styles.viewOrdersBtn}>
+                <button onClick={() => navigate('/orders')} className="checkout-view-orders-btn">
                     View My Orders
                 </button>
             </div>
@@ -446,21 +422,21 @@ const CheckoutPage = () => {
     }
 
     return (
-        <div style={styles.container}>
-            <button onClick={() => navigate('/cart')} style={styles.backBtn}>
+        <div className="checkout-container">
+            <button onClick={() => navigate('/cart')} className="checkout-back-btn">
                 <FaArrowLeft /> Back to Cart
             </button>
             
-            <h1 style={styles.title}>Checkout</h1>
+            <h1 className="checkout-title">Checkout</h1>
             
-            <div style={styles.checkoutContainer}>
-                <div style={styles.form}>
+            <div className="checkout-layout">
+                <div className="checkout-form-section">
                     {/* Saved Addresses */}
                     {savedAddresses.length > 0 && (
-                        <div style={styles.section}>
+                        <div className="checkout-section">
                             <h2>Saved Addresses</h2>
-                            <div style={styles.radioGroup}>
-                                <label style={styles.radioLabel}>
+                            <div className="checkout-radio-group">
+                                <label className="checkout-radio-label">
                                     <input
                                         type="radio"
                                         checked={!useSavedAddress}
@@ -478,7 +454,7 @@ const CheckoutPage = () => {
                                     />
                                     Enter new address
                                 </label>
-                                <label style={styles.radioLabel}>
+                                <label className="checkout-radio-label">
                                     <input
                                         type="radio"
                                         checked={useSavedAddress}
@@ -492,7 +468,7 @@ const CheckoutPage = () => {
                                 <select
                                     value={selectedAddressId}
                                     onChange={(e) => handleAddressSelect(e.target.value)}
-                                    style={styles.select}
+                                    className="checkout-select"
                                 >
                                     <option value="">Select an address</option>
                                     {savedAddresses.map(addr => (
@@ -506,7 +482,7 @@ const CheckoutPage = () => {
                     )}
                     
                     {/* Shipping Information */}
-                    <div style={styles.section}>
+                    <div className="checkout-section">
                         <h2>Shipping Information</h2>
                         
                         <input
@@ -516,7 +492,7 @@ const CheckoutPage = () => {
                             value={shippingAddress.fullName}
                             onChange={handleChange}
                             required
-                            style={styles.input}
+                            className="checkout-input"
                         />
                         
                         <input
@@ -526,7 +502,7 @@ const CheckoutPage = () => {
                             value={shippingAddress.address}
                             onChange={handleChange}
                             required
-                            style={styles.input}
+                            className="checkout-input"
                         />
                         
                         <input
@@ -536,7 +512,7 @@ const CheckoutPage = () => {
                             value={shippingAddress.city}
                             onChange={handleChange}
                             required
-                            style={styles.input}
+                            className="checkout-input"
                         />
                         
                         <input
@@ -546,7 +522,7 @@ const CheckoutPage = () => {
                             value={shippingAddress.postalCode}
                             onChange={handleChange}
                             required
-                            style={styles.input}
+                            className="checkout-input"
                         />
                         
                         <input
@@ -556,7 +532,7 @@ const CheckoutPage = () => {
                             value={shippingAddress.country}
                             onChange={handleChange}
                             required
-                            style={styles.input}
+                            className="checkout-input"
                         />
                         
                         <input
@@ -566,64 +542,64 @@ const CheckoutPage = () => {
                             value={shippingAddress.phone}
                             onChange={handleChange}
                             required
-                            style={styles.input}
+                            className="checkout-input"
                         />
                     </div>
                     
                     {/* Payment Method */}
-                    <div style={styles.section}>
+                    <div className="checkout-section">
                         <h2>Payment Method</h2>
                         
-                        <div style={styles.paymentOptions}>
-                            <label style={styles.paymentLabel}>
+                        <div className="checkout-payment-options">
+                            <label className="checkout-payment-label">
                                 <input
                                     type="radio"
                                     value="Cash on Delivery"
                                     checked={paymentMethod === 'Cash on Delivery'}
                                     onChange={(e) => handlePaymentMethodChange(e.target.value)}
                                 />
-                                <div style={styles.paymentCard}>
+                                <div className="checkout-payment-card">
                                     <FaMoneyBillWave size={20} />
                                     <span>Cash on Delivery</span>
                                 </div>
                             </label>
                             
-                            <label style={styles.paymentLabel}>
+                            <label className="checkout-payment-label">
                                 <input
                                     type="radio"
                                     value="CBE Birr"
                                     checked={paymentMethod === 'CBE Birr'}
                                     onChange={(e) => handlePaymentMethodChange(e.target.value)}
                                 />
-                                <div style={styles.paymentCard}>
+                                <div className="checkout-payment-card">
                                     <FaUniversity size={20} />
                                     <span>CBE Birr</span>
                                 </div>
                             </label>
                             
-                            <label style={styles.paymentLabel}>
+                            <label className="checkout-payment-label">
                                 <input
                                     type="radio"
                                     value="Telebirr"
                                     checked={paymentMethod === 'Telebirr'}
                                     onChange={(e) => handlePaymentMethodChange(e.target.value)}
                                 />
-                                <div style={styles.paymentCard}>
+                                <div className="checkout-payment-card">
                                     <FaMobile size={20} />
                                     <span>Telebirr</span>
-                                    <span style={styles.paymentBadge}>Auto-Pay</span>
+                                    <span className="checkout-payment-badge">Auto-Pay</span>
                                 </div>
                             </label>
                         </div>
                     </div>
 
-                    {/* Payment Details for CBE Birr */}
+                    {/* Payment Details for CBE Birr - Phone number removed */}
                     {showPaymentDetails && paymentMethod === 'CBE Birr' && (
-                        <div style={styles.section}>
+                        <div className="checkout-section">
                             <h2>Payment Details</h2>
                             
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>CBE Birr Account Number</label>
+                            <div className="checkout-form-group">
+                                <label className="checkout-label">CBE Birr Account Number</label>
                                 <input
                                     type="text"
                                     value={accountNumber}
@@ -636,45 +612,25 @@ const CheckoutPage = () => {
                                         }
                                     }}
                                     placeholder="1000123456789"
-                                    style={{...styles.input, ...(accountNumberError && styles.inputError)}}
+                                    className={`checkout-input ${accountNumberError ? 'checkout-input-error' : ''}`}
                                 />
-                                {accountNumberError && <span style={styles.errorText}>{accountNumberError}</span>}
-                                <small style={styles.hintText}>Account number must start with 1000 followed by 9 digits (total 13 digits)</small>
-                            </div>
-                            
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Phone Number</label>
-                                <input
-                                    type="tel"
-                                    value={phoneNumber}
-                                    onChange={(e) => {
-                                        setPhoneNumber(e.target.value);
-                                        if (validatePhoneNumber(e.target.value)) {
-                                            setPhoneNumberError('');
-                                        } else {
-                                            setPhoneNumberError('Phone number must start with +2519 followed by 8 digits (e.g., +251912345678)');
-                                        }
-                                    }}
-                                    placeholder="+251912345678"
-                                    style={{...styles.input, ...(phoneNumberError && styles.inputError)}}
-                                />
-                                {phoneNumberError && <span style={styles.errorText}>{phoneNumberError}</span>}
-                                <small style={styles.hintText}>Enter your phone number in international format (+2519XXXXXXXX)</small>
+                                {accountNumberError && <span className="checkout-error-text">{accountNumberError}</span>}
+                                <small className="checkout-hint-text">Account number must start with 1000 followed by 9 digits (total 13 digits)</small>
                             </div>
                         </div>
                     )}
 
                     {/* Phone Number for Telebirr */}
                     {showPaymentDetails && paymentMethod === 'Telebirr' && (
-                        <div style={styles.section}>
+                        <div className="checkout-section">
                             <h2>Telebirr Payment</h2>
-                            <div style={styles.telebirrInfo}>
+                            <div className="checkout-telebirr-info">
                                 <FaShieldAlt size={24} color="#10b981" />
                                 <p>You will be redirected to Telebirr secure payment page after order creation.</p>
                             </div>
                             
-                            <div style={styles.formGroup}>
-                                <label style={styles.label}>Phone Number</label>
+                            <div className="checkout-form-group">
+                                <label className="checkout-label">Phone Number</label>
                                 <input
                                     type="tel"
                                     value={phoneNumber}
@@ -687,22 +643,22 @@ const CheckoutPage = () => {
                                         }
                                     }}
                                     placeholder="+251912345678"
-                                    style={{...styles.input, ...(phoneNumberError && styles.inputError)}}
+                                    className={`checkout-input ${phoneNumberError ? 'checkout-input-error' : ''}`}
                                     required
                                 />
-                                {phoneNumberError && <span style={styles.errorText}>{phoneNumberError}</span>}
-                                <small style={styles.hintText}>Enter the phone number registered with Telebirr</small>
+                                {phoneNumberError && <span className="checkout-error-text">{phoneNumberError}</span>}
+                                <small className="checkout-hint-text">Enter the phone number registered with Telebirr</small>
                             </div>
                         </div>
                     )}
                     
                     <button 
                         onClick={handleCreateOrder}
-                        style={styles.placeOrderBtn}
+                        className="checkout-place-order-btn"
                         disabled={submitting || orderLoading || checkoutItems.length === 0}
                     >
                         {submitting || orderLoading ? (
-                            <><FaSpinner style={styles.spinnerIcon} /> Creating Order...</>
+                            <><FaSpinner className="checkout-spinner-icon" /> Creating Order...</>
                         ) : (
                             <><FaCheckCircle /> Place Order (${finalTotal.toFixed(2)})</>
                         )}
@@ -710,28 +666,28 @@ const CheckoutPage = () => {
                 </div>
                 
                 {/* Order Summary */}
-                <div style={styles.summary}>
-                    <h2 style={styles.summaryTitle}>Order Summary</h2>
+                <div className="checkout-summary">
+                    <h2 className="checkout-summary-title">Order Summary</h2>
                     
-                    <div style={styles.orderItems}>
+                    <div className="checkout-order-items">
                         {checkoutItems.map((item, index) => (
-                            <div key={index} style={styles.orderItem}>
+                            <div key={index} className="checkout-order-item">
                                 <img 
                                     src={item.imageUrl || 'https://via.placeholder.com/60'} 
                                     alt={item.name}
-                                    style={styles.itemImage}
+                                    className="checkout-item-image"
                                 />
-                                <div style={styles.itemInfo}>
-                                    <p style={styles.itemName}>{item.name}</p>
-                                    {item.size && <p style={styles.itemSize}>Size: {item.size}</p>}
-                                    <p style={styles.itemQty}>Qty: {item.quantity}</p>
+                                <div className="checkout-item-info">
+                                    <p className="checkout-item-name">{item.name}</p>
+                                    {item.size && <p className="checkout-item-size">Size: {item.size}</p>}
+                                    <p className="checkout-item-qty">Qty: {item.quantity}</p>
                                 </div>
-                                <div style={styles.itemPrice}>
+                                <div className="checkout-item-price">
                                     ${(item.price * item.quantity).toFixed(2)}
                                 </div>
                                 <button 
                                     onClick={() => handleRemoveItem(item.product?._id || item.product)}
-                                    style={styles.removeItemBtn}
+                                    className="checkout-remove-item-btn"
                                     title="Remove item"
                                 >
                                     <FaTrash />
@@ -740,29 +696,29 @@ const CheckoutPage = () => {
                         ))}
                     </div>
                     
-                    <div style={styles.couponSection}>
+                    <div className="checkout-coupon-section">
                         <CouponInput cartTotal={checkoutTotal} />
                     </div>
                     
-                    <div style={styles.priceDetails}>
-                        <div style={styles.priceRow}>
+                    <div className="checkout-price-details">
+                        <div className="checkout-price-row">
                             <span>Subtotal ({checkoutItems.length} items):</span>
                             <span>${checkoutTotal.toFixed(2)}</span>
                         </div>
-                        <div style={styles.priceRow}>
+                        <div className="checkout-price-row">
                             <span>Shipping:</span>
                             <span>Free</span>
                         </div>
                         {discountAmount > 0 && (
-                            <div style={styles.discountRow}>
+                            <div className="checkout-discount-row">
                                 <span>Discount:</span>
                                 <span style={{ color: '#10b981' }}>-${discountAmount.toFixed(2)}</span>
                             </div>
                         )}
-                        <div style={styles.divider}></div>
-                        <div style={styles.totalRow}>
+                        <div className="checkout-divider"></div>
+                        <div className="checkout-total-row">
                             <strong>Total:</strong>
-                            <strong style={styles.totalAmount}>${finalTotal.toFixed(2)}</strong>
+                            <strong className="checkout-total-amount">${finalTotal.toFixed(2)}</strong>
                         </div>
                     </div>
                 </div>
@@ -771,347 +727,553 @@ const CheckoutPage = () => {
     );
 };
 
-const styles = {
-    container: {
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '20px',
-    },
-    backBtn: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        background: 'none',
-        border: 'none',
-        color: '#6366f1',
-        cursor: 'pointer',
-        marginBottom: '20px',
-        fontSize: '0.9rem',
-    },
-    title: {
-        fontSize: '2rem',
-        marginBottom: '30px',
-        color: '#333',
-    },
-    checkoutContainer: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 380px',
-        gap: '30px',
-    },
-    form: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '25px',
-    },
-    section: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '1.5rem',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    },
-    input: {
-        width: '100%',
-        padding: '12px',
-        marginBottom: '15px',
-        border: '1px solid #ddd',
-        borderRadius: '0.5rem',
-        fontSize: '1rem',
-        transition: 'border-color 0.3s',
-    },
-    inputError: {
-        borderColor: '#dc3545',
-        backgroundColor: '#fff8f8',
-    },
-    errorText: {
-        color: '#dc3545',
-        fontSize: '0.75rem',
-        marginTop: '5px',
-        display: 'block',
-    },
-    hintText: {
-        color: '#6c757d',
-        fontSize: '0.7rem',
-        marginTop: '5px',
-        display: 'block',
-    },
-    radioGroup: {
-        display: 'flex',
-        gap: '20px',
-        marginBottom: '15px',
-        flexWrap: 'wrap',
-    },
-    radioLabel: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        cursor: 'pointer',
-    },
-    select: {
-        width: '100%',
-        padding: '12px',
-        border: '1px solid #ddd',
-        borderRadius: '0.5rem',
-        fontSize: '1rem',
-        backgroundColor: '#fff',
-    },
-    paymentOptions: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(160px, 1fr))',
-        gap: '15px',
-    },
-    paymentLabel: {
-        cursor: 'pointer',
-    },
-    paymentCard: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        padding: '12px',
-        border: '2px solid #e5e7eb',
-        borderRadius: '0.5rem',
-        transition: 'all 0.3s',
-        backgroundColor: '#fff',
-        position: 'relative',
-    },
-    paymentBadge: {
-        position: 'absolute',
-        top: '-8px',
-        right: '-8px',
-        backgroundColor: '#10b981',
-        color: '#fff',
-        fontSize: '10px',
-        padding: '2px 6px',
-        borderRadius: '20px',
-    },
-    telebirrInfo: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        backgroundColor: '#f0fdf4',
-        padding: '12px',
-        borderRadius: '0.5rem',
-        marginBottom: '15px',
-        border: '1px solid #bbf7d0',
-    },
-    formGroup: {
-        marginBottom: '15px',
-    },
-    label: {
-        display: 'block',
-        marginBottom: '5px',
-        fontWeight: '500',
-        color: '#555',
-    },
-    placeOrderBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '10px',
-        padding: '14px',
-        backgroundColor: '#28a745',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        fontSize: '1rem',
-        fontWeight: '600',
-        cursor: 'pointer',
-        transition: 'background-color 0.3s',
-        width: '100%',
-    },
-    summary: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '1.5rem',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        height: 'fit-content',
-        position: 'sticky',
-        top: '20px',
-    },
-    summaryTitle: {
-        fontSize: '1.2rem',
-        marginBottom: '1rem',
-        paddingBottom: '0.5rem',
-        borderBottom: '2px solid #f0f0f0',
-    },
-    orderItems: {
-        maxHeight: '400px',
-        overflowY: 'auto',
-        marginBottom: '1rem',
-    },
-    orderItem: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '12px',
-        padding: '10px 0',
-        borderBottom: '1px solid #f0f0f0',
-    },
-    itemImage: {
-        width: '50px',
-        height: '50px',
-        objectFit: 'cover',
-        borderRadius: '0.5rem',
-    },
-    itemInfo: {
-        flex: 1,
-    },
-    itemName: {
-        fontSize: '0.9rem',
-        fontWeight: '500',
-        marginBottom: '4px',
-    },
-    itemSize: {
-        fontSize: '0.75rem',
-        color: '#666',
-    },
-    itemQty: {
-        fontSize: '0.75rem',
-        color: '#666',
-    },
-    itemPrice: {
-        fontWeight: '600',
-        color: '#6366f1',
-    },
-    removeItemBtn: {
-        background: 'none',
-        border: 'none',
-        color: '#dc3545',
-        cursor: 'pointer',
-        padding: '5px',
-    },
-    couponSection: {
-        margin: '1rem 0',
-        padding: '1rem 0',
-        borderTop: '1px solid #f0f0f0',
-        borderBottom: '1px solid #f0f0f0',
-    },
-    priceDetails: {
-        marginTop: '1rem',
-    },
-    priceRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: '10px',
-        fontSize: '0.9rem',
-    },
-    discountRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: '10px',
-        fontSize: '0.9rem',
-        color: '#10b981',
-    },
-    divider: {
-        height: '1px',
-        backgroundColor: '#e5e7eb',
-        margin: '12px 0',
-    },
-    totalRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontSize: '1.2rem',
-    },
-    totalAmount: {
-        color: '#28a745',
-        fontSize: '1.3rem',
-    },
-    paymentContainer: {
-        maxWidth: '600px',
-        margin: '0 auto',
-    },
-    paymentForm: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '1.5rem',
-        marginTop: '20px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    },
-    confirmPaymentBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '10px',
-        padding: '14px',
-        backgroundColor: '#10b981',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        fontSize: '1rem',
-        fontWeight: '600',
-        cursor: 'pointer',
-        width: '100%',
-        marginTop: '10px',
-    },
-    orderInfo: {
-        textAlign: 'center',
-        marginBottom: '20px',
-        fontSize: '0.9rem',
-        color: '#666',
-    },
-    spinner: {
-        animation: 'spin 1s linear infinite',
-        fontSize: '2rem',
-        color: '#6366f1',
-        marginBottom: '1rem',
-    },
-    spinnerIcon: {
-        animation: 'spin 1s linear infinite',
-    },
-    center: {
-        textAlign: 'center',
-        padding: '50px',
-    },
-    loginBtn: {
-        padding: '10px 30px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        marginTop: '20px',
-    },
-    shopBtn: {
-        padding: '10px 30px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        marginTop: '20px',
-    },
-    viewOrdersBtn: {
-        padding: '10px 30px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        marginTop: '20px',
-    },
-};
-
-// Add keyframes for spinner
+// Inject CSS Styles for CheckoutPage
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    @keyframes spin {
+    @keyframes checkoutSpin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
     }
     
-    input:focus, select:focus {
+    /* Checkout Page Styles - Dark Mode Compatible */
+    .checkout-center {
+        text-align: center;
+        padding: 50px;
+        color: var(--text-primary, #333);
+    }
+    
+    .checkout-center h2 {
+        color: var(--text-primary, #333);
+    }
+    
+    .checkout-center p {
+        color: var(--text-secondary, #666);
+    }
+    
+    .checkout-spinner {
+        animation: checkoutSpin 1s linear infinite;
+        font-size: 2rem;
+        color: #6366f1;
+        margin-bottom: 1rem;
+    }
+    
+    .checkout-spinner-icon {
+        animation: checkoutSpin 1s linear infinite;
+    }
+    
+    .checkout-success-icon {
+        color: #10b981;
+        margin-bottom: 20px;
+    }
+    
+    .checkout-login-btn,
+    .checkout-shop-btn,
+    .checkout-view-orders-btn {
+        padding: 10px 30px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        margin-top: 20px;
+    }
+    
+    .checkout-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .checkout-back-btn {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        background: none;
+        border: none;
+        color: #6366f1;
+        cursor: pointer;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+    }
+    
+    body.dark-mode .checkout-back-btn {
+        color: #a5b4fc;
+    }
+    
+    .checkout-title {
+        font-size: 2rem;
+        margin-bottom: 30px;
+        color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .checkout-title {
+        color: #ffffff;
+    }
+    
+    .checkout-layout {
+        display: grid;
+        grid-template-columns: 1fr 380px;
+        gap: 30px;
+    }
+    
+    .checkout-form-section {
+        display: flex;
+        flex-direction: column;
+        gap: 25px;
+    }
+    
+    .checkout-section {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    body.dark-mode .checkout-section {
+        background-color: #1a1a1a;
+        border-color: #333333;
+    }
+    
+    .checkout-section h2 {
+        color: var(--text-primary, #333);
+        margin-bottom: 15px;
+        font-size: 1.2rem;
+    }
+    
+    body.dark-mode .checkout-section h2 {
+        color: #ffffff;
+    }
+    
+    .checkout-input {
+        width: 100%;
+        padding: 12px;
+        margin-bottom: 15px;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        transition: border-color 0.3s;
+        background-color: var(--input-bg, #fff);
+        color: var(--text-primary, #333);
+    }
+    
+    .checkout-input:focus {
         outline: none;
         border-color: #6366f1;
         box-shadow: 0 0 0 2px rgba(99, 102, 241, 0.1);
     }
     
-    .payment-label:hover .payment-card {
+    body.dark-mode .checkout-input {
+        background-color: #0a0a0a;
+        border-color: #444444;
+        color: #ffffff;
+    }
+    
+    .checkout-input-error {
+        border-color: #dc3545;
+        background-color: #fff8f8;
+    }
+    
+    body.dark-mode .checkout-input-error {
+        border-color: #ef4444;
+        background-color: rgba(239, 68, 68, 0.1);
+    }
+    
+    .checkout-error-text {
+        color: #dc3545;
+        font-size: 0.75rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    body.dark-mode .checkout-error-text {
+        color: #f87171;
+    }
+    
+    .checkout-hint-text {
+        color: var(--text-secondary, #6c757d);
+        font-size: 0.7rem;
+        margin-top: 5px;
+        display: block;
+    }
+    
+    .checkout-radio-group {
+        display: flex;
+        gap: 20px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .checkout-radio-label {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        cursor: pointer;
+        color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .checkout-radio-label {
+        color: #d1d5db;
+    }
+    
+    .checkout-select {
+        width: 100%;
+        padding: 12px;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        background-color: var(--input-bg, #fff);
+        color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .checkout-select {
+        background-color: #0a0a0a;
+        border-color: #444444;
+        color: #ffffff;
+    }
+    
+    .checkout-payment-options {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(160px, 1fr));
+        gap: 15px;
+    }
+    
+    .checkout-payment-label {
+        cursor: pointer;
+    }
+    
+    .checkout-payment-card {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px;
+        border: 2px solid var(--border-color, #e5e7eb);
+        border-radius: 0.5rem;
+        transition: all 0.3s;
+        background-color: var(--card-bg, #fff);
+        position: relative;
+        color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .checkout-payment-card {
+        background-color: #1a1a1a;
+        border-color: #444444;
+    }
+    
+    .checkout-payment-label:hover .checkout-payment-card {
         border-color: #6366f1;
-        background-color: #f8fafc;
         transform: translateY(-2px);
     }
     
-    input[type="radio"]:checked + .payment-card {
-        border-color: #6366f1;
-        background-color: #f0f9ff;
+    .checkout-payment-badge {
+        position: absolute;
+        top: -8px;
+        right: -8px;
+        background-color: #10b981;
+        color: #fff;
+        font-size: 10px;
+        padding: 2px 6px;
+        border-radius: 20px;
+    }
+    
+    .checkout-telebirr-info {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background-color: #f0fdf4;
+        padding: 12px;
+        border-radius: 0.5rem;
+        margin-bottom: 15px;
+        border: 1px solid #bbf7d0;
+    }
+    
+    body.dark-mode .checkout-telebirr-info {
+        background-color: #064e3b;
+        border-color: #065f46;
+    }
+    
+    body.dark-mode .checkout-telebirr-info p {
+        color: #86efac;
+    }
+    
+    .checkout-form-group {
+        margin-bottom: 15px;
+    }
+    
+    .checkout-label {
+        display: block;
+        margin-bottom: 5px;
+        font-weight: 500;
+        color: var(--text-primary, #555);
+    }
+    
+    body.dark-mode .checkout-label {
+        color: #d1d5db;
+    }
+    
+    .checkout-place-order-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px;
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.3s;
+        width: 100%;
+    }
+    
+    .checkout-place-order-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+        background: linear-gradient(135deg, #047857, #059669);
+    }
+    
+    .checkout-place-order-btn:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+    }
+    
+    /* Order Summary */
+    .checkout-summary {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        height: fit-content;
+        position: sticky;
+        top: 20px;
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    body.dark-mode .checkout-summary {
+        background-color: #1a1a1a;
+        border-color: #333333;
+    }
+    
+    .checkout-summary-title {
+        font-size: 1.2rem;
+        margin-bottom: 1rem;
+        padding-bottom: 0.5rem;
+        border-bottom: 2px solid var(--border-color, #f0f0f0);
+        color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .checkout-summary-title {
+        color: #ffffff;
+        border-bottom-color: #333333;
+    }
+    
+    .checkout-order-items {
+        max-height: 400px;
+        overflow-y: auto;
+        margin-bottom: 1rem;
+    }
+    
+    .checkout-order-item {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 10px 0;
+        border-bottom: 1px solid var(--border-color, #f0f0f0);
+    }
+    
+    body.dark-mode .checkout-order-item {
+        border-bottom-color: #333333;
+    }
+    
+    .checkout-item-image {
+        width: 50px;
+        height: 50px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+    }
+    
+    .checkout-item-info {
+        flex: 1;
+    }
+    
+    .checkout-item-name {
+        font-size: 0.9rem;
+        font-weight: 500;
+        margin-bottom: 4px;
+        color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .checkout-item-name {
+        color: #ffffff;
+    }
+    
+    .checkout-item-size,
+    .checkout-item-qty {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #666);
+    }
+    
+    .checkout-item-price {
+        font-weight: 600;
+        color: #6366f1;
+    }
+    
+    .checkout-remove-item-btn {
+        background: none;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        padding: 5px;
+        transition: transform 0.2s;
+    }
+    
+    .checkout-remove-item-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .checkout-coupon-section {
+        margin: 1rem 0;
+        padding: 1rem 0;
+        border-top: 1px solid var(--border-color, #f0f0f0);
+        border-bottom: 1px solid var(--border-color, #f0f0f0);
+    }
+    
+    body.dark-mode .checkout-coupon-section {
+        border-top-color: #333333;
+        border-bottom-color: #333333;
+    }
+    
+    .checkout-price-details {
+        margin-top: 1rem;
+    }
+    
+    .checkout-price-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .checkout-price-row {
+        color: #d1d5db;
+    }
+    
+    .checkout-discount-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        font-size: 0.9rem;
+        color: #10b981;
+    }
+    
+    .checkout-divider {
+        height: 1px;
+        background-color: var(--border-color, #e5e7eb);
+        margin: 12px 0;
+    }
+    
+    .checkout-total-row {
+        display: flex;
+        justify-content: space-between;
+        font-size: 1.2rem;
+        color: var(--text-primary, #333);
+    }
+    
+    body.dark-mode .checkout-total-row {
+        color: #ffffff;
+    }
+    
+    .checkout-total-amount {
+        color: #10b981;
+        font-size: 1.3rem;
+    }
+    
+    .checkout-payment-container {
+        max-width: 600px;
+        margin: 0 auto;
+    }
+    
+    .checkout-payment-form {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 1.5rem;
+        margin-top: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    body.dark-mode .checkout-payment-form {
+        background-color: #1a1a1a;
+        border-color: #333333;
+    }
+    
+    .checkout-confirm-payment-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 10px;
+        padding: 14px;
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        font-size: 1rem;
+        font-weight: 600;
+        cursor: pointer;
+        width: 100%;
+        margin-top: 10px;
+        transition: all 0.3s;
+    }
+    
+    .checkout-confirm-payment-btn:hover:not(:disabled) {
+        transform: translateY(-2px);
+    }
+    
+    .checkout-order-info {
+        text-align: center;
+        margin-bottom: 20px;
+        font-size: 0.9rem;
+        color: var(--text-secondary, #666);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .checkout-layout {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .checkout-container {
+            padding: 15px;
+        }
+        
+        .checkout-title {
+            font-size: 1.5rem;
+        }
+        
+        .checkout-summary {
+            position: static;
+        }
+        
+        .checkout-payment-options {
+            grid-template-columns: 1fr;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .checkout-section {
+            padding: 1rem;
+        }
+        
+        .checkout-order-item {
+            flex-wrap: wrap;
+        }
+        
+        .checkout-item-price {
+            margin-left: auto;
+        }
     }
 `;
 document.head.appendChild(styleSheet);
