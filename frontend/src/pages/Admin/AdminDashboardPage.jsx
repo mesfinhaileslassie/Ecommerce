@@ -103,8 +103,8 @@ const AdminDashboardPage = () => {
 
     if (loading) {
         return (
-            <div style={styles.center}>
-                <FaSpinner style={styles.spinner} />
+            <div className="admin-center">
+                <FaSpinner className="admin-spinner" />
                 <p>Loading dashboard...</p>
             </div>
         );
@@ -116,7 +116,6 @@ const AdminDashboardPage = () => {
             <div className="admin-hero-fullwidth">
                 <div className="admin-hero-fullwidth-overlay"></div>
                 <div className="admin-hero-fullwidth-content">
-    
                     <h1 className="admin-hero-fullwidth-title">Admin Dashboard</h1>
                     <p className="admin-hero-fullwidth-subtitle">Welcome back, {user?.name}!</p>
                     <div className="admin-tab-container">
@@ -143,63 +142,59 @@ const AdminDashboardPage = () => {
             </div>
 
             {/* Main Content */}
-            <div style={styles.container}>
+            <div className="admin-container">
                 {/* Main Stats Cards */}
-                <div style={styles.statsGrid}>
+                <div className="admin-stats-grid">
                     {statCards.map((stat, index) => (
-                        <Link to={stat.link} key={index} style={styles.statCard}>
-                            <div style={{...styles.statIcon, backgroundColor: stat.bgColor, color: stat.color}}>
+                        <Link to={stat.link} key={index} className="admin-stat-card">
+                            <div className="admin-stat-icon" style={{ backgroundColor: stat.bgColor, color: stat.color }}>
                                 {stat.icon}
                             </div>
-                            <div style={styles.statInfo}>
-                                <h3 style={styles.statTitle}>{stat.title}</h3>
-                                <p style={styles.statValue}>{stat.value}</p>
+                            <div className="admin-stat-info">
+                                <h3 className="admin-stat-title">{stat.title}</h3>
+                                <p className="admin-stat-value">{stat.value}</p>
                             </div>
                         </Link>
                     ))}
                 </div>
 
                 {/* Quick Actions */}
-                <div style={styles.section}>
-                    <h2 style={styles.sectionTitle}>Quick Actions</h2>
-                    <div style={styles.actionButtons}>
-                        <Link to="/admin/products" style={styles.actionBtn}>
+                <div className="admin-section">
+                    <h2 className="admin-section-title">Quick Actions</h2>
+                    <div className="admin-action-buttons">
+                        <Link to="/admin/products" className="admin-action-btn">
                             <FaBoxes /> Manage Products
                         </Link>
-                        <Link to="/admin/orders" style={styles.actionBtn}>
+                        <Link to="/admin/orders" className="admin-action-btn">
                             <FaShoppingCart /> Manage Orders
                         </Link>
-                        <Link to="/admin/coupons" style={styles.actionBtn}>
+                        <Link to="/admin/coupons" className="admin-action-btn">
                             <FaTag /> Manage Coupons
                         </Link>
                     </div>
                 </div>
 
                 {/* Recent Orders */}
-                <div style={styles.card}>
-                    <div style={styles.cardHeader}>
-                        <h2 style={styles.cardTitle}>
+                <div className="admin-card">
+                    <div className="admin-card-header">
+                        <h2 className="admin-card-title">
                             <FaClock /> Recent Orders
                         </h2>
-                        <Link to="/admin/orders" style={styles.viewAllLink}>View All →</Link>
+                        <Link to="/admin/orders" className="admin-view-all-link">View All →</Link>
                     </div>
                     {recentOrders.length === 0 ? (
-                        <p style={styles.emptyText}>No orders yet</p>
+                        <p className="admin-empty-text">No orders yet</p>
                     ) : (
-                        <div style={styles.orderList}>
+                        <div className="admin-order-list">
                             {recentOrders.map((order) => (
-                                <div key={order._id} style={styles.orderItem}>
+                                <div key={order._id} className="admin-order-item">
                                     <div>
-                                        <span style={styles.orderId}>#{order._id.slice(-8)}</span>
-                                        <span style={styles.orderCustomer}>{order.user?.name || 'Guest'}</span>
+                                        <span className="admin-order-id">#{order._id.slice(-8)}</span>
+                                        <span className="admin-order-customer">{order.user?.name || 'Guest'}</span>
                                     </div>
                                     <div>
-                                        <span style={styles.orderAmount}>${order.totalPrice.toFixed(2)}</span>
-                                        <span style={{
-                                            ...styles.orderStatus,
-                                            backgroundColor: order.status === 'Delivered' ? '#d1fae5' : '#fef3c7',
-                                            color: order.status === 'Delivered' ? '#065f46' : '#92400e',
-                                        }}>
+                                        <span className="admin-order-amount">${order.totalPrice.toFixed(2)}</span>
+                                        <span className={`admin-order-status admin-order-status-${order.status.toLowerCase()}`}>
                                             {order.status}
                                         </span>
                                     </div>
@@ -213,154 +208,7 @@ const AdminDashboardPage = () => {
     );
 };
 
-const styles = {
-    container: {
-        maxWidth: '1400px',
-        margin: '0 auto',
-        padding: '20px',
-    },
-    statsGrid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))',
-        gap: '20px',
-        marginBottom: '30px',
-    },
-    statCard: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '20px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '15px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-        textDecoration: 'none',
-        transition: 'transform 0.3s',
-    },
-    statIcon: {
-        width: '50px',
-        height: '50px',
-        borderRadius: '0.75rem',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        fontSize: '24px',
-    },
-    statInfo: {
-        flex: 1,
-    },
-    statTitle: {
-        fontSize: '0.85rem',
-        color: '#666',
-        marginBottom: '5px',
-    },
-    statValue: {
-        fontSize: '1.8rem',
-        fontWeight: 'bold',
-        color: '#333',
-        margin: 0,
-    },
-    section: {
-        marginBottom: '30px',
-    },
-    sectionTitle: {
-        fontSize: '1.2rem',
-        marginBottom: '15px',
-        color: '#333',
-    },
-    actionButtons: {
-        display: 'flex',
-        gap: '15px',
-        flexWrap: 'wrap',
-    },
-    actionBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        padding: '12px 20px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        textDecoration: 'none',
-        borderRadius: '0.5rem',
-        transition: 'background-color 0.3s',
-    },
-    card: {
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '20px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    },
-    cardHeader: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        marginBottom: '15px',
-        paddingBottom: '10px',
-        borderBottom: '1px solid #eee',
-    },
-    cardTitle: {
-        fontSize: '1rem',
-        display: 'flex',
-        alignItems: 'center',
-        gap: '8px',
-        margin: 0,
-    },
-    viewAllLink: {
-        color: '#6366f1',
-        textDecoration: 'none',
-        fontSize: '0.85rem',
-    },
-    orderList: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '12px',
-    },
-    orderItem: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '10px',
-        backgroundColor: '#f8fafc',
-        borderRadius: '0.5rem',
-        flexWrap: 'wrap',
-        gap: '10px',
-    },
-    orderId: {
-        fontWeight: 'bold',
-        fontFamily: 'monospace',
-        fontSize: '0.85rem',
-        marginRight: '10px',
-    },
-    orderCustomer: {
-        fontSize: '0.75rem',
-        color: '#666',
-    },
-    orderAmount: {
-        fontWeight: 'bold',
-        marginRight: '10px',
-    },
-    orderStatus: {
-        fontSize: '0.7rem',
-        padding: '2px 8px',
-        borderRadius: '20px',
-    },
-    emptyText: {
-        textAlign: 'center',
-        color: '#999',
-        padding: '20px',
-    },
-    center: {
-        textAlign: 'center',
-        padding: '50px',
-    },
-    spinner: {
-        animation: 'spin 1s linear infinite',
-        fontSize: '2rem',
-        color: '#6366f1',
-        marginBottom: '1rem',
-    },
-};
-
-// Inject CSS Styles
+// Inject CSS Styles for Admin Dashboard (these will work with dark mode)
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
     @keyframes spin {
@@ -368,7 +216,200 @@ styleSheet.textContent = `
         to { transform: rotate(360deg); }
     }
     
-    /* FULL WIDTH HERO SECTION - USING #6366f1 COLOR */
+    .admin-center {
+        text-align: center;
+        padding: 50px;
+    }
+    
+    .admin-spinner {
+        animation: spin 1s linear infinite;
+        font-size: 2rem;
+        color: #6366f1;
+        margin-bottom: 1rem;
+    }
+    
+    .admin-container {
+        max-width: 1400px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .admin-stats-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+        gap: 20px;
+        margin-bottom: 30px;
+    }
+    
+    .admin-stat-card {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 20px;
+        display: flex;
+        align-items: center;
+        gap: 15px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        text-decoration: none;
+        transition: transform 0.3s;
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    .admin-stat-card:hover {
+        transform: translateY(-2px);
+    }
+    
+    .admin-stat-icon {
+        width: 50px;
+        height: 50px;
+        border-radius: 0.75rem;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        font-size: 24px;
+    }
+    
+    .admin-stat-info {
+        flex: 1;
+    }
+    
+    .admin-stat-title {
+        font-size: 0.85rem;
+        color: var(--text-secondary, #666);
+        margin-bottom: 5px;
+    }
+    
+    .admin-stat-value {
+        font-size: 1.8rem;
+        font-weight: bold;
+        color: var(--text-primary, #333);
+        margin: 0;
+    }
+    
+    .admin-section {
+        margin-bottom: 30px;
+    }
+    
+    .admin-section-title {
+        font-size: 1.2rem;
+        margin-bottom: 15px;
+        color: var(--text-primary, #333);
+    }
+    
+    .admin-action-buttons {
+        display: flex;
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .admin-action-btn {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 12px 20px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff !important;
+        text-decoration: none;
+        border-radius: 0.5rem;
+        transition: background-color 0.3s;
+    }
+    
+    .admin-action-btn:hover {
+        background: linear-gradient(135deg, #4338ca, #4f46e5);
+        transform: translateY(-2px);
+    }
+    
+    .admin-card {
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 20px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    .admin-card-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        margin-bottom: 15px;
+        padding-bottom: 10px;
+        border-bottom: 1px solid var(--border-color, #eee);
+    }
+    
+    .admin-card-title {
+        font-size: 1rem;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        margin: 0;
+        color: var(--text-primary, #333);
+    }
+    
+    .admin-view-all-link {
+        color: #6366f1;
+        text-decoration: none;
+        font-size: 0.85rem;
+    }
+    
+    .admin-order-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+    }
+    
+    .admin-order-item {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px;
+        background-color: var(--bg-secondary, #f8fafc);
+        border-radius: 0.5rem;
+        flex-wrap: wrap;
+        gap: 10px;
+    }
+    
+    .admin-order-id {
+        font-weight: bold;
+        font-family: monospace;
+        font-size: 0.85rem;
+        margin-right: 10px;
+        color: var(--text-primary, #333);
+    }
+    
+    .admin-order-customer {
+        font-size: 0.75rem;
+        color: var(--text-secondary, #666);
+    }
+    
+    .admin-order-amount {
+        font-weight: bold;
+        margin-right: 10px;
+        color: var(--text-primary, #333);
+    }
+    
+    .admin-order-status {
+        font-size: 0.7rem;
+        padding: 2px 8px;
+        border-radius: 20px;
+    }
+    
+    .admin-order-status-delivered {
+        background-color: #d1fae5;
+        color: #065f46;
+    }
+    
+    .admin-order-status-pending,
+    .admin-order-status-processing {
+        background-color: #fef3c7;
+        color: #92400e;
+    }
+    
+    .admin-empty-text {
+        text-align: center;
+        padding: 20px;
+        color: var(--text-secondary, #999);
+    }
+    
+    /* FULL WIDTH HERO SECTION */
     .admin-hero-fullwidth {
         position: relative;
         width: 100%;
@@ -408,15 +449,16 @@ styleSheet.textContent = `
         font-weight: bold;
         margin-bottom: 0.75rem;
         animation: fadeIn 0.6s ease-out;
+        color: white !important;
     }
     
     .admin-hero-fullwidth-subtitle {
         font-size: 1.1rem;
         margin-bottom: 1.5rem;
         opacity: 0.9;
+        color: white !important;
     }
     
-    /* VISIBLE TABS - USING #6366f1 */
     .admin-tab-container {
         display: flex;
         gap: 15px;
@@ -473,18 +515,6 @@ styleSheet.textContent = `
         }
     }
     
-    /* Hover effects */
-    .stat-card:hover {
-        transform: translateY(-2px);
-        box-shadow: 0 4px 6px rgba(0,0,0,0.1);
-    }
-    
-    .action-btn:hover {
-        background-color: #4f46e5;
-        transform: translateY(-2px);
-    }
-    
-    /* Responsive Styles */
     @media (max-width: 768px) {
         .admin-hero-fullwidth {
             min-height: 260px;
@@ -523,11 +553,11 @@ styleSheet.textContent = `
             font-size: 0.8rem;
         }
         
-        .stat-value {
+        .admin-stat-value {
             font-size: 1.3rem;
         }
         
-        .stat-icon {
+        .admin-stat-icon {
             width: 40px !important;
             height: 40px !important;
             font-size: 18px !important;

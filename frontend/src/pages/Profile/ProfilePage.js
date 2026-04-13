@@ -762,6 +762,161 @@ styleSheet.textContent = `
         box-shadow: 0 8px 25px rgba(0,0,0,0.1);
     }
 `;
+
+// Dark mode styles for Profile Page - STRONGER VERSION
+const profileDarkStyles = document.createElement("style");
+profileDarkStyles.textContent = `
+    /* Force dark mode on all profile containers */
+    body.dark-mode .profile-card,
+    body.dark-mode .edit-card,
+    body.dark-mode .link-card,
+    body.dark-mode [class*="profileCard"],
+    body.dark-mode [class*="editCard"],
+    body.dark-mode [class*="linkCard"] {
+        background-color: #1a1a1a !important;
+        border: 1px solid #333333 !important;
+        box-shadow: none !important;
+    }
+    
+    /* Force all text to be white */
+    body.dark-mode .profile-card *,
+    body.dark-mode .edit-card *,
+    body.dark-mode .link-card *,
+    body.dark-mode .profile-card div,
+    body.dark-mode .edit-card div,
+    body.dark-mode .profile-card span,
+    body.dark-mode .edit-card span,
+    body.dark-mode .profile-card p,
+    body.dark-mode .edit-card p,
+    body.dark-mode .profile-card h2,
+    body.dark-mode .edit-card h2,
+    body.dark-mode .profile-card h3,
+    body.dark-mode .edit-card h3,
+    body.dark-mode .profile-card label,
+    body.dark-mode .edit-card label,
+    body.dark-mode .profile-card strong,
+    body.dark-mode .edit-card strong {
+        color: #ffffff !important;
+    }
+    
+    /* Info rows */
+    body.dark-mode .info-row {
+        border-bottom-color: #333333 !important;
+    }
+    
+    body.dark-mode .info-row strong,
+    body.dark-mode .info-row span {
+        color: #ffffff !important;
+    }
+    
+    /* Stats section */
+    body.dark-mode .stats-section {
+        border-top-color: #333333 !important;
+    }
+    
+    body.dark-mode .stat-item {
+        background-color: #0a0a0a !important;
+        border-radius: 8px !important;
+    }
+    
+    body.dark-mode .stat-item h3,
+    body.dark-mode .stat-item p,
+    body.dark-mode .stat-number,
+    body.dark-mode .stat-label {
+        color: #ffffff !important;
+    }
+    
+    body.dark-mode .stat-icon-container {
+        background-color: #1a1a1a !important;
+    }
+    
+    body.dark-mode .stat-icon {
+        color: #a5b4fc !important;
+    }
+    
+    /* Input fields */
+    body.dark-mode .input,
+    body.dark-mode input:not([type="submit"]):not([type="button"]),
+    body.dark-mode textarea,
+    body.dark-mode select {
+        background-color: #0a0a0a !important;
+        border: 1px solid #444444 !important;
+        color: #ffffff !important;
+    }
+    
+    body.dark-mode .input::placeholder {
+        color: #888888 !important;
+    }
+    
+    /* Buttons */
+    body.dark-mode .edit-btn {
+        background-color: #4f46e5 !important;
+        color: white !important;
+    }
+    
+    body.dark-mode .save-btn {
+        background-color: #059669 !important;
+        color: white !important;
+    }
+    
+    body.dark-mode .cancel-btn {
+        background-color: #4b5563 !important;
+        color: white !important;
+    }
+    
+    body.dark-mode .logout-btn {
+        background-color: #dc2626 !important;
+        color: white !important;
+    }
+    
+    /* Avatar */
+    body.dark-mode .avatar {
+        border-color: #4f46e5 !important;
+    }
+    
+    body.dark-mode .camera-icon {
+        background-color: #4f46e5 !important;
+        color: white !important;
+    }
+    
+    /* Dividers and text */
+    body.dark-mode .divider {
+        background-color: #333333 !important;
+    }
+    
+    body.dark-mode .hint-text {
+        color: #aaaaaa !important;
+    }
+    
+    body.dark-mode .error-text {
+        color: #f87171 !important;
+    }
+    
+    body.dark-mode .google-badge {
+        background-color: #1a1a1a !important;
+        color: #a5b4fc !important;
+        border: 1px solid #333333 !important;
+    }
+    
+    body.dark-mode .user-since {
+        color: #aaaaaa !important;
+    }
+    
+    /* Card header */
+    body.dark-mode .card-header {
+        border-bottom-color: #333333 !important;
+    }
+    
+    /* Quick links grid */
+    body.dark-mode .quick-links {
+        border-top-color: #333333 !important;
+    }
+    
+    body.dark-mode .section-title {
+        color: #ffffff !important;
+    }
+`;
+document.head.appendChild(profileDarkStyles);
 document.head.appendChild(styleSheet);
 
 
