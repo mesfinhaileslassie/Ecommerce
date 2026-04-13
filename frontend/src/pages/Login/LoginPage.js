@@ -89,6 +89,9 @@ const LoginPageContent = () => {
         toast.error('Google login was unsuccessful. Please try again.');
     };
 
+    const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
+    const isGoogleConfigured = googleClientId && googleClientId !== 'your_google_client_id_here';
+
     return (
         <div className="login-container">
             <div className="login-form-container">
@@ -146,19 +149,25 @@ const LoginPageContent = () => {
                     <span>OR</span>
                 </div>
                 
-                <div className="login-google-button-wrapper">
-                    <GoogleLogin
-                        onSuccess={handleGoogleSuccess}
-                        onError={handleGoogleFailure}
-                        useOneTap={false}
-                        theme="outline"
-                        size="large"
-                        text="continue_with"
-                        shape="rectangular"
-                        width="100%"
-                        logo_alignment="center"
-                    />
-                </div>
+                {isGoogleConfigured ? (
+                    <div className="login-google-button-wrapper">
+                        <GoogleLogin
+                            onSuccess={handleGoogleSuccess}
+                            onError={handleGoogleFailure}
+                            useOneTap={false}
+                            theme="outline"
+                            size="large"
+                            text="continue_with"
+                            shape="rectangular"
+                            width="100%"
+                            logo_alignment="center"
+                        />
+                    </div>
+                ) : (
+                    <div className="login-google-unavailable">
+                        <p>Google Sign In is not configured. Please contact support.</p>
+                    </div>
+                )}
                 
                 <p className="login-register-link">
                     Don't have an account? <Link to="/register">Register here</Link>
@@ -171,8 +180,9 @@ const LoginPageContent = () => {
 const LoginPage = () => {
     const googleClientId = process.env.REACT_APP_GOOGLE_CLIENT_ID;
     
-    if (!googleClientId) {
-        console.error("REACT_APP_GOOGLE_CLIENT_ID is not set");
+    // If Google Client ID is not configured, show login without Google
+    if (!googleClientId || googleClientId === 'your_google_client_id_here') {
+        console.warn("REACT_APP_GOOGLE_CLIENT_ID is not set. Google login will not be available.");
         return <LoginPageContent />;
     }
 
@@ -284,10 +294,6 @@ styleSheet.textContent = `
         color: #ffffff;
     }
     
-    body.dark-mode .login-input:focus {
-        border-color: #6366f1;
-    }
-    
     .login-input-error {
         border-color: #dc3545;
         background-color: #fff8f8;
@@ -369,6 +375,21 @@ styleSheet.textContent = `
         display: flex;
         justify-content: center;
         width: 100%;
+    }
+    
+    .login-google-unavailable {
+        text-align: center;
+        padding: 12px;
+        background-color: #fef3c7;
+        color: #92400e;
+        border-radius: 5px;
+        font-size: 0.8rem;
+        margin-top: 10px;
+    }
+    
+    body.dark-mode .login-google-unavailable {
+        background-color: #7f5f00;
+        color: #ffd966;
     }
     
     /* Style Google button for dark mode */
