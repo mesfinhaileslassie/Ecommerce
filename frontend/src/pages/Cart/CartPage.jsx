@@ -177,16 +177,16 @@ const CartPage = () => {
 
     if (!user) {
         return (
-            <div style={styles.center}>
+            <div className="cart-center">
                 <h2>Please login to view your cart</h2>
-                <Link to="/login" style={styles.loginBtn}>Login</Link>
+                <Link to="/login" className="cart-login-btn">Login</Link>
             </div>
         );
     }
 
     if (loading || loadingExpiration) {
         return (
-            <div style={styles.center}>
+            <div className="cart-center">
                 <div className="spinner"></div>
                 <h2>Loading your cart...</h2>
             </div>
@@ -196,14 +196,14 @@ const CartPage = () => {
     // Check if cart is expired
     if (expirationInfo && expirationInfo.isExpired) {
         return (
-            <div style={styles.center}>
-                <FaExclamationTriangle size={48} color="#dc3545" />
+            <div className="cart-center">
+                <FaExclamationTriangle size={48} className="cart-expired-icon" />
                 <h2>Your cart has expired</h2>
                 <p>Items in your cart were held for too long and have been removed.</p>
                 <p>Please add items to your cart again to continue shopping.</p>
-                <div style={styles.buttonGroup}>
-                    <Link to="/products" style={styles.shopBtn}>Continue Shopping</Link>
-                    <button onClick={handleRefreshCart} style={styles.refreshBtn}>Refresh Cart</button>
+                <div className="cart-button-group">
+                    <Link to="/products" className="cart-shop-btn">Continue Shopping</Link>
+                    <button onClick={handleRefreshCart} className="cart-refresh-btn">Refresh Cart</button>
                 </div>
             </div>
         );
@@ -211,21 +211,21 @@ const CartPage = () => {
 
     if (items.length === 0) {
         return (
-            <div style={styles.center}>
+            <div className="cart-center">
                 <h2>Your cart is empty</h2>
                 <p>Start shopping to add items to your cart</p>
-                <Link to="/products" style={styles.shopBtn}>Continue Shopping</Link>
+                <Link to="/products" className="cart-shop-btn">Continue Shopping</Link>
             </div>
         );
     }
 
     return (
-        <div style={styles.container}>
-            <h1 style={styles.title}>Shopping Cart</h1>
+        <div className="cart-container">
+            <h1 className="cart-title">Shopping Cart</h1>
             
             {/* Expiration Warning */}
             {expirationInfo && expirationInfo.hasCart && !expirationInfo.isExpired && (
-                <div style={styles.expirationWarning}>
+                <div className="cart-expiration-warning">
                     <FaClock size={16} />
                     <span>
                         Items in your cart will expire in{' '}
@@ -236,24 +236,24 @@ const CartPage = () => {
                 </div>
             )}
             
-            <div style={styles.cartContainer}>
-                <div style={styles.itemsSection}>
+            <div className="cart-grid">
+                <div className="cart-items-section">
                     {/* Select All Header */}
-                    <div style={styles.selectAllRow}>
-                        <button onClick={handleSelectAll} style={styles.selectAllBtn}>
+                    <div className="cart-select-all-row">
+                        <button onClick={handleSelectAll} className="cart-select-all-btn">
                             {selectAll ? <FaCheckSquare color="#6366f1" /> : <FaSquare color="#999" />}
                             <span>Select All Items</span>
                         </button>
-                        <span style={styles.selectAllInfo}>{selectedCount} of {items.length} items selected</span>
+                        <span className="cart-select-all-info">{selectedCount} of {items.length} items selected</span>
                     </div>
                     
                     {items.map((item) => {
                         const itemId = item.product?._id || item.product;
                         return (
-                            <div key={itemId} style={styles.cartItem}>
+                            <div key={itemId} className="cart-item">
                                 <button 
                                     onClick={() => handleSelectItem(itemId)}
-                                    style={styles.selectCheckbox}
+                                    className="cart-select-checkbox"
                                 >
                                     {selectedItems[itemId] ? <FaCheckSquare color="#6366f1" size={20} /> : <FaSquare color="#999" size={20} />}
                                 </button>
@@ -261,40 +261,40 @@ const CartPage = () => {
                                 <img 
                                     src={item.imageUrl || 'https://via.placeholder.com/100'} 
                                     alt={item.name}
-                                    style={styles.itemImage}
+                                    className="cart-item-image"
                                 />
                                 
-                                <div style={styles.itemDetails}>
+                                <div className="cart-item-details">
                                     <h3>{item.name}</h3>
-                                    {item.size && <p style={styles.itemSize}>Size: {item.size}</p>}
-                                    <p style={styles.itemPrice}>${item.price.toFixed(2)}</p>
+                                    {item.size && <p className="cart-item-size">Size: {item.size}</p>}
+                                    <p className="cart-item-price">${item.price.toFixed(2)}</p>
                                 </div>
                                 
-                                <div style={styles.quantityControls}>
+                                <div className="cart-quantity-controls">
                                     <button 
                                         onClick={() => handleUpdateQuantity(itemId, item.quantity - 1)}
                                         disabled={updating}
-                                        style={styles.qtyBtn}
+                                        className="cart-qty-btn"
                                     >
                                         <FaMinus />
                                     </button>
-                                    <span style={styles.quantity}>{item.quantity}</span>
+                                    <span className="cart-quantity">{item.quantity}</span>
                                     <button 
                                         onClick={() => handleUpdateQuantity(itemId, item.quantity + 1)}
                                         disabled={updating}
-                                        style={styles.qtyBtn}
+                                        className="cart-qty-btn"
                                     >
                                         <FaPlus />
                                     </button>
                                 </div>
                                 
-                                <div style={styles.itemTotal}>
+                                <div className="cart-item-total">
                                     <strong>${(item.price * item.quantity).toFixed(2)}</strong>
                                 </div>
                                 
                                 <button 
                                     onClick={() => handleRemoveItem(itemId)}
-                                    style={styles.removeBtn}
+                                    className="cart-remove-btn"
                                 >
                                     <FaTrash />
                                 </button>
@@ -303,42 +303,42 @@ const CartPage = () => {
                     })}
                 </div>
                 
-                <div style={styles.summarySection}>
+                <div className="cart-summary-section">
                     <h2>Order Summary</h2>
                     
-                    <div style={styles.summaryRow}>
+                    <div className="cart-summary-row">
                         <span>Selected Items ({selectedCount}):</span>
                         <span>${selectedTotal.toFixed(2)}</span>
                     </div>
                     
-                    <div style={styles.summaryRow}>
+                    <div className="cart-summary-row">
                         <span>Total Items in Cart ({itemCount}):</span>
                         <span>${totalPrice.toFixed(2)}</span>
                     </div>
                     
-                    <div style={styles.summaryRow}>
+                    <div className="cart-summary-row">
                         <span>Shipping:</span>
                         <span>Free</span>
                     </div>
                     
-                    <hr style={styles.divider} />
+                    <hr className="cart-divider" />
                     
-                    <div style={styles.summaryTotal}>
+                    <div className="cart-summary-total">
                         <strong>Selected Total:</strong>
                         <strong>${selectedTotal.toFixed(2)}</strong>
                     </div>
                     
                     {selectedCount === 0 ? (
-                        <button style={styles.disabledCheckoutBtn} disabled>
+                        <button className="cart-disabled-checkout-btn" disabled>
                             Select Items to Checkout
                         </button>
                     ) : (
-                        <button onClick={handleCheckout} style={styles.checkoutBtn}>
+                        <button onClick={handleCheckout} className="cart-checkout-btn">
                             <FaMoneyBillWave /> Checkout Selected ({selectedCount})
                         </button>
                     )}
                     
-                    <button onClick={handleClearCart} style={styles.clearBtn}>
+                    <button onClick={handleClearCart} className="cart-clear-btn">
                         Clear Cart
                     </button>
                 </div>
@@ -347,227 +347,370 @@ const CartPage = () => {
     );
 };
 
-const styles = {
-    container: {
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '20px',
-    },
-    title: {
-        marginBottom: '20px',
-        color: '#333',
-    },
-    expirationWarning: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        backgroundColor: '#fff3cd',
-        color: '#856404',
-        padding: '12px 16px',
-        borderRadius: '8px',
-        marginBottom: '20px',
-        fontSize: '14px',
-    },
-    cartContainer: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 320px',
-        gap: '30px',
-    },
-    itemsSection: {
-        backgroundColor: '#fff',
-        borderRadius: '8px',
-        padding: '20px',
-    },
-    selectAllRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        alignItems: 'center',
-        padding: '10px 0',
-        borderBottom: '2px solid #eee',
-        marginBottom: '15px',
-    },
-    selectAllBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        fontSize: '14px',
-        fontWeight: '500',
-        color: '#333',
-    },
-    selectAllInfo: {
-        fontSize: '13px',
-        color: '#666',
-    },
-    cartItem: {
-        display: 'flex',
-        alignItems: 'center',
-        padding: '15px',
-        borderBottom: '1px solid #eee',
-        gap: '15px',
-    },
-    selectCheckbox: {
-        background: 'none',
-        border: 'none',
-        cursor: 'pointer',
-        padding: '5px',
-    },
-    itemImage: {
-        width: '80px',
-        height: '80px',
-        objectFit: 'cover',
-        borderRadius: '8px',
-    },
-    itemDetails: {
-        flex: 1,
-    },
-    itemSize: {
-        fontSize: '12px',
-        color: '#666',
-        marginTop: '4px',
-    },
-    itemPrice: {
-        color: '#007bff',
-        fontWeight: 'bold',
-        marginTop: '4px',
-    },
-    quantityControls: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-    },
-    qtyBtn: {
-        width: '30px',
-        height: '30px',
-        borderRadius: '5px',
-        border: '1px solid #ddd',
-        backgroundColor: '#f5f5f5',
-        cursor: 'pointer',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-    },
-    quantity: {
-        minWidth: '30px',
-        textAlign: 'center',
-    },
-    itemTotal: {
-        minWidth: '80px',
-        textAlign: 'right',
-    },
-    removeBtn: {
-        backgroundColor: 'transparent',
-        border: 'none',
-        color: '#dc3545',
-        cursor: 'pointer',
-        fontSize: '1.1rem',
-    },
-    summarySection: {
-        backgroundColor: '#fff',
-        borderRadius: '8px',
-        padding: '20px',
-        height: 'fit-content',
-        position: 'sticky',
-        top: '80px',
-    },
-    summaryRow: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        marginBottom: '10px',
-    },
-    summaryTotal: {
-        display: 'flex',
-        justifyContent: 'space-between',
-        fontSize: '1.2rem',
-        marginTop: '10px',
-    },
-    divider: {
-        margin: '15px 0',
-        border: 'none',
-        borderTop: '1px solid #eee',
-    },
-    checkoutBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        width: '100%',
-        padding: '12px',
-        backgroundColor: '#28a745',
-        color: '#fff',
-        textAlign: 'center',
-        textDecoration: 'none',
-        borderRadius: '5px',
-        marginTop: '20px',
-        border: 'none',
-        cursor: 'pointer',
-    },
-    disabledCheckoutBtn: {
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        width: '100%',
-        padding: '12px',
-        backgroundColor: '#ccc',
-        color: '#666',
-        textAlign: 'center',
-        borderRadius: '5px',
-        marginTop: '20px',
-        border: 'none',
-        cursor: 'not-allowed',
-    },
-    clearBtn: {
-        width: '100%',
-        padding: '12px',
-        backgroundColor: '#dc3545',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '5px',
-        marginTop: '10px',
-        cursor: 'pointer',
-    },
-    center: {
-        textAlign: 'center',
-        padding: '50px',
-    },
-    loginBtn: {
-        display: 'inline-block',
-        marginTop: '20px',
-        padding: '10px 30px',
-        backgroundColor: '#007bff',
-        color: '#fff',
-        textDecoration: 'none',
-        borderRadius: '5px',
-    },
-    shopBtn: {
-        display: 'inline-block',
-        marginTop: '20px',
-        padding: '10px 30px',
-        backgroundColor: '#007bff',
-        color: '#fff',
-        textDecoration: 'none',
-        borderRadius: '5px',
-    },
-    refreshBtn: {
-        display: 'inline-block',
-        marginTop: '20px',
-        marginLeft: '10px',
-        padding: '10px 30px',
-        backgroundColor: '#28a745',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '5px',
-        cursor: 'pointer',
-    },
-    buttonGroup: {
-        display: 'flex',
-        gap: '10px',
-        justifyContent: 'center',
-        marginTop: '20px',
-    },
-};
+// Inject CSS Styles for CartPage
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+    /* Cart Page Styles - Dark Mode Compatible */
+    
+    .cart-center {
+        text-align: center;
+        padding: 50px;
+    }
+    
+    .cart-center h2 {
+        color: var(--text-primary, #333);
+    }
+    
+    .cart-center p {
+        color: var(--text-secondary, #666);
+    }
+    
+    .cart-expired-icon {
+        color: #dc3545;
+        margin-bottom: 20px;
+    }
+    
+    .cart-login-btn,
+    .cart-shop-btn {
+        display: inline-block;
+        margin-top: 20px;
+        padding: 10px 30px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        text-decoration: none;
+        border-radius: 5px;
+    }
+    
+    .cart-refresh-btn {
+        display: inline-block;
+        margin-top: 20px;
+        margin-left: 10px;
+        padding: 10px 30px;
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        cursor: pointer;
+    }
+    
+    .cart-button-group {
+        display: flex;
+        gap: 10px;
+        justify-content: center;
+        margin-top: 20px;
+    }
+    
+    .cart-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .cart-title {
+        margin-bottom: 20px;
+        color: var(--text-primary, #333);
+    }
+    
+    .cart-expiration-warning {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background-color: #fff3cd;
+        color: #856404;
+        padding: 12px 16px;
+        border-radius: 8px;
+        margin-bottom: 20px;
+        font-size: 14px;
+    }
+    
+    body.dark-mode .cart-expiration-warning {
+        background-color: #7f5f00;
+        color: #ffd966;
+    }
+    
+    .cart-grid {
+        display: grid;
+        grid-template-columns: 1fr 320px;
+        gap: 30px;
+    }
+    
+    .cart-items-section {
+        background-color: var(--card-bg, #fff);
+        border-radius: 8px;
+        padding: 20px;
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    .cart-select-all-row {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 10px 0;
+        border-bottom: 2px solid var(--border-color, #eee);
+        margin-bottom: 15px;
+    }
+    
+    .cart-select-all-btn {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        background: none;
+        border: none;
+        cursor: pointer;
+        font-size: 14px;
+        font-weight: 500;
+        color: var(--text-primary, #333);
+    }
+    
+    .cart-select-all-info {
+        font-size: 13px;
+        color: var(--text-secondary, #666);
+    }
+    
+    .cart-item {
+        display: flex;
+        align-items: center;
+        padding: 15px;
+        border-bottom: 1px solid var(--border-color, #eee);
+        gap: 15px;
+        flex-wrap: wrap;
+    }
+    
+    .cart-select-checkbox {
+        background: none;
+        border: none;
+        cursor: pointer;
+        padding: 5px;
+    }
+    
+    .cart-item-image {
+        width: 80px;
+        height: 80px;
+        object-fit: cover;
+        border-radius: 8px;
+    }
+    
+    .cart-item-details {
+        flex: 1;
+        min-width: 150px;
+    }
+    
+    .cart-item-details h3 {
+        color: var(--text-primary, #333);
+        margin: 0 0 5px 0;
+    }
+    
+    .cart-item-size {
+        font-size: 12px;
+        color: var(--text-secondary, #666);
+        margin-top: 4px;
+    }
+    
+    .cart-item-price {
+        color: #6366f1;
+        font-weight: bold;
+        margin-top: 4px;
+    }
+    
+    .cart-quantity-controls {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .cart-qty-btn {
+        width: 30px;
+        height: 30px;
+        border-radius: 5px;
+        border: 1px solid var(--border-color, #ddd);
+        background-color: var(--bg-secondary, #f5f5f5);
+        cursor: pointer;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: var(--text-primary, #333);
+    }
+    
+    .cart-qty-btn:hover:not(:disabled) {
+        background-color: var(--border-color, #e5e7eb);
+    }
+    
+    .cart-qty-btn:disabled {
+        opacity: 0.5;
+        cursor: not-allowed;
+    }
+    
+    .cart-quantity {
+        min-width: 30px;
+        text-align: center;
+        color: var(--text-primary, #333);
+    }
+    
+    .cart-item-total {
+        min-width: 80px;
+        text-align: right;
+        color: var(--text-primary, #333);
+    }
+    
+    .cart-remove-btn {
+        background: transparent;
+        border: none;
+        color: #dc3545;
+        cursor: pointer;
+        font-size: 1.1rem;
+        transition: transform 0.2s;
+    }
+    
+    .cart-remove-btn:hover {
+        transform: scale(1.1);
+    }
+    
+    .cart-summary-section {
+        background-color: var(--card-bg, #fff);
+        border-radius: 8px;
+        padding: 20px;
+        height: fit-content;
+        position: sticky;
+        top: 80px;
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    .cart-summary-section h2 {
+        color: var(--text-primary, #333);
+        margin-bottom: 20px;
+    }
+    
+    .cart-summary-row {
+        display: flex;
+        justify-content: space-between;
+        margin-bottom: 10px;
+        color: var(--text-primary, #333);
+    }
+    
+    .cart-summary-total {
+        display: flex;
+        justify-content: space-between;
+        font-size: 1.2rem;
+        margin-top: 10px;
+        color: var(--text-primary, #333);
+    }
+    
+    .cart-divider {
+        margin: 15px 0;
+        border: none;
+        border-top: 1px solid var(--border-color, #eee);
+    }
+    
+    .cart-checkout-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 12px;
+        background: linear-gradient(135deg, #059669, #10b981);
+        color: #fff;
+        text-align: center;
+        text-decoration: none;
+        border-radius: 5px;
+        margin-top: 20px;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .cart-checkout-btn:hover {
+        transform: translateY(-2px);
+        background: linear-gradient(135deg, #047857, #059669);
+    }
+    
+    .cart-disabled-checkout-btn {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        width: 100%;
+        padding: 12px;
+        background-color: #ccc;
+        color: #666;
+        text-align: center;
+        border-radius: 5px;
+        margin-top: 20px;
+        border: none;
+        cursor: not-allowed;
+    }
+    
+    body.dark-mode .cart-disabled-checkout-btn {
+        background-color: #374151;
+        color: #9ca3af;
+    }
+    
+    .cart-clear-btn {
+        width: 100%;
+        padding: 12px;
+        background-color: #dc3545;
+        color: #fff;
+        border: none;
+        border-radius: 5px;
+        margin-top: 10px;
+        cursor: pointer;
+        transition: all 0.3s;
+    }
+    
+    .cart-clear-btn:hover {
+        background-color: #c82333;
+        transform: translateY(-2px);
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .cart-grid {
+            grid-template-columns: 1fr;
+            gap: 20px;
+        }
+        
+        .cart-summary-section {
+            position: static;
+        }
+        
+        .cart-item {
+            flex-direction: column;
+            text-align: center;
+        }
+        
+        .cart-item-details {
+            text-align: center;
+        }
+        
+        .cart-item-total {
+            text-align: center;
+        }
+        
+        .cart-select-all-row {
+            flex-direction: column;
+            gap: 10px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .cart-container {
+            padding: 15px;
+        }
+        
+        .cart-title {
+            font-size: 1.5rem;
+        }
+        
+        .cart-item-image {
+            width: 100px;
+            height: 100px;
+        }
+        
+        .cart-quantity-controls {
+            justify-content: center;
+        }
+    }
+`;
+document.head.appendChild(styleSheet);
 
 export default CartPage;
