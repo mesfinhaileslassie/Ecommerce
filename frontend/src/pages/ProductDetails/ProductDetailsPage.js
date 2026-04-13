@@ -108,15 +108,15 @@ const ProductDetailsPage = () => {
 
     if (loading) {
         return (
-            <div style={styles.center}>
-                <FaSpinner style={styles.spinner} />
+            <div className="product-details-center">
+                <FaSpinner className="product-details-spinner" />
                 <p>Loading product...</p>
             </div>
         );
     }
 
     if (!product) {
-        return <div style={styles.center}>Product not found</div>;
+        return <div className="product-details-center">Product not found</div>;
     }
 
     const currentPrice = getCurrentPrice();
@@ -137,35 +137,35 @@ const ProductDetailsPage = () => {
                 url={`https://yourshop.com/products/${product._id}`}
             />
             
-            <div style={styles.container}>
-                <Link to="/products" style={styles.backLink}>
+            <div className="product-details-container">
+                <Link to="/products" className="product-details-back-link">
                     <FaArrowLeft /> Back to Products
                 </Link>
                 
-                <div style={styles.productContainer}>
+                <div className="product-details-main">
                     {/* Image Gallery */}
-                    <div style={styles.imageSection}>
+                    <div className="product-details-image-section">
                         <img 
                             src={getProductImage()} 
                             alt={product.name}
-                            style={styles.mainImage}
+                            className="product-details-main-image"
                         />
                     </div>
                     
                     {/* Product Info */}
-                    <div style={styles.infoSection}>
-                        <h1 style={styles.name}>{product.name}</h1>
-                        <div style={styles.rating}>
+                    <div className="product-details-info-section">
+                        <h1 className="product-details-name">{product.name}</h1>
+                        <div className="product-details-rating">
                             {[...Array(5)].map((_, i) => (
                                 <FaStar
                                     key={i}
-                                    style={styles.star}
+                                    className="product-details-star"
                                     color={i < Math.floor(product.rating) ? '#fbbf24' : '#e5e7eb'}
                                 />
                             ))}
-                            <span style={styles.reviewCount}>({product.numReviews} reviews)</span>
+                            <span className="product-details-review-count">({product.numReviews} reviews)</span>
                         </div>
-                        <p style={styles.category}>Category: {product.category}</p>
+                        <p className="product-details-category">Category: {product.category}</p>
                         
                         {/* Size Selector */}
                         {product.hasSizes && product.sizes && product.sizes.length > 0 && (
@@ -176,31 +176,31 @@ const ProductDetailsPage = () => {
                             />
                         )}
                         
-                        <p style={styles.description}>{product.description}</p>
+                        <p className="product-details-description">{product.description}</p>
                         
-                        <div style={styles.priceSection}>
-                            <div style={styles.priceContainer}>
-                                <label style={styles.priceLabel}>Price:</label>
-                                <p style={styles.price}>${currentPrice.toFixed(2)}</p>
+                        <div className="product-details-price-section">
+                            <div className="product-details-price-container">
+                                <label className="product-details-price-label">Price:</label>
+                                <p className="product-details-price">${currentPrice.toFixed(2)}</p>
                             </div>
                             {product.hasSizes && (
-                                <p style={styles.priceNote}>* Price varies by size</p>
+                                <p className="product-details-price-note">* Price varies by size</p>
                             )}
                         </div>
                         
-                        <div style={styles.stockSection}>
-                            <p style={currentStock > 0 ? styles.inStock : styles.outOfStock}>
+                        <div className="product-details-stock-section">
+                            <p className={currentStock > 0 ? "product-details-in-stock" : "product-details-out-of-stock"}>
                                 {currentStock > 0 ? `✅ In Stock: ${currentStock} units` : '❌ Out of Stock'}
                             </p>
                         </div>
                         
                         {currentStock > 0 && (
-                            <div style={styles.quantitySection}>
-                                <label style={styles.label}>Quantity:</label>
+                            <div className="product-details-quantity-section">
+                                <label className="product-details-label">Quantity:</label>
                                 <select 
                                     value={quantity} 
                                     onChange={(e) => setQuantity(Number(e.target.value))}
-                                    style={styles.select}
+                                    className="product-details-select"
                                 >
                                     {[...Array(Math.min(10, currentStock))].map((_, i) => (
                                         <option key={i + 1} value={i + 1}>{i + 1}</option>
@@ -209,14 +209,11 @@ const ProductDetailsPage = () => {
                             </div>
                         )}
                         
-                        <div style={styles.buttonGroup}>
+                        <div className="product-details-button-group">
                             <button 
                                 onClick={handleAddToCart}
                                 disabled={currentStock === 0 || adding}
-                                style={{
-                                    ...styles.addBtn,
-                                    ...(currentStock === 0 && styles.disabledBtn)
-                                }}
+                                className={`product-details-add-btn ${currentStock === 0 ? 'product-details-disabled-btn' : ''}`}
                             >
                                 <FaShoppingCart /> {adding ? 'Adding...' : 'Add to Cart'}
                             </button>
@@ -246,164 +243,260 @@ const ProductDetailsPage = () => {
     );
 };
 
-const styles = {
-    container: {
-        maxWidth: '1200px',
-        margin: '0 auto',
-        padding: '20px',
-    },
-    backLink: {
-        display: 'inline-flex',
-        alignItems: 'center',
-        gap: '8px',
-        color: '#666',
-        textDecoration: 'none',
-        marginBottom: '20px',
-        transition: 'color 0.3s',
-    },
-    productContainer: {
-        display: 'grid',
-        gridTemplateColumns: '1fr 1fr',
-        gap: '40px',
-        backgroundColor: '#fff',
-        borderRadius: '1rem',
-        padding: '30px',
-        marginBottom: '30px',
-        boxShadow: '0 2px 4px rgba(0,0,0,0.1)',
-    },
-    imageSection: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '1rem',
-    },
-    mainImage: {
-        width: '100%',
-        height: '400px',
-        objectFit: 'cover',
-        borderRadius: '0.5rem',
-    },
-    infoSection: {
-        display: 'flex',
-        flexDirection: 'column',
-        gap: '15px',
-    },
-    name: {
-        fontSize: '1.8rem',
-        color: '#333',
-    },
-    rating: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '5px',
-    },
-    star: {
-        fontSize: '18px',
-    },
-    reviewCount: {
-        color: '#666',
-        fontSize: '14px',
-        marginLeft: '5px',
-    },
-    category: {
-        color: '#666',
-    },
-    description: {
-        color: '#555',
-        lineHeight: '1.6',
-    },
-    priceSection: {
-        marginTop: '10px',
-        padding: '10px 0',
-        borderTop: '1px solid #eee',
-        borderBottom: '1px solid #eee',
-    },
-    priceContainer: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '10px',
-    },
-    priceLabel: {
-        fontWeight: 'bold',
-        color: '#333',
-    },
-    price: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: '#6366f1',
-        margin: 0,
-    },
-    priceNote: {
-        fontSize: '0.8rem',
-        color: '#999',
-        marginTop: '5px',
-        fontStyle: 'italic',
-    },
-    stockSection: {
-        marginTop: '5px',
-    },
-    inStock: {
-        fontWeight: 'bold',
-        color: '#10b981',
-    },
-    outOfStock: {
-        fontWeight: 'bold',
-        color: '#ef4444',
-    },
-    quantitySection: {
-        display: 'flex',
-        alignItems: 'center',
-        gap: '15px',
-    },
-    label: {
-        fontWeight: 'bold',
-    },
-    select: {
-        padding: '8px',
-        border: '1px solid #ddd',
-        borderRadius: '5px',
-    },
-    buttonGroup: {
-        display: 'flex',
-        gap: '1rem',
-        marginTop: '0.5rem',
-    },
-    addBtn: {
-        flex: 1,
-        padding: '12px',
-        backgroundColor: '#6366f1',
-        color: '#fff',
-        border: 'none',
-        borderRadius: '0.5rem',
-        cursor: 'pointer',
-        fontSize: '16px',
-        display: 'flex',
-        alignItems: 'center',
-        justifyContent: 'center',
-        gap: '8px',
-        transition: 'all 0.3s',
-    },
-    disabledBtn: {
-        backgroundColor: '#ccc',
-        cursor: 'not-allowed',
-    },
-    center: {
-        textAlign: 'center',
-        padding: '50px',
-    },
-    spinner: {
-        animation: 'spin 1s linear infinite',
-        fontSize: '2rem',
-        color: '#6366f1',
-        marginBottom: '1rem',
-    },
-};
-
-// Add keyframes for spinner
+// Inject CSS Styles for ProductDetailsPage
 const styleSheet = document.createElement("style");
 styleSheet.textContent = `
-    @keyframes spin {
+    @keyframes productDetailsSpin {
         from { transform: rotate(0deg); }
         to { transform: rotate(360deg); }
+    }
+    
+    .product-details-center {
+        text-align: center;
+        padding: 50px;
+        color: var(--text-primary, #333);
+    }
+    
+    .product-details-spinner {
+        animation: productDetailsSpin 1s linear infinite;
+        font-size: 2rem;
+        color: #6366f1;
+        margin-bottom: 1rem;
+    }
+    
+    .product-details-container {
+        max-width: 1200px;
+        margin: 0 auto;
+        padding: 20px;
+    }
+    
+    .product-details-back-link {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        color: var(--text-secondary, #666);
+        text-decoration: none;
+        margin-bottom: 20px;
+        transition: color 0.3s;
+    }
+    
+    .product-details-back-link:hover {
+        color: #6366f1;
+    }
+    
+    body.dark-mode .product-details-back-link {
+        color: #a0a0a0;
+    }
+    
+    body.dark-mode .product-details-back-link:hover {
+        color: #a5b4fc;
+    }
+    
+    .product-details-main {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 40px;
+        background-color: var(--card-bg, #fff);
+        border-radius: 1rem;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+        border: 1px solid var(--border-color, #e5e7eb);
+    }
+    
+    .product-details-image-section {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .product-details-main-image {
+        width: 100%;
+        height: 400px;
+        object-fit: cover;
+        border-radius: 0.5rem;
+    }
+    
+    .product-details-info-section {
+        display: flex;
+        flex-direction: column;
+        gap: 15px;
+    }
+    
+    .product-details-name {
+        font-size: 1.8rem;
+        color: var(--text-primary, #333);
+        margin: 0;
+    }
+    
+    .product-details-rating {
+        display: flex;
+        align-items: center;
+        gap: 5px;
+    }
+    
+    .product-details-star {
+        font-size: 18px;
+    }
+    
+    .product-details-review-count {
+        color: var(--text-secondary, #666);
+        font-size: 14px;
+        margin-left: 5px;
+    }
+    
+    .product-details-category {
+        color: var(--text-secondary, #666);
+    }
+    
+    .product-details-description {
+        color: var(--text-primary, #555);
+        line-height: 1.6;
+    }
+    
+    body.dark-mode .product-details-description {
+        color: #d1d5db;
+    }
+    
+    .product-details-price-section {
+        margin-top: 10px;
+        padding: 10px 0;
+        border-top: 1px solid var(--border-color, #eee);
+        border-bottom: 1px solid var(--border-color, #eee);
+    }
+    
+    .product-details-price-container {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+    }
+    
+    .product-details-price-label {
+        font-weight: bold;
+        color: var(--text-primary, #333);
+    }
+    
+    .product-details-price {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: #6366f1;
+        margin: 0;
+    }
+    
+    .product-details-price-note {
+        font-size: 0.8rem;
+        color: var(--text-secondary, #999);
+        margin-top: 5px;
+        font-style: italic;
+    }
+    
+    .product-details-stock-section {
+        margin-top: 5px;
+    }
+    
+    .product-details-in-stock {
+        font-weight: bold;
+        color: #10b981;
+    }
+    
+    .product-details-out-of-stock {
+        font-weight: bold;
+        color: #ef4444;
+    }
+    
+    .product-details-quantity-section {
+        display: flex;
+        align-items: center;
+        gap: 15px;
+    }
+    
+    .product-details-label {
+        font-weight: bold;
+        color: var(--text-primary, #333);
+    }
+    
+    .product-details-select {
+        padding: 8px;
+        border: 1px solid var(--border-color, #ddd);
+        border-radius: 5px;
+        background-color: var(--input-bg, #fff);
+        color: var(--text-primary, #333);
+    }
+    
+    .product-details-button-group {
+        display: flex;
+        gap: 1rem;
+        margin-top: 0.5rem;
+    }
+    
+    .product-details-add-btn {
+        flex: 1;
+        padding: 12px;
+        background: linear-gradient(135deg, #4f46e5, #6366f1);
+        color: #fff;
+        border: none;
+        border-radius: 0.5rem;
+        cursor: pointer;
+        font-size: 16px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        gap: 8px;
+        transition: all 0.3s;
+    }
+    
+    .product-details-add-btn:hover:not(:disabled) {
+        background: linear-gradient(135deg, #4338ca, #4f46e5);
+        transform: translateY(-2px);
+    }
+    
+    .product-details-disabled-btn {
+        background-color: #ccc !important;
+        cursor: not-allowed !important;
+        opacity: 0.6;
+    }
+    
+    body.dark-mode .product-details-disabled-btn {
+        background-color: #374151 !important;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .product-details-main {
+            grid-template-columns: 1fr;
+            gap: 20px;
+            padding: 20px;
+        }
+        
+        .product-details-name {
+            font-size: 1.4rem;
+        }
+        
+        .product-details-main-image {
+            height: 300px;
+        }
+        
+        .product-details-container {
+            padding: 15px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .product-details-main-image {
+            height: 250px;
+        }
+        
+        .product-details-name {
+            font-size: 1.2rem;
+        }
+        
+        .product-details-price {
+            font-size: 1.2rem;
+        }
+        
+        .product-details-quantity-section {
+            flex-wrap: wrap;
+        }
     }
 `;
 document.head.appendChild(styleSheet);
