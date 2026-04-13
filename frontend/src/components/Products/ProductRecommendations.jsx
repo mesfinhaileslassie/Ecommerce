@@ -86,8 +86,8 @@ const ProductRecommendations = ({ type, productId, title, limit = 4 }) => {
 
     if (loading) {
         return (
-            <div style={styles.loadingContainer}>
-                <FaSpinner style={styles.spinner} />
+            <div className="recommendations-loading-container">
+                <FaSpinner className="recommendations-spinner" />
                 <p>Loading recommendations...</p>
             </div>
         );
@@ -98,12 +98,12 @@ const ProductRecommendations = ({ type, productId, title, limit = 4 }) => {
     }
 
     return (
-        <div style={styles.container}>
-            <div style={styles.header}>
+        <div className="recommendations-container">
+            <div className="recommendations-header">
                 {getIcon()}
-                <h2 style={styles.title}>{title}</h2>
+                <h2 className="recommendations-title">{title}</h2>
             </div>
-            <div style={styles.grid}>
+            <div className="recommendations-grid">
                 {products.map(product => (
                     <ProductCard key={product._id} product={product} />
                 ))}
@@ -112,42 +112,109 @@ const ProductRecommendations = ({ type, productId, title, limit = 4 }) => {
     );
 };
 
-const styles = {
-    container: {
-        marginTop: '50px',
-        padding: '30px 0',
-        borderTop: '1px solid #e5e7eb',
-        backgroundColor: '#f9fafb',
-        borderRadius: '1rem',
-    },
-    header: {
-        display: 'flex',
-        alignItems: 'center',
-        marginBottom: '25px',
-        padding: '0 20px',
-    },
-    title: {
-        fontSize: '1.5rem',
-        fontWeight: 'bold',
-        color: '#1f2937',
-        margin: 0,
-    },
-    grid: {
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(250px, 1fr))',
-        gap: '25px',
-        padding: '0 20px',
-    },
-    loadingContainer: {
-        textAlign: 'center',
-        padding: '40px',
-    },
-    spinner: {
-        animation: 'spin 1s linear infinite',
-        fontSize: '2rem',
-        color: '#6366f1',
-        marginBottom: '10px',
-    },
-};
+// Inject CSS Styles for ProductRecommendations
+const styleSheet = document.createElement("style");
+styleSheet.textContent = `
+    @keyframes recommendationsSpin {
+        from { transform: rotate(0deg); }
+        to { transform: rotate(360deg); }
+    }
+    
+    .recommendations-loading-container {
+        text-align: center;
+        padding: 40px;
+        background-color: var(--card-bg, transparent);
+        border-radius: 1rem;
+    }
+    
+    .recommendations-loading-container p {
+        color: var(--text-secondary, #666);
+    }
+    
+    .recommendations-spinner {
+        animation: recommendationsSpin 1s linear infinite;
+        font-size: 2rem;
+        color: #6366f1;
+        margin-bottom: 10px;
+    }
+    
+    .recommendations-container {
+        margin-top: 50px;
+        padding: 30px 0;
+        border-top: 1px solid var(--border-color, #e5e7eb);
+        background-color: var(--bg-secondary, #f9fafb);
+        border-radius: 1rem;
+    }
+    
+    body.dark-mode .recommendations-container {
+        background-color: #0a0a0a;
+        border-top-color: #333333;
+    }
+    
+    .recommendations-header {
+        display: flex;
+        align-items: center;
+        margin-bottom: 25px;
+        padding: 0 20px;
+    }
+    
+    .recommendations-title {
+        font-size: 1.5rem;
+        font-weight: bold;
+        color: var(--text-primary, #1f2937);
+        margin: 0;
+    }
+    
+    body.dark-mode .recommendations-title {
+        color: #ffffff;
+    }
+    
+    .recommendations-grid {
+        display: grid;
+        grid-template-columns: repeat(auto-fill, minmax(250px, 1fr));
+        gap: 25px;
+        padding: 0 20px;
+    }
+    
+    /* Responsive */
+    @media (max-width: 768px) {
+        .recommendations-container {
+            margin-top: 30px;
+            padding: 20px 0;
+        }
+        
+        .recommendations-title {
+            font-size: 1.2rem;
+        }
+        
+        .recommendations-grid {
+            gap: 15px;
+            padding: 0 15px;
+        }
+    }
+    
+    @media (max-width: 480px) {
+        .recommendations-container {
+            margin-top: 20px;
+            padding: 15px 0;
+        }
+        
+        .recommendations-title {
+            font-size: 1rem;
+        }
+        
+        .recommendations-header {
+            padding: 0 15px;
+            margin-bottom: 15px;
+        }
+        
+        .recommendations-grid {
+            gap: 12px;
+            padding: 0 12px;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+        }
+    }
+`;
+document.head.appendChild(styleSheet);
 
 export default ProductRecommendations;
