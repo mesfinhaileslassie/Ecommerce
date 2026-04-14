@@ -1268,7 +1268,6 @@ app.get('/api/products/:id/reviews', async (req, res) => {
 // ============================================
 // CART ROUTES
 // ============================================
-
 // Get user's cart
 app.get('/api/cart', protect, async (req, res) => {
     try {
@@ -1280,6 +1279,17 @@ app.get('/api/cart', protect, async (req, res) => {
                 items: [],
                 expiresAt: new Date(Date.now() + 3 * 24 * 60 * 60 * 1000)
             });
+            await cart.save();
+        }
+        
+        // CHECK IF CART IS EXPIRED AND CLEAR IT
+        const now = new Date();
+        if (cart.expiresAt && now > cart.expiresAt) {
+            console.log(`🕐 Cart expired for user ${req.userId}, clearing...`);
+            cart.items = [];
+            cart.totalPrice = 0;
+            cart.expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+            cart.updatedAt = now;
             await cart.save();
         }
         
@@ -1296,6 +1306,8 @@ app.get('/api/cart', protect, async (req, res) => {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
+
 
 // Add item to cart
 app.post('/api/cart/add', protect, async (req, res) => {
@@ -1409,6 +1421,8 @@ app.put('/api/cart/update/:productId', protect, async (req, res) => {
         }
         cart.totalPrice = total;
         cart.updatedAt = Date.now();
+        cart.expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+        
         
         await cart.save();
         
@@ -1498,29 +1512,49 @@ app.delete('/api/cart/cleanup', async (req, res) => {
 // Get cart expiration info
 app.get('/api/cart/expiration', protect, async (req, res) => {
     try {
-        const cart = await Cart.findOne({ user: req.userId });
+        let cart = await Cart.findOne({ user: req.userId });
         
         if (!cart) {
-            return res.json({ success: true, hasCart: false, expiresAt: null });
+            return res.json({ success: true, hasCart: false, isExpired: false });
         }
         
         const now = new Date();
         const expiresAt = new Date(cart.expiresAt);
+        const isExpired = now > expiresAt;
+        
+        // IF EXPIRED, CLEAR THE CART AND RETURN EMPTY
+        if (isExpired) {
+            console.log(`🕐 Cart expired for user ${req.userId}, returning expired=true`);
+            // Clear the cart but keep the document
+            cart.items = [];
+            cart.totalPrice = 0;
+            cart.expiresAt = new Date(Date.now() + 3 * 24 * 60 * 60 * 1000);
+            cart.updatedAt = now;
+            await cart.save();
+            
+            return res.json({
+                success: true,
+                hasCart: false,
+                isExpired: true
+            });
+        }
+        
         const hoursRemaining = Math.max(0, Math.floor((expiresAt - now) / (1000 * 60 * 60)));
         const daysRemaining = Math.floor(hoursRemaining / 24);
         
         res.json({
             success: true,
             hasCart: true,
+            isExpired: false,
             expiresAt: cart.expiresAt,
             daysRemaining: daysRemaining,
-            hoursRemaining: hoursRemaining,
-            isExpired: now > expiresAt
+            hoursRemaining: hoursRemaining
         });
     } catch (error) {
         res.status(500).json({ success: false, message: error.message });
     }
 });
+
 
 // ============================================
 // ORDER ROUTES
